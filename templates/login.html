@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Login</title>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</head>
+<body>
+
+
+<div class="panel panel-default" style="width: 500px;margin: 0 auto;margin-top: 100px;text-align: center">
+    <div class="panel-heading">
+       <h2>Login</h2>
+    </div>
+    <div class="panel-body">
+        <form class="form-horizontal" role="form" method="post">
+            {% if msg %}
+            <div class="alert alert-danger">{{ msg }}</div>
+
+            {% endif %}
+
+            <div class="form-group">
+                <label for="lastname" class="col-sm-3 control-label">email</label>
+                <div class="col-sm-9">
+                    <input type="email" class="form-control" id="lastname" name="email" placeholder="">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="lastname" class="col-sm-3 control-label">password</label>
+                <div class="col-sm-9">
+                    <input type="password" class="form-control" id="lastname" name="password" placeholder="">
+                </div>
+            </div>
+
+
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-10">
+                    <button type="submit" class="btn btn-default">Login</button>
+                </div>
+                     <div class="col-sm-offset-8 col-sm-4" style="margin-top: 10px">
+                    <a href="/register" >No account, click here to register.</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+</body>
+</html>

@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% block content %}
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Data processing</h5>
+                </div>
+
+
+                <div class="ibox-content">
+                    <form class="form-horizontal" method="post" enctype="multipart/form-data" action="">
+                        <div class="row form_info">
+                            <div class="form-group"><label class="col-lg-2 control-label">sample id</label>
+
+                                <div class="col-lg-8"><input type="text" class="form-control" name="sample_id"
+                                                             value="{% if data %}{{ data.sample_id }}{% endif %}">
+                                </div>
+
+                            </div>
+                            <div class="form-group"><label class="col-lg-2 control-label">sample name</label>
+
+                                <div class="col-lg-8"><input type="text" class="form-control" name="sample_name"
+                                                             value="{% if data %}{{ data.sample_name }}{% endif %}">
+                                </div>
+                            </div>
+                            <div class="form-group"><label class="col-lg-2 control-label">user name</label>
+
+                                <div class="col-lg-8"><input type="text" class="form-control" name="user_name"
+                                                             value="{% if data %}{{ data.user_name }}{% endif %}">
+                                </div>
+                            </div>
+                            <div class="form-group"><label class="col-lg-2 control-label">address</label>
+
+                                <div class="col-lg-8"><input type="text" class="form-control" name="address"
+                                                             value="{% if data %}{{ data.address }}{% endif %}">
+                                </div>
+                            </div>
+                            <div class="form-group" id="info"><label class="col-lg-2 control-label">process</label>
+
+                                <div class="col-lg-8"><input type="text" class="form-control" name="process"
+                                                             value="{% if data %}{{ data.process }}{% endif %}">
+                                </div>
+                            </div>
+                            <div class="form-group"><label class="col-lg-2 control-label">information</label>
+
+                                <div class="col-lg-8"><input type="text" class="form-control" name="information"
+                                                             value="{% if data %}{{ data.information }}{% endif %}">
+                                </div>
+                            </div>
+
+
+                            {% for foo in fieldList %}
+                                <div class="form-group {{ foo.name }}"><label
+                                        class="col-lg-2 control-label">{{ foo.name }}</label>
+
+                                    <div class="col-lg-8"><input type="{{ foo.type }}" class="form-control"
+                                                                 name="{{ foo.name }}&{{ foo.type }}"
+                                                                 value="{{ foo.value }}">
+                                    </div>
+                                    <div class="col-lg-2 "><a href="javascript:void(0)"
+                                                              onclick="delFile('{{ foo.name }}',this)">Del</a>
+                                    </div>
+
+                                </div>
+
+
+                            {% endfor %}
+
+                        </div>
+
+                        <div class="form-group">
+                            <div class="col-lg-offset-2 col-lg-10">
+                                <button class="btn btn-sm btn-danger" type="submit">Submit</button>
+                                <button class="btn btn-sm btn-primary " data-toggle="modal" data-target="#myModal"
+                                        type="button">Add fields
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+    <!-- 模态框（Modal） -->
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title" id="myModalLabel">Add fields</h4>
+                </div>
+                <div class="modal-body">
+                    <form class="form-horizontal" method="post" enctype="multipart/form-data" action="">
+                        <div class="form-group"><label class="col-lg-2 control-label">Field name</label>
+
+                            <div class="col-lg-10"><input type="text" class="form-control new_file_name" name="name">
+                            </div>
+                        </div>
+
+                        <div class="form-group"><label class="col-lg-2 control-label">Type</label>
+
+                            <div class="col-lg-10">
+                                <select type="text" class="form-control new_file_type" name="type">
+                                    <option value="text">text</option>
+                                    <option value="file">file</option>
+                                    <option value="number">Number</option>
+
+                                </select>
+                            </div>
+                        </div>
+
+                    </form>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="addFile()" data-dismiss="modal">Submit</button>
+                </div>
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal -->
+    </div>
+
+    <script>
+
+
+        function addFile() {
+            var new_file_type = $(".new_file_type").val()
+            var new_file_name = $(".new_file_name").val()
+            var content = "        <div class=\"form-group " + new_file_name + "\"><label\n" +
+                "                                    class=\"col-lg-2 control-label\">" + new_file_name + "</label>\n" +
+                "\n" +
+                "                                <div class=\"col-lg-8\"><input type=\"" + new_file_type + "\" class=\"form-control\"\n" +
+                "                                                             name=\"" + new_file_name + "&" + new_file_type + "\"\n" +
+                "                                                             >\n" +
+                "                                </div>\n" +
+                "                                <div class=\"col-lg-2 \"><a href=\"javascript:void(0)\" onclick=\"delFile('" + new_file_name + "',this)\">Del</a>\n" +
+                "                                </div>\n" +
+                "\n" +
+                "                            </div>"
+
+            $(".form_info").append(content)
+            $(".new_file_type").val("")
+            $(".new_file_name").val("")
+        }
+
+
+        function delFile(value, e) {
+            console.log(e)
+            $(e).parent().parent().remove()
+
+            $.get("/data/del?id={{ data._id }}&field=" + value, function (data) {
+                $(e).parent().parent().remove()
+
+            })
+
+
+        }
+
+    </script>
+
+
+{% endblock %}

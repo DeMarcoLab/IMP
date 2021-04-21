@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <style>
+        td {
+            width: 120px;
+            height: 40px;
+            line-height: 40px;
+            text-align: center;
+        }
+    </style>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>Field list</h5>
+                </div>
+                <div class="ibox-content">
+
+
+                    <div class="row" style="margin-top: 15px">
+
+
+                        <div class="col-sm-1">
+
+                        </div>
+                        <div class="col-sm-10">
+                                                                                                            <a href="/field/add" class="btn btn-info">Add</a>
+
+                            <table class="table-bordered table">
+
+
+                                <tr>
+                                    <td><strong>Field name</strong></td>
+                                    <td><strong>Type</strong></td>
+                                    <td><strong>Operation</strong></td>
+
+
+                                </tr>
+                                {% for foo in filedinfo %}
+                                    <tr>
+
+                                        <td>{{ foo.name }}</td>
+                                        <td>{{ foo.type }}</td>
+
+                                        <td>
+                                            <a href="/field/del?id={{ foo._id }}" class="btn btn-info">Delete</a>
+                                        </td>
+
+                                    </tr>
+
+
+                                {% endfor %}
+
+
+                            </table>
+                        <ul class="pagination">
+
+                            {% for foo in all_page %}
+                                {% if foo==page %}
+                                    <li  class="page-item active" style="background-color: #0d70b7"><a  class="page-link" href="/field/list?page={{ foo }}" style="background-color: #0e9aef;color: white">{{ foo }}</a></li>
+
+
+                                {% else %}
+                                    <li><a href="/field/list?page={{ foo }}">{{ foo }}</a></li>
+
+                                {% endif %}
+
+
+                            {% endfor %}
+                            </ul>
+
+
+                        </div>
+                    <div class="col-sm-1"></div>
+                    </div>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
