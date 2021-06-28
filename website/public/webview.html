@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>LavaVu Emscripten</title>
+
+    <link rel="stylesheet" type="text/css" href="LavaVu-amalgamated.css">
+    <!--link rel="stylesheet" type="text/css" href="emscripten.css">
+    <link rel="stylesheet" type="text/css" href="control.css">
+    <link rel="stylesheet" type="text/css" href="styles.css">
+    <link rel="stylesheet" type="text/css" href="gui.css"-->
+  </head>
+  <body>
+
+    <div className="spinner" id='spinner' style="z-index: 100; position: relative;"></div>
+    <div className="emscripten" id="status" style="z-index: 100; position: relative;">Downloading...</div>
+
+    <div className="emscripten">
+      <progress value="0" max="100" id="progress" hidden=1 style="z-index: 100; position: relative;"></progress>
+    </div>
+    
+    <canvas className="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+    <textarea id="output" rows="20"></textarea>
+
+    <input id="fileinput" type="file" style="visibility:hidden" onchange="useFileInput(this)" />
+
+    <script async type="text/javascript" src="https://cdn.jsdelivr.net/gh/lavavu/lavavu.github.io@main/LavaVu-amalgamated.min.js"></script>
+    <!--script type="text/javascript" src="dat.gui.min.js"></script>
+    <script type="text/javascript" src="OK-min.js"></script>
+    <script type="text/javascript" src="baseviewer.js"></script>
+    <script type="text/javascript" src="menu.js"></script>
+    <script type="text/javascript" src="emscripten.js"></script-->
+
+    <!--script async type="text/javascript" src="LavaVu.js"></script-->
+
+  </body>
+</html>

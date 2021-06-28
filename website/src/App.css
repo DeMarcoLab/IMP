@@ -1,0 +1,105 @@
+.App {
+  text-align: center;
+}
+
+#root, #main{
+  height:100% !important;
+  min-height: 800px;
+}
+
+#menu{
+  position: relative;
+  width: 20%;
+
+  padding-top: 5px;
+}
+
+#vis-panel {
+  position: relative;
+  width: 70% !important;
+  margin-left:10px;
+  height:100%;
+}
+
+.flex {
+  display: flex;
+
+}
+
+.dropdown-medium {
+  height: 25px;
+  max-width: 180px;
+  font-size: 0.85rem;
+  margin-right: 5px;
+}
+
+* + .dropdown-small,
+* + .dropdown-medium {
+  margin-left: 5px;
+}
+
+.infoPanelSection {
+  padding-left: 20px;
+  border-radius: 4px;
+  width: 80%;
+  min-height:40px;
+  height: auto;
+  margin-bottom: 10px;
+  background-color: var(--ui-blue-100);
+  padding-top: 5px;
+  padding-bottom:20px;
+  padding-right:20px;
+}
+
+:root {
+  --ui-blue-100: #e5fcff;
+  --ui-gray-200: #bababa;
+  --ui-blue-800: #052e57;
+  --ui-blue-shadow: rgba(5, 46, 87, 0.5);
+}
+
+html {
+  font-size: 0.8rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.fileNameString {
+   color: var(--ui-blue-800)
+}
+
+.selectPrompt {
+  margin-top: 10px;
+  font-size:x-large;
+}
+
+.attributeRow {
+  display:flex;
+  height: 25px;
+  padding-top: 5px;
+  width: 99%;
+  
+}
+
+.attributeLabel {
+  min-width: 80px;
+  
+}
+
+
+.proteinList {
+  padding-left: 20px;
+  padding-right: 10px;
+}
+
+ td, th {
+  padding-right: 25px;
+}
+
+.listElementContent{
+  display: flex;
+  justify-content: space-between;
+}
+
+iframe{
+  display:block;
+}

@@ -1,0 +1,7 @@
+{
+  "files": [
+    "" ,
+    { "name": "yeast.gldb", "size": 83640, "unit": "kb", "description" : "Noisy Yeast"},
+    { "name": "yeast_with_bubbles.gldb", "size": 83640, "unit": "kb", "description" : "Noisy Yeast with Nucleosomes and Ribosomes"}
+  ]
+}
