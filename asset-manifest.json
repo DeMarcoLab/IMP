@@ -1,0 +1,22 @@
+{
+  "files": {
+    "main.css": "/IMP/static/css/main.fe0c0600.chunk.css",
+    "main.js": "/IMP/static/js/main.d9983bb6.chunk.js",
+    "main.js.map": "/IMP/static/js/main.d9983bb6.chunk.js.map",
+    "runtime-main.js": "/IMP/static/js/runtime-main.dd52d0ec.js",
+    "runtime-main.js.map": "/IMP/static/js/runtime-main.dd52d0ec.js.map",
+    "static/js/2.339138cf.chunk.js": "/IMP/static/js/2.339138cf.chunk.js",
+    "static/js/2.339138cf.chunk.js.map": "/IMP/static/js/2.339138cf.chunk.js.map",
+    "static/js/3.660f5299.chunk.js": "/IMP/static/js/3.660f5299.chunk.js",
+    "static/js/3.660f5299.chunk.js.map": "/IMP/static/js/3.660f5299.chunk.js.map",
+    "index.html": "/IMP/index.html",
+    "static/css/main.fe0c0600.chunk.css.map": "/IMP/static/css/main.fe0c0600.chunk.css.map",
+    "static/js/2.339138cf.chunk.js.LICENSE.txt": "/IMP/static/js/2.339138cf.chunk.js.LICENSE.txt"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.dd52d0ec.js",
+    "static/js/2.339138cf.chunk.js",
+    "static/css/main.fe0c0600.chunk.css",
+    "static/js/main.d9983bb6.chunk.js"
+  ]
+}
