@@ -1,18 +1,22 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, createRef, useState, useEffect } from 'react';
 
+import {NeuroglancerViewer} from './NeuroglancerViewer.js'
 import { VisViewer } from './VisViewer.js'
 export const InformationPanel = () => {
-    const [inputFile, setInputFile] = useState()
+    const [inputFileAndID, setInputFileAndID] = useState([])
     const [fileList, setFileList] = useState([])
     const [fileData, setFileData] = useState()
     const [proteinData, setProteomics] = useState()
     const size = useWindowSize();
+    const menuRef = useRef()
+    const iframeRef = createRef()
+    const [menuFocus,setMenuFocus] = useState(true)
 
     useEffect(() => {
         //fetches a list of files to display for the user for selection. in the database, there will probably be a job to run to create a file, or several if several sources, like this as well.
         // currently these are just testing files located in the public folder.
 
-        let fetchstring = process.env.PUBLIC_URL + '/data/listOfFiles.json';
+        let fetchstring = process.env.PUBLIC_URL + '/data/Neuroglancer/idToUrlmapping.json';
         console.log('Fetching ' + fetchstring);
         fetch(fetchstring, {
             headers: {
@@ -20,21 +24,36 @@ export const InformationPanel = () => {
                 Accept: 'application/json',
             },
         }).then(response => response.json())
-            .then(data => setFileList(data.files));
+            .then(data => 
+                setFileList(data))
+        
 
+        //register mouseclick tracker
+            document.addEventListener('mousedown',handleMouseClick)
     }, []) //does this only once on load
 
+    const handleMouseClick = (event) => {
+        console.log(event.target)
+        event.target.focus()
+    }
+    const setFocus = () => {
+       
+        setMenuFocus(true)
+    }
 
+    const removeFocus=() => {
+        setMenuFocus(false)
+    }
     const changeInputFile = (newFile) => {
         console.log(newFile)
-        let obj = fileList.find(o => o.name === newFile);
+        let obj = fileList[newFile]
         //set the new file data
         setFileData(obj)
-        setInputFile("data/" + newFile)
-
+        setInputFileAndID([newFile,obj["url"]])
+        removeFocus()
 
         //load the proteomics data
-        let fetchstring = process.env.PUBLIC_URL + '/data/proteomics/' + newFile.split(".")[0] + ".json";  //loads the available data for the file, with the matching name --- should probably be a unique ID instead!
+        let fetchstring = process.env.PUBLIC_URL + '/data/proteomics/' + newFile + ".json";  //loads the available data for the file, with the matching name --- should probably be a unique ID instead!
         fetch(fetchstring, {
             headers: {
                 'Content-Type': 'application/json',
@@ -46,12 +65,13 @@ export const InformationPanel = () => {
 
     return (
         <div id="root" className="flex">
-            <div id="menu">
-                <DataPanelSection fileList={fileList} fileCallback={changeInputFile} inputFile={inputFile} fileData={fileData} />
+            <div id="menu"  ref={menuRef}  onMouseEnter={setFocus} onMouseLeave={removeFocus}>
+                <DataPanelSection fileList={fileList} fileCallback={changeInputFile} inputFile={inputFileAndID[1]} fileData={fileData} />
                 <ProteomicsPanelSection proteinData={proteinData} />
 
             </div>
-            <VisViewer filePath={inputFile} height={size.height} />
+            {/*<VisViewer filePath={inputFile} height={size.height} /> */}
+            <NeuroglancerViewer menuFocus={menuFocus}  ref={iframeRef} setID={inputFileAndID[0]} filePath ={inputFileAndID[1]} height={size.height} />
         </div>
     )
 
@@ -103,11 +123,9 @@ const DataPanelSection = ({ fileList, fileCallback, fileData }) => {
                 onChange={onChange}
                 ref={selectRef}
             >
-                {fileList.map((file, i) => (
-
-                    <option key={'file' + i} value={file.name}>
-
-                        {file.name}
+                {Object.keys(fileList).map((file, i) => (
+                    <option key={'file' + i} value={file}>
+                        {file}
                     </option>
                 ))}
             </select>
@@ -136,7 +154,10 @@ const ProteomicsPanelSection = ({ proteinData }) => {
             <h3>Proteomics</h3>
             {proteinData ?
                 <table className="proteinList">
-                    <tr><th>Protein</th><th>#</th> <th>Probability</th></tr>
+                     <thead>
+                    <tr><th>Protein</th><th>#</th><th>Probability</th></tr>
+                    </thead>
+                    <tbody>
                     {proteinData.map((protein, i) => (
 
                        <tr className="proteinListElement" key={'file' + i} value={protein.name}>
@@ -145,6 +166,7 @@ const ProteomicsPanelSection = ({ proteinData }) => {
                                 <td>{protein.probability}</td>
                         </tr>
                     ))}
+                    </tbody>
                 </table>
                 : ""}
         </aside>

@@ -8,23 +8,22 @@
 }
 
 #menu{
-  position: relative;
+  position: absolute;
   width: 20%;
-
+  z-index:1000;
   padding-top: 5px;
+  left:0;
 }
+
 
 #vis-panel {
-  position: relative;
-  width: 70% !important;
-  margin-left:10px;
+  position: absolute;
+  width: 80% !important;
+  padding-right:10px;
   height:100%;
+  right:0;
 }
 
-.flex {
-  display: flex;
-
-}
 
 .dropdown-medium {
   height: 25px;
@@ -102,4 +101,13 @@ html {
 
 iframe{
   display:block;
+}
+
+.noInteraction{
+  pointer-events:none !important;
+  display:none;
+}
+
+h3{
+  margin-bottom: 1px;
 }

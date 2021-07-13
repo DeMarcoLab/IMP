@@ -1,0 +1,4 @@
+https://neuroglancer-demo.appspot.com/#!%7B%22dimensions%22:%7B%22x%22:%5B0.000003363538%2C%22m%22%5D%2C%22y%22:%5B0.0000032511860000000004%2C%22m%22%5D%2C%22z%22:%5B0.000001313114%2C%22m%22%5D%7D%2C%22
+position%22:%5B862.81884765625%2C1036.5523681640625%2C747.5%5D%2C%22crossSectionScale%22:4.481689070338065%2C%22projectionScale%22:8192%2C%22layers%22:%5B%7B%22type%22:%22image%22%2C%22
+source%22:%22precomputed://http://127.0.0.1:9000/testdata/8bit_big%22%2C%22tab%22:%22source%22%2C%22name%22:%22new%20layer%22%7D%5D%2C%22selectedLayer%22:%7B%22visible%22:true%2C%22layer%22:%22new%20layer%22%7D%2C%22
+layout%22:%22xy-3d%22%7D
