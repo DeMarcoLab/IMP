@@ -7,20 +7,30 @@
   min-height: 800px;
 }
 
+body {
+  background: black;
+  color:white;
+}
+
 #menu{
-  position: absolute;
-  width: 20%;
+  position: relative;
+  width: 300px;
   z-index:1000;
-  padding-top: 5px;
+  padding-top: 1em;
+ 
   left:0;
 }
 
 
+.flex {
+  display: flex;
+  justify-content: left;
+}
 #vis-panel {
-  position: absolute;
-  width: 80% !important;
+  position: relative;
+  width: calc(100% - 310px);
   padding-right:10px;
-  height:100%;
+  height:100% !important;
   right:0;
 }
 
@@ -38,18 +48,30 @@
 }
 
 .infoPanelSection {
-  padding-left: 20px;
-  border-radius: 4px;
-  width: 80%;
+  position:relative;
+  width: 95%;
   min-height:40px;
   height: auto;
-  margin-bottom: 10px;
-  background-color: var(--ui-blue-100);
-  padding-top: 5px;
-  padding-bottom:20px;
-  padding-right:20px;
+  margin-bottom: 1em;
+  background-color: #30302f;
+  padding-top:1em;
+  padding-bottom:4em;
+
 }
 
+.menu-row {
+  display:flex;
+  justify-content: space-between;
+
+}
+
+.menu-row p {
+  font-size: 1.5em;
+  margin-top:0px;
+  margin-bottom:0;
+  margin-left: 0.5em;
+  
+}
 :root {
   --ui-blue-100: #e5fcff;
   --ui-gray-200: #bababa;
@@ -76,6 +98,7 @@ html {
   height: 25px;
   padding-top: 5px;
   width: 99%;
+  padding-left: 0.5em;
   
 }
 
@@ -84,12 +107,10 @@ html {
   
 }
 
-
-.proteinList {
-  padding-left: 20px;
-  padding-right: 10px;
+table {
+  font-size: 0.9rem;
+  margin-left: 1em;
 }
-
  td, th {
   padding-right: 25px;
 }
@@ -101,13 +122,23 @@ html {
 
 iframe{
   display:block;
+  height:100%;
 }
 
 .noInteraction{
   pointer-events:none !important;
-  display:none;
+  /*display:none;*/
 }
 
 h3{
   margin-bottom: 1px;
 }
+
+.sectionTitle {
+  font-size: 1.5em;
+  margin-left: 0.5em;
+  margin-top:0;
+}
+
+/*"url": "https://viz.neurodata.io/#!%7B%22dimensions%22:%7B%22x%22:%5B0.000003363538%2C%22m%22%5D%2C%22y%22:%5B0.0000032511860000000004%2C%22m%22%5D%2C%22z%22:%5B0.000001313114%2C%22m%22%5D%7D%2C%22position%22:%5B1032.4407958984375%2C980.5195922851562%2C276.7569885253906%5D%2C%22crossSectionScale%22:2.7182818284590455%2C%22projectionOrientation%22:%5B-0.04418540745973587%2C0.03656844422221184%2C0.0417754165828228%2C0.9974794387817383%5D%2C%22projectionScale%22:4968.699164365893%2C%22layers%22:%5B%7B%22type%22:%22image%22%2C%22source%22:%22precomputed://https://webdev.imp-db.cloud.edu.au:3002/YeastWithBubbles/8bit_big%22%2C%22tab%22:%22source%22%2C%22name%22:%228bit_big%22%7D%2C%7B%22type%22:%22annotation%22%2C%22source%22:%22precomputed://https://webdev.imp-db.cloud.edu.au:3002/YeastWithBubbles/nucleosomes%22%2C%22tab%22:%22source%22%2C%22name%22:%22Nucleosomes%22%2C%22visible%22:false%7D%2C%7B%22type%22:%22annotation%22%2C%22source%22:%22precomputed://https://webdev.imp-db.cloud.edu.au:3002/YeastWithBubbles/ribosomes%22%2C%22tab%22:%22source%22%2C%22annotationColor%22:%22#0400ff%22%2C%22name%22:%22ribosomes%22%7D%2C%7B%22type%22:%22annotation%22%2C%22source%22:%7B%22url%22:%22local://annotations%22%2C%22transform%22:%7B%22outputDimensions%22:%7B%22x%22:%5B0.000003363538%2C%22m%22%5D%2C%22y%22:%5B0.0000032511860000000004%2C%22m%22%5D%2C%22z%22:%5B0.000001313114%2C%22m%22%5D%7D%7D%7D%2C%22tool%22:%22annotateSphere%22%2C%22annotationColor%22:%22#ff00f7%22%2C%22annotations%22:%5B%7B%22center%22:%5B652%2C1067%2C312%5D%2C%22radii%22:%5B133.76177978515625%2C96.955810546875%2C48.503387451171875%5D%2C%22type%22:%22ellipsoid%22%2C%22id%22:%2259086a370294538ae4b6e4cb371ea9c2f20571ca%22%2C%22description%22:%22Pink%20blob%5Cn%22%7D%5D%2C%22name%22:%22new%20layer%22%2C%22visible%22:false%7D%5D%2C%22selectedLayer%22:%7B%22layer%22:%22new%20layer%22%2C%22visible%22:true%7D%2C%22layout%22:%22xy-3d%22%2C%22selection%22:%7B%22layers%22:%7B%22new%20layer%22:%7B%22annotationId%22:%2259086a370294538ae4b6e4cb371ea9c2f20571ca%22%2C%22annotationSource%22:0%2C%22annotationSubsource%22:%22default%22%7D%7D%7D%2C%22partialViewport%22:%5B0%2C0%2C1%2C1%5D%7D",
+       */

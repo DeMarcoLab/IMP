@@ -21,12 +21,12 @@ export const NeuroglancerViewer = forwardRef((props, ref) => {
     return (
   
          
-            <div id="vis-panel" style={{ minHeight: props.height }} className={props.menuFocus ? "noInteraction" : ""}>
+            <div id="vis-panel"style={{ height: '100%', minHeight: props.height }} > {/*className={props.menuFocus ? "noInteraction" : ""}*/}
                 {props.filePath ?
                     <Fragment>
-                        <h3>Showing <span className="fileNameString">{props.setID} </span></h3>
-                        <span> Press [h] to view controls</span>
-                        <iframe ref={ref} seamless sandbox="allow-same-origin allow-scripts allow-downloads" title="Neuroglancer Viewer" id="frame1" className={`"resized" ${props.menuFocus ? "noInteraction" : ""}`} src={props.filePath} style={{ border: 'none', width: '100%', height: '100%', minHeight: props.height - 100 }}>
+                        
+                      
+                        <iframe ref={ref} seamless sandbox="allow-modals allow-same-origin allow-scripts allow-downloads" title="Neuroglancer Viewer" id="frame1" className={`"resized" ${props.menuFocus ? "noInteraction" : ""}`} src={props.filePath} style={{ border: 'none', width: '100%', height: '100%', minHeight: props.height }}>
                         </iframe>
                     </Fragment>
                     :

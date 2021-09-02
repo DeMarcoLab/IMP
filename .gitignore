@@ -1,0 +1,5 @@
+/datahost/
+/website/node_modules/
+*.pyc
+__pycache__
+*.vscode

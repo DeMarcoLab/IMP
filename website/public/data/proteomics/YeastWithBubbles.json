@@ -1,7 +1,16 @@
  [
-        { "name": "asda", "num": 90908124, "probability": 82 },
-        { "name": "asdx", "num": 3453414, "probability": 77},
-        { "name": "zby", "num": 12412312, "probability": 22}
-    
+        { "Majority protein ID": "CON__P00761", "iBAQ": 2710600000
+        },
+        { "Majority protein ID": "CON__P04264", "iBAQ": 169440000
+        },
+        { "Majority protein ID": "CON__P13645;CON__P02535-1", "iBAQ": 124360000
+        },
+        { "Majority protein ID": "CON__P15636", "iBAQ": 2253800000
+        },
+        { "Majority protein ID": "CON__P35527", "iBAQ": 36886000
+        },
+        { "Majority protein ID": "CON__P35908", "iBAQ": 5244900
+        },
+        { "Majority protein ID": "CON__Q9U6Y5", "iBAQ": 1714300000 }
       ]
 
