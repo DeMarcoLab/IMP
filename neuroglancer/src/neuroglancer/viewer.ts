@@ -753,12 +753,79 @@ export class Viewer extends RefCounted implements ViewerState {
     if (urlParams.has('dataset_id')) {
       let id = urlParams.get('dataset_id')!;
       //create JSON as per url
-      console.log(id)
-      cancellableFetchOk("https://webdev.imp-db.cloud.edu.au:3002/" + id, {}, responseJson)
+
+      cancellableFetchOk("https://webdev.imp-db.cloud.edu.au:3002/" + id + "/savedState.json", {}, responseJson) //try to pull a saved state file
         .then(response => {
-          console.log(response)
-          //this.state.restoreState(response);
+
+          if (response.url) {  //if there is a saved state url, load that one.
+            //history.replaceState(null, '', removeParameterFromUrl(window.location.href, 'dataset_id'));
+            console.log("loading saved state...")
+            StatusMessage
+              .forPromise(
+                cancellableFetchOk(response.url, {}, responseJson)
+                  .then(response => {
+                    console.log("response")
+                    this.state.restoreState(response);
+                  }),
+                {
+                  initialMessage: `Retrieving state from json_url: ${response.url}.`,
+                  delay: true,
+                  errorPrefix: `Error retrieving state: `,
+                });
+          }
         })
+        .catch(error => {
+          console.log(error)
+          console.log("...")
+          //if there is no saved state, load the precomputed sources from the same dataset_id url. 
+          //building state from precomputed sets
+          cancellableFetchOk("https://webdev.imp-db.cloud.edu.au:3002/" + id + "/config.json", {}, responseJson) //pull the config file
+            .then(response => {
+              if (response.layers) {
+                console.log("loading from config file")
+                let layers = []
+                for (let layer of response.layers) {
+                  let newLayer = { "type": layer.type, "source": "precomputed://https://webdev.imp-db.cloud.edu.au:3002/" + id + "/" + layer.name, "tab": "source", "name": layer.name, "annotationColor": "#"+Math.floor(Math.random()*16777215).toString(16) }
+                  layers.push(newLayer)
+                }
+                layers.push({ "tpye": "annotation", "source": "local://annotations", "name": "Annotations" })
+                let myJSON = {
+                  "layers": layers,
+                  "layout": "xy-3d",
+                  "partialViewport": [0, 0, 1, 1],
+                  "dimensions": {
+                    "x": [
+                      0.000003363538,
+                      "m"
+                    ],
+                    "y": [
+                      0.0000032511860000000004,
+                      "m"
+                    ],
+                    "z": [
+                      0.000001313114,
+                      "m"
+                    ]
+                  },
+                  "crossSectionScale": 4.481689070338065,
+                }
+                this.state.restoreState(myJSON);
+              } else {
+                console.log("no sources defined in config file.")
+              }
+            })
+
+        })
+
+
+
+
+
+
+      //console.log(myJSON)
+
+
+
 
       //Nhamacher: Instead of the fixed list of layers, this shouuld query the webserver, get the list of files in the folder identified by ID (or whatever the database query returns) and
       // construct the URL from there.
@@ -766,37 +833,8 @@ export class Viewer extends RefCounted implements ViewerState {
       //construct the URL from the ID given, which should be a list of layers defined by the server response querying this ID.
       //TODO: Dimensions and scale should already be provided by the user for the steps before. Needs to be read here as well.
       //Alternatively, this JSON gets created and updated as the user uploads/adds data.
-      let myJSON = {
-        "layers": [
-          { "type": "image", "source": "precomputed://https://webdev.imp-db.cloud.edu.au:3002/" + id + "/8bit_big", "tab": "proteomics", "name": "8bit_big", "visible": true },
-          { "type": "annotation", "source": "precomputed://https://webdev.imp-db.cloud.edu.au:3002/" + id + "/nucleosomes", "tab": "source", "name": "Nucleosomes" },
-          { "type": "annotation", "source": "precomputed://https://webdev.imp-db.cloud.edu.au:3002/" + id + "/ribosomes", "tab": "source", "annotationColor": "#0400ff", "name": "ribosomes" },
-        ],
-        "selectedLayer": {
-          "layer": "8bit_big",
-          "visible": true
-        },
-        "layout": "xy-3d",
-        "partialViewport": [0, 0, 1, 1],
-        "dimensions": {
-          "x": [
-            0.000003363538,
-            "m"
-          ],
-          "y": [
-            0.0000032511860000000004,
-            "m"
-          ],
-          "z": [
-            0.000001313114,
-            "m"
-          ]
-        },
-        "crossSectionScale": 4.481689070338065,
-      }
 
-      //console.log(myJSON)
-      this.state.restoreState(myJSON);
+
     }
   }
   promptJsonStateServer(message: string): void {
