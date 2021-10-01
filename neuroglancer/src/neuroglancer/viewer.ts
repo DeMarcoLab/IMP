@@ -111,7 +111,8 @@ const viewerUiControlOptionKeys: (keyof ViewerUIControlConfiguration)[] = [
   'showLocation',
   'showLayerHoverValues',
   'showAnnotationToolStatus',
-  'showJsonPostButton'
+  'showJsonPostButton',
+  'showDatabaseButton'
 ];
 
 const viewerOptionKeys: (keyof ViewerUIOptions)[] =
@@ -125,6 +126,7 @@ export class ViewerUIControlConfiguration {
   showLocation = new TrackableBoolean(true);
   showLayerHoverValues = new TrackableBoolean(true);
   showAnnotationToolStatus = new TrackableBoolean(true);
+  showDatabaseButton = new TrackableBoolean(true)
 }
 
 export class ViewerUIConfiguration extends ViewerUIControlConfiguration {
@@ -156,6 +158,7 @@ interface ViewerUIOptions {
   showPanelBorders: boolean;
   showAnnotationToolStatus: boolean;
   showJsonPostButton: boolean;
+  showDatabaseButton: boolean;
 }
 
 export interface ViewerOptions extends ViewerUIOptions, VisibilityPrioritySpecification {
@@ -548,6 +551,18 @@ export class Viewer extends RefCounted implements ViewerState {
       this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
         this.uiControlVisibility.showJsonPostButton, button));
       topRow.appendChild(button);
+
+    }
+
+    {
+      const button = makeIcon({ text: 'DB', title: 'Open Database Panel' });
+      this.registerEventListener(button, 'click', () => {
+        this.openDatabasePanel();
+      });
+      this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
+        this.uiControlVisibility.showDatabaseButton, button));
+      topRow.appendChild(button);
+
     }
 
     {
@@ -747,94 +762,84 @@ export class Viewer extends RefCounted implements ViewerState {
     }
   }
 
-  constructFromID() {
 
-    var urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('dataset_id')) {
-      let id = urlParams.get('dataset_id')!;
-      //create JSON as per url
+  
+  //NH_Monash
+  tryFetchByID(selected_id:string){
+    cancellableFetchOk("https://webdev.imp-db.cloud.edu.au:3002/" + selected_id + "/savedState.json", {}, responseJson) //try to pull a saved state file
+    .then(response => {
 
-      cancellableFetchOk("https://webdev.imp-db.cloud.edu.au:3002/" + id + "/savedState.json", {}, responseJson) //try to pull a saved state file
+      if (response.url) {  //if there is a saved state url, load that one.
+        //history.replaceState(null, '', removeParameterFromUrl(window.location.href, 'dataset_id'));
+        console.log("loading saved state...")
+        StatusMessage
+          .forPromise(
+            cancellableFetchOk(response.url, {}, responseJson)
+              .then(response => {
+                console.log("response")
+                this.state.restoreState(response);
+              }),
+            {
+              initialMessage: `Retrieving state from json_url: ${response.url}.`,
+              delay: true,
+              errorPrefix: `Error retrieving state: `,
+            });
+      }
+    })
+    .catch(error => {   //if there is no saved state JSON, or its loading has an error, try loading from the config file.
+      console.log(error)
+
+      //if there is no saved state, load the precomputed sources from the same dataset_id url. 
+      //building state from precomputed sets
+      cancellableFetchOk("https://webdev.imp-db.cloud.edu.au:3002/" + selected_id + "/config.json", {}, responseJson) //pull the config file
         .then(response => {
-
-          if (response.url) {  //if there is a saved state url, load that one.
-            //history.replaceState(null, '', removeParameterFromUrl(window.location.href, 'dataset_id'));
-            console.log("loading saved state...")
-            StatusMessage
-              .forPromise(
-                cancellableFetchOk(response.url, {}, responseJson)
-                  .then(response => {
-                    console.log("response")
-                    this.state.restoreState(response);
-                  }),
-                {
-                  initialMessage: `Retrieving state from json_url: ${response.url}.`,
-                  delay: true,
-                  errorPrefix: `Error retrieving state: `,
-                });
+          if (response.layers) {
+            console.log("loading from config file")
+            let layers = []
+            for (let layer of response.layers) {
+              let newLayer = { "type": layer.type, "source": "precomputed://https://webdev.imp-db.cloud.edu.au:3002/" + id + "/" + layer.name, "tab": "source", "name": layer.name, "annotationColor": "#" + Math.floor(Math.random() * 16777215).toString(16) }
+              layers.push(newLayer)
+            }
+            layers.push({ "type": "annotation", "source": "local://annotations", "name": "Annotations" })
+            let myJSON = {
+              "layers": layers,
+              "layout": "xy-3d",
+              "partialViewport": [0, 0, 1, 1],
+              "crossSectionScale": 4.481689070338065,
+            }
+            this.state.restoreState(myJSON);
+          } else {
+            console.log("no sources defined in config file.")
           }
         })
         .catch(error => {
           console.log(error)
-          console.log("...")
-          //if there is no saved state, load the precomputed sources from the same dataset_id url. 
-          //building state from precomputed sets
-          cancellableFetchOk("https://webdev.imp-db.cloud.edu.au:3002/" + id + "/config.json", {}, responseJson) //pull the config file
-            .then(response => {
-              if (response.layers) {
-                console.log("loading from config file")
-                let layers = []
-                for (let layer of response.layers) {
-                  let newLayer = { "type": layer.type, "source": "precomputed://https://webdev.imp-db.cloud.edu.au:3002/" + id + "/" + layer.name, "tab": "source", "name": layer.name, "annotationColor": "#"+Math.floor(Math.random()*16777215).toString(16) }
-                  layers.push(newLayer)
-                }
-                layers.push({ "tpye": "annotation", "source": "local://annotations", "name": "Annotations" })
-                let myJSON = {
-                  "layers": layers,
-                  "layout": "xy-3d",
-                  "partialViewport": [0, 0, 1, 1],
-                  "dimensions": {
-                    "x": [
-                      0.000003363538,
-                      "m"
-                    ],
-                    "y": [
-                      0.0000032511860000000004,
-                      "m"
-                    ],
-                    "z": [
-                      0.000001313114,
-                      "m"
-                    ]
-                  },
-                  "crossSectionScale": 4.481689070338065,
-                }
-                this.state.restoreState(myJSON);
-              } else {
-                console.log("no sources defined in config file.")
-              }
-            })
-
         })
 
+    })
+  }
+  
+  //uses the unique ID of a dataset to load data. this is either passed directly via the url .../?dataset_id=xyz  or after selecting one on the menu.
+  constructFromID( selected_id: string) {
 
+    if(selected_id){
+      this.tryFetchByID(selected_id)
+    } else {
 
+    //can also be called directly if ID is known:  
+      var urlParams = new URLSearchParams(window.location.search);
 
+      if (urlParams.has('dataset_id')) {
+        let id = urlParams.get('dataset_id')!;
+        //create JSON as per url
+        this.tryFetchByID(id)
+      }
 
-
-      //console.log(myJSON)
-
-
-
-
-      //Nhamacher: Instead of the fixed list of layers, this shouuld query the webserver, get the list of files in the folder identified by ID (or whatever the database query returns) and
+      //NH_Mnoash: Instead of the fixed list of layers, this shouuld query the webserver, get the list of files in the folder identified by ID (or whatever the database query returns) and
       // construct the URL from there.
-
       //construct the URL from the ID given, which should be a list of layers defined by the server response querying this ID.
       //TODO: Dimensions and scale should already be provided by the user for the steps before. Needs to be read here as well.
       //Alternatively, this JSON gets created and updated as the user uploads/adds data.
-
-
     }
   }
   promptJsonStateServer(message: string): void {
@@ -872,6 +877,75 @@ export class Viewer extends RefCounted implements ViewerState {
             this.postJsonState();
           }
         });
+    }
+  }
+
+  openDatabasePanel() {
+    console.log("button clicked"); 
+    let db_panel = document.getElementById("db_panel") 
+    if (db_panel !== null) {
+      db_panel.style.display = "block"
+    } else {
+      db_panel = document.createElement('div');
+      db_panel.style.position = "absolute";
+      db_panel.style.zIndex = "4000";
+      db_panel.style.width = "50%";
+      db_panel.style.height = "50%";
+      db_panel.style.marginTop = "10%";
+      db_panel.style.marginLeft = "25%";
+      db_panel.id = "db_panel";
+      const closeButton = document.createElement('button');
+      closeButton.textContent = "Close";
+      closeButton.className = "db_btn";
+      closeButton.onclick = () => {
+        if(db_panel!==null){
+        db_panel.style.display = "none"
+        }
+      }
+      const topRow = document.createElement('div');
+      topRow.style.display = "flex";
+      topRow.style.justifyContent = "space-between";
+      const listDatasets_button = document.createElement('button');
+      listDatasets_button.className = "db_btn";
+      listDatasets_button.textContent = "Temp"
+      topRow.append(listDatasets_button)
+      topRow.append(closeButton)
+     
+      const resultPanel = document.createElement('div');
+      resultPanel.className = "db_result_list";
+      const resultList = document.createElement('ul');
+      resultList.className = "db_ul";
+      for (var i = 0; i < 5; i++) {
+        var el = document.createElement('li')
+        el.className = "db_li"
+        if(i>1){
+          el.textContent = "Element " + i;
+         
+          
+        } else {
+          if(i==0){
+            el.textContent = "YeastWithBubbles"
+          } else {
+            el.textContent = "Synthetic_1"
+          }
+        }
+        el.onclick = (ev) => {
+          var element = ev.target as HTMLElement
+          this.constructFromID(element.innerHTML)
+          //console.log(element.innerHTML)
+        }
+        resultList.append(el)
+      }
+      resultPanel.append(resultList)
+      db_panel.append(topRow)
+      db_panel.append(resultPanel)
+
+
+      const rootNode = document.getElementById("neuroglancer-container")
+      console.log(rootNode)
+      if (rootNode !== null) {
+        rootNode.append(db_panel)
+      }
     }
   }
 
