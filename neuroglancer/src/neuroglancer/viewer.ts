@@ -16,6 +16,7 @@
 
 import './viewer.css';
 import 'neuroglancer/noselect.css';
+//import { MongoClient } from 'mongodb'
 
 import debounce from 'lodash/debounce';
 import { CapacitySpecification, ChunkManager, ChunkQueueManager, FrameNumberCounter } from 'neuroglancer/chunk_manager/frontend';
@@ -67,6 +68,10 @@ declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 
 import './viewer.css';
 import 'neuroglancer/noselect.css';
+//import { completeQueryStringParameters } from './util/completion';
+
+
+
 
 export function validateStateServer(obj: any) {
   return obj;
@@ -753,6 +758,7 @@ export class Viewer extends RefCounted implements ViewerState {
             .then(response => {
               console.log(response)
               this.state.restoreState(response);
+
             }),
           {
             initialMessage: `Retrieving state from json_url: ${json_url}.`,
@@ -763,85 +769,176 @@ export class Viewer extends RefCounted implements ViewerState {
   }
 
 
-  
+
   //NH_Monash
-  tryFetchByID(selected_id:string){
-    cancellableFetchOk("https://webdev.imp-db.cloud.edu.au:3002/" + selected_id + "/savedState.json", {}, responseJson) //try to pull a saved state file
-    .then(response => {
 
-      if (response.url) {  //if there is a saved state url, load that one.
-        //history.replaceState(null, '', removeParameterFromUrl(window.location.href, 'dataset_id'));
-        console.log("loading saved state...")
-        StatusMessage
-          .forPromise(
-            cancellableFetchOk(response.url, {}, responseJson)
-              .then(response => {
-                console.log("response")
-                this.state.restoreState(response);
-              }),
-            {
-              initialMessage: `Retrieving state from json_url: ${response.url}.`,
-              delay: true,
-              errorPrefix: `Error retrieving state: `,
-            });
-      }
+  datasets = [] as Array<any>
+  async connectToDatabase(url: string) {
+    const axios = require('axios').default;
+    axios.defaults.headers.post['Access-Control-Allow-Origin'] = '*'
+    let self = this
+    axios.get(url).then((response: any) => {
+      console.log(response.data)
+      self.datasets = response.data
     })
-    .catch(error => {   //if there is no saved state JSON, or its loading has an error, try loading from the config file.
-      console.log(error)
+      .catch((error: any) => {
+        console.error(error);
+      })
 
-      //if there is no saved state, load the precomputed sources from the same dataset_id url. 
-      //building state from precomputed sets
-      cancellableFetchOk("https://webdev.imp-db.cloud.edu.au:3002/" + selected_id + "/config.json", {}, responseJson) //pull the config file
+
+  }
+
+  currentDataset = {} as Object
+  tryFetchByID(selected_id: string) {
+    console.log("selected: " + selected_id)
+    const axios = require('axios').default;
+    const url: string = 'https://webdev.imp-db.cloud.edu.au:3005/tomosets/' + selected_id;
+    let self = this
+    axios.get(url).then((response: any) => {
+      console.log(response.data)
+      self.loadDBsetIntoNeuroglancer(response.data)
+    })
+      .catch((error: any) => {
+        console.error(error);
+      })
+  }
+
+
+  async loadDBsetIntoNeuroglancer(dataset: any) {
+    if (dataset.stateFile.exists) {
+      console.log("Has state file")
+      let path = dataset.stateFile.path;
+      StatusMessage
+        .forPromise(
+          cancellableFetchOk(path, {}, responseJson)
+            .then(response => {
+              console.log("response")
+              this.state.restoreState(response);
+            }),
+          {
+            initialMessage: `Retrieving state from json_url: ${path}.`,
+            delay: true,
+            errorPrefix: `Error retrieving state: `,
+          });
+
+    } else {
+      console.log("Has no state file")
+
+      let layers = [] as Array<Object>
+      //image layer
+      let dimensions = {
+        "x": [
+          0.000003363538,
+          "m"
+        ],
+        "y": [
+          0.0000032511860000000004,
+          "m"
+        ],
+        "z": [
+          0.000001313114,
+          "m"
+        ]
+      };
+      let imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name };
+      layers.push(imgLayer);
+      if (dataset.layers) {
+        for (let layer of dataset.layers) {
+          if (layer) {
+            console.log(layer.name)
+
+            //fetch the json for the annotations 
+            let response = await fetch(layer.path, { method: "GET" });
+            if (!response.ok) {
+              console.log("Response is not ok: " + response.json());
+              continue;
+            }
+            //create a new annotation layer TODO: improve for non-annotation layers if necessary.
+            let newLayer = {
+              "type": layer.type, "source": "local://annotations", "tab": "annotations", "name": layer.name, "shader": "\nvoid main() {\n   setColor(prop_color());\n   setPointMarkerSize(prop_size());\n}\n",
+              "annotationProperties": [{ "id": "color", "type": "rgb", "default": "red" }, { "id": "size", "type": "float32", "default": 5 }],
+              "annotations": await response.json()
+            }
+            layers.push(newLayer)
+          }
+        }
+      }
+
+      console.log(layers)
+      let myJSON = {
+
+        "layout": "xy-3d",
+        "partialViewport": [0, 0, 1, 1],
+        "dimensions": dimensions,
+        "position": [0, 0, 0],
+        "crossSectionScale": 0.0007615485022625607,
+        "projectionScale": 0.7798256663168621,
+        "layers": layers,
+        "selectedLayer": {
+          "layer": "Nucleosomes",
+          "visible": true
+        },
+      }
+      //console.log(myJSON)
+      console.log(myJSON)
+      this.state.restoreState(myJSON);
+      /*
+      cancellableFetchOk("https://webdev.imp-db.cloud.edu.au:3002/" + selected_id + "/savedState.json", {}, responseJson) //try to pull a saved state file
         .then(response => {
-          if (response.layers) {
-            console.log("loading from config file")
-            let layers = []
-            for (let layer of response.layers) {
-              let newLayer = { "type": layer.type, "source": "precomputed://https://webdev.imp-db.cloud.edu.au:3002/" + id + "/" + layer.name, "tab": "source", "name": layer.name, "annotationColor": "#" + Math.floor(Math.random() * 16777215).toString(16) }
-              layers.push(newLayer)
-            }
-            layers.push({ "type": "annotation", "source": "local://annotations", "name": "Annotations" })
-            let myJSON = {
-              "layers": layers,
-              "layout": "xy-3d",
-              "partialViewport": [0, 0, 1, 1],
-              "crossSectionScale": 4.481689070338065,
-            }
-            this.state.restoreState(myJSON);
-          } else {
-            console.log("no sources defined in config file.")
+       
+          if (response.url) {  //if there is a saved state url, load that one.
+            //history.replaceState(null, '', removeParameterFromUrl(window.location.href, 'dataset_id'));
+            console.log("loading saved state...")
+            StatusMessage
+              .forPromise(
+                cancellableFetchOk(response.url, {}, responseJson)
+                  .then(response => {
+                    console.log("response")
+                    this.state.restoreState(response);
+                  }),
+                {
+                  initialMessage: `Retrieving state from json_url: ${response.url}.`,
+                  delay: true,
+                  errorPrefix: `Error retrieving state: `,
+                });
           }
         })
-        .catch(error => {
+        .catch(error => {   //if there is no saved state JSON, or its loading has an error, try loading from the config file.
           console.log(error)
+       
+          //if there is no saved state, load the precomputed sources from the same dataset_id url. 
+          //building state from precomputed sets
+          cancellableFetchOk("https://webdev.imp-db.cloud.edu.au:3002/" + selected_id + "/config.json", {}, responseJson) //pull the config file
+            .then(response => {
+              if (response.layers) {
+                console.log("loading from config file")
+                let layers = []
+                for (let layer of response.layers) {
+                  let newLayer = { "type": layer.type, "source": "precomputed://https://webdev.imp-db.cloud.edu.au:3002/" + selected_id + "/" + layer.name, "tab": "source", "name": layer.name, "annotationColor": "#" + Math.floor(Math.random() * 16777215).toString(16) }
+                  layers.push(newLayer)
+                }
+                layers.push({ "type": "annotation", "source": "local://annotations", "name": "Annotations" })
+                let myJSON = {
+                  "layers": layers,
+                  "layout": "xy-3d",
+                  "partialViewport": [0, 0, 1, 1],
+                  "crossSectionScale": 4.481689070338065,
+                }
+                this.state.restoreState(myJSON);
+              } else {
+                console.log("no sources defined in config file.")
+              }
+            })
+            .catch(error => {
+              console.log(error)
+            })
+       
         })
-
-    })
-  }
-  
-  //uses the unique ID of a dataset to load data. this is either passed directly via the url .../?dataset_id=xyz  or after selecting one on the menu.
-  constructFromID( selected_id: string) {
-
-    if(selected_id){
-      this.tryFetchByID(selected_id)
-    } else {
-
-    //can also be called directly if ID is known:  
-      var urlParams = new URLSearchParams(window.location.search);
-
-      if (urlParams.has('dataset_id')) {
-        let id = urlParams.get('dataset_id')!;
-        //create JSON as per url
-        this.tryFetchByID(id)
-      }
-
-      //NH_Mnoash: Instead of the fixed list of layers, this shouuld query the webserver, get the list of files in the folder identified by ID (or whatever the database query returns) and
-      // construct the URL from there.
-      //construct the URL from the ID given, which should be a list of layers defined by the server response querying this ID.
-      //TODO: Dimensions and scale should already be provided by the user for the steps before. Needs to be read here as well.
-      //Alternatively, this JSON gets created and updated as the user uploads/adds data.
+      }*/
     }
   }
+  //uses the unique ID of a dataset to load data. this is either passed directly via the url .../?dataset_id=xyz  or after selecting one on the menu.
+
   promptJsonStateServer(message: string): void {
     let json_server_input = prompt(message, 'https://json.neurodata.io/v1');
     if (json_server_input !== null) {
@@ -881,8 +978,8 @@ export class Viewer extends RefCounted implements ViewerState {
   }
 
   openDatabasePanel() {
-    console.log("button clicked"); 
-    let db_panel = document.getElementById("db_panel") 
+    console.log("button clicked");
+    let db_panel = document.getElementById("db_panel")
     if (db_panel !== null) {
       db_panel.style.display = "block"
     } else {
@@ -898,8 +995,8 @@ export class Viewer extends RefCounted implements ViewerState {
       closeButton.textContent = "Close";
       closeButton.className = "db_btn";
       closeButton.onclick = () => {
-        if(db_panel!==null){
-        db_panel.style.display = "none"
+        if (db_panel !== null) {
+          db_panel.style.display = "none"
         }
       }
       const topRow = document.createElement('div');
@@ -910,28 +1007,21 @@ export class Viewer extends RefCounted implements ViewerState {
       listDatasets_button.textContent = "Temp"
       topRow.append(listDatasets_button)
       topRow.append(closeButton)
-     
+
       const resultPanel = document.createElement('div');
       resultPanel.className = "db_result_list";
       const resultList = document.createElement('ul');
       resultList.className = "db_ul";
-      for (var i = 0; i < 5; i++) {
+      for (var i = 0; i < this.datasets.length; i++) {
         var el = document.createElement('li')
-        el.className = "db_li"
-        if(i>1){
-          el.textContent = "Element " + i;
-         
-          
-        } else {
-          if(i==0){
-            el.textContent = "YeastWithBubbles"
-          } else {
-            el.textContent = "Synthetic_1"
-          }
-        }
+        el.className = "db_li";
+        el.textContent = this.datasets[i].name + " - " + this.datasets[i]._id;
+
         el.onclick = (ev) => {
-          var element = ev.target as HTMLElement
-          this.constructFromID(element.innerHTML)
+          var element = ev.target as HTMLLIElement
+          if (element.textContent) {
+            this.tryFetchByID(element.textContent.split(" - ")[1]);
+          }
           //console.log(element.innerHTML)
         }
         resultList.append(el)
