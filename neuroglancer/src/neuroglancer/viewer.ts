@@ -823,23 +823,10 @@ export class Viewer extends RefCounted implements ViewerState {
 
     } else {
       console.log("Has no state file")
-
+      this.state.reset() //reset state and load new one
       let layers = [] as Array<Object>
       //image layer
-      let dimensions = {
-        "x": [
-          0.000003363538,
-          "m"
-        ],
-        "y": [
-          0.0000032511860000000004,
-          "m"
-        ],
-        "z": [
-          0.000001313114,
-          "m"
-        ]
-      };
+      let dimensions = dataset.dimensions;
       let imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name };
       layers.push(imgLayer);
       if (dataset.layers) {
@@ -853,88 +840,32 @@ export class Viewer extends RefCounted implements ViewerState {
               console.log("Response is not ok: " + response.json());
               continue;
             }
+
+            const annots = await response.json()
             //create a new annotation layer TODO: improve for non-annotation layers if necessary.
             let newLayer = {
               "type": layer.type, "source": "local://annotations", "tab": "annotations", "name": layer.name, "shader": "\nvoid main() {\n   setColor(prop_color());\n   setPointMarkerSize(prop_size());\n}\n",
               "annotationProperties": [{ "id": "color", "type": "rgb", "default": "red" }, { "id": "size", "type": "float32", "default": 5 }],
-              "annotations": await response.json()
+              "annotations": annots
             }
             layers.push(newLayer)
           }
         }
       }
 
-      console.log(layers)
+      //console.log(layers)
       let myJSON = {
 
-        "layout": "xy-3d",
+        "layout": "4panel",
         "partialViewport": [0, 0, 1, 1],
         "dimensions": dimensions,
-        "position": [0, 0, 0],
-        "crossSectionScale": 0.0007615485022625607,
-        "projectionScale": 0.7798256663168621,
-        "layers": layers,
-        "selectedLayer": {
-          "layer": "Nucleosomes",
-          "visible": true
-        },
+        "position": [100,100, 100],
+        "layers": layers
       }
       //console.log(myJSON)
       console.log(myJSON)
       this.state.restoreState(myJSON);
-      /*
-      cancellableFetchOk("https://webdev.imp-db.cloud.edu.au:3002/" + selected_id + "/savedState.json", {}, responseJson) //try to pull a saved state file
-        .then(response => {
-       
-          if (response.url) {  //if there is a saved state url, load that one.
-            //history.replaceState(null, '', removeParameterFromUrl(window.location.href, 'dataset_id'));
-            console.log("loading saved state...")
-            StatusMessage
-              .forPromise(
-                cancellableFetchOk(response.url, {}, responseJson)
-                  .then(response => {
-                    console.log("response")
-                    this.state.restoreState(response);
-                  }),
-                {
-                  initialMessage: `Retrieving state from json_url: ${response.url}.`,
-                  delay: true,
-                  errorPrefix: `Error retrieving state: `,
-                });
-          }
-        })
-        .catch(error => {   //if there is no saved state JSON, or its loading has an error, try loading from the config file.
-          console.log(error)
-       
-          //if there is no saved state, load the precomputed sources from the same dataset_id url. 
-          //building state from precomputed sets
-          cancellableFetchOk("https://webdev.imp-db.cloud.edu.au:3002/" + selected_id + "/config.json", {}, responseJson) //pull the config file
-            .then(response => {
-              if (response.layers) {
-                console.log("loading from config file")
-                let layers = []
-                for (let layer of response.layers) {
-                  let newLayer = { "type": layer.type, "source": "precomputed://https://webdev.imp-db.cloud.edu.au:3002/" + selected_id + "/" + layer.name, "tab": "source", "name": layer.name, "annotationColor": "#" + Math.floor(Math.random() * 16777215).toString(16) }
-                  layers.push(newLayer)
-                }
-                layers.push({ "type": "annotation", "source": "local://annotations", "name": "Annotations" })
-                let myJSON = {
-                  "layers": layers,
-                  "layout": "xy-3d",
-                  "partialViewport": [0, 0, 1, 1],
-                  "crossSectionScale": 4.481689070338065,
-                }
-                this.state.restoreState(myJSON);
-              } else {
-                console.log("no sources defined in config file.")
-              }
-            })
-            .catch(error => {
-              console.log(error)
-            })
-       
-        })
-      }*/
+
     }
   }
   //uses the unique ID of a dataset to load data. this is either passed directly via the url .../?dataset_id=xyz  or after selecting one on the menu.
@@ -1015,13 +946,19 @@ export class Viewer extends RefCounted implements ViewerState {
       for (var i = 0; i < this.datasets.length; i++) {
         var el = document.createElement('li')
         el.className = "db_li";
-        el.textContent = this.datasets[i].name + " - " + this.datasets[i]._id;
+        el.textContent = this.datasets[i].name + " " + this.datasets[i]._id;
 
         el.onclick = (ev) => {
           var element = ev.target as HTMLLIElement
           if (element.textContent) {
-            this.tryFetchByID(element.textContent.split(" - ")[1]);
+            this.tryFetchByID(element.textContent.split(" ")[1]);
           }
+          if(db_panel){
+            //close panel upon dataset selection
+            db_panel.style.display = "none"
+          }
+            
+          
           //console.log(element.innerHTML)
         }
         resultList.append(el)
