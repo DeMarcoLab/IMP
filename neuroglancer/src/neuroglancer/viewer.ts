@@ -68,6 +68,7 @@ declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 
 import './viewer.css';
 import 'neuroglancer/noselect.css';
+import { keys } from 'lodash';
 //import { completeQueryStringParameters } from './util/completion';
 
 
@@ -340,7 +341,6 @@ export class Viewer extends RefCounted implements ViewerState {
 
   resetInitiated = new NullarySignal();
 
-  proteomicsData = {}
   get chunkManager() {
     return this.dataContext.chunkManager;
   }
@@ -778,7 +778,6 @@ export class Viewer extends RefCounted implements ViewerState {
     axios.defaults.headers.post['Access-Control-Allow-Origin'] = '*'
     let self = this
     axios.get(url).then((response: any) => {
-      console.log(response.data)
       self.datasets = response.data
     })
       .catch((error: any) => {
@@ -790,12 +789,10 @@ export class Viewer extends RefCounted implements ViewerState {
 
   currentDataset = {} as Object
   tryFetchByID(selected_id: string) {
-    console.log("selected: " + selected_id)
     const axios = require('axios').default;
     const url: string = 'https://webdev.imp-db.cloud.edu.au:3005/tomosets/' + selected_id;
     let self = this
     axios.get(url).then((response: any) => {
-      console.log(response.data)
       self.loadDBsetIntoNeuroglancer(response.data)
     })
       .catch((error: any) => {
@@ -826,8 +823,8 @@ export class Viewer extends RefCounted implements ViewerState {
       this.state.reset() //reset state and load new one
       let layers = [] as Array<Object>
       //image layer
-      let dimensions = dataset.dimensions;
-      let imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name };
+      const dimensions = dataset.dimensions;
+      const imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name };
       layers.push(imgLayer);
       if (dataset.layers) {
         for (let layer of dataset.layers) {
@@ -835,7 +832,7 @@ export class Viewer extends RefCounted implements ViewerState {
             console.log(layer.name)
 
             //fetch the json for the annotations 
-            let response = await fetch(layer.path, { method: "GET" });
+            const response = await fetch(layer.path, { method: "GET" });
             if (!response.ok) {
               console.log("Response is not ok: " + response.json());
               continue;
@@ -843,7 +840,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
             const annots = await response.json()
             //create a new annotation layer TODO: improve for non-annotation layers if necessary.
-            let newLayer = {
+            const newLayer = {
               "type": layer.type, "source": "local://annotations", "tab": "annotations", "name": layer.name, "shader": "\nvoid main() {\n   setColor(prop_color());\n   setPointMarkerSize(prop_size());\n}\n",
               "annotationProperties": [{ "id": "color", "type": "rgb", "default": "red" }, { "id": "size", "type": "float32", "default": 5 }],
               "annotations": annots
@@ -859,15 +856,139 @@ export class Viewer extends RefCounted implements ViewerState {
         "layout": "4panel",
         "partialViewport": [0, 0, 1, 1],
         "dimensions": dimensions,
-        "position": [100,100, 100],
+        "position": [100, 100, 100],
         "layers": layers
       }
       //console.log(myJSON)
-      console.log(myJSON)
       this.state.restoreState(myJSON);
 
     }
+    //Proteomics
+    //this constructs the div element with proteomics content. it is appended to the root node and not displayed. Once the proteomics tab is activated, this node is 
+    //pulled to that panel and displayed there. 
+    const rootNode = document.getElementById("neuroglancer-container")
+    let responseElement = document.getElementById("proteomics-content")
+
+    if (rootNode !== null) {
+
+      if (responseElement !== null) {
+        responseElement.textContent = ''
+      } else {
+        responseElement = document.createElement('div')
+        responseElement.id = "proteomics-content"
+        rootNode.append(responseElement)
+      }
+
+      
+      if (dataset.proteomics.path) {
+        let protTable = document.createElement("table")
+        protTable.id = "proteomics-table"
+        
+        responseElement.append(protTable)
+  
+        let tableHead = document.createElement("thead")
+  
+        let trEl_head = document.createElement("tr")
+        trEl_head.className = "proteomics-row"
+        trEl_head.id = "protTableHeadRow"
+        tableHead.append(trEl_head)
+        protTable.append(tableHead)
+        //table body
+        let tbodyEl = document.createElement("tbody")
+        tbodyEl.id = "protTableBody"
+        protTable.append(tbodyEl)
+        const response = await fetch(dataset.proteomics.path, { method: "GET" });
+        const res = await response.json();
+
+        const keys = []
+        for (const item of res) {
+          //fill the header row with the keys in the table
+          if (trEl_head !== null && trEl_head.childElementCount == 0) {
+            trEl_head.innerHTML = ''; //reset table
+            for (const key of Object.keys(item)) {
+              let tdEl = document.createElement("td")
+              tdEl.textContent = key
+              trEl_head.append(tdEl)
+              keys.push(key)
+            }
+          }
+          let rowEl = document.createElement("tr")
+          for (const key of keys) {
+            let tdEl1_ = document.createElement("td")
+            tdEl1_.textContent = item[key]
+            rowEl.append(tdEl1_)
+          }
+
+          if (tbodyEl !== null) {
+            tbodyEl.append(rowEl)
+          }
+        }
+        
+        
+      } else {
+        console.log("no proteomics")
+        responseElement.textContent = "No Proteomics data found."
+      }
+      responseElement.style.display = "none"
+      console.log(responseElement)
+    }
+
+
+    //Metadata
+
+    //this pulls the metadata and creates a node element as a child of the rootnode. Initially this is invisible, once the metadata tab is activated, the node will be appended
+    //to that panel as a child.
+    //all available metadata for layers will get their own content...
+    if (rootNode !== null) {
+      //console.log(response.toString())
+      let responseElement = document.getElementById("metadataOptions-content")
+      if (responseElement === null) {
+        responseElement = document.createElement('div')
+        responseElement.id = "metadataOptions-content"
+        rootNode.append(responseElement)
+        responseElement.style.display = "none"
+      } else {
+        responseElement.textContent = '';
+      }
+      let datasetMetadatadiv = document.createElement('div')
+      datasetMetadatadiv.className = "metadata-dataset"
+      let heading = document.createElement('h3')
+      heading.textContent = "About this dataset"
+      datasetMetadatadiv.append(heading)
+      let datasetContent = document.createElement('p')
+      if (dataset.metadata.text) {
+        datasetContent.textContent = dataset.metadata.text;
+      } else {
+        datasetContent.textContent = "No metadata provided for this dataset."
+      }
+      datasetMetadatadiv.append(datasetContent)
+      responseElement.append(datasetMetadatadiv)
+      responseElement.append(document.createElement('hl'))
+
+      //metadata about the selected layer
+      let layerMetadatadiv = document.createElement('div')
+      layerMetadatadiv.className = "metadata-layer"
+      let layerheading = document.createElement('h3')
+      layerheading.textContent = "About the selected layer"
+      layerMetadatadiv.append(layerheading)
+
+      for (const elem of dataset.layers) {
+        let layerContent = document.createElement('div')
+        layerContent.style.display = "none"
+        layerContent.className = "layer-metadata-" + elem.name;
+        if (elem.metadata) {
+          layerContent.textContent = elem.metadata
+        } else {
+          layerContent.textContent = "No metadata available for this layer"
+        }
+        layerMetadatadiv.append(layerContent)
+      }
+      responseElement.append(layerMetadatadiv)
+
+    }
   }
+
+
   //uses the unique ID of a dataset to load data. this is either passed directly via the url .../?dataset_id=xyz  or after selecting one on the menu.
 
   promptJsonStateServer(message: string): void {
@@ -953,12 +1074,12 @@ export class Viewer extends RefCounted implements ViewerState {
           if (element.textContent) {
             this.tryFetchByID(element.textContent.split(" ")[1]);
           }
-          if(db_panel){
+          if (db_panel) {
             //close panel upon dataset selection
             db_panel.style.display = "none"
           }
-            
-          
+
+
           //console.log(element.innerHTML)
         }
         resultList.append(el)
