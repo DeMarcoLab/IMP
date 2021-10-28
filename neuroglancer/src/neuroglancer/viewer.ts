@@ -68,7 +68,8 @@ declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 
 import './viewer.css';
 import 'neuroglancer/noselect.css';
-import { keys } from 'lodash';
+import { completeQueryStringParameters } from './util/completion';
+
 //import { completeQueryStringParameters } from './util/completion';
 
 
@@ -824,28 +825,48 @@ export class Viewer extends RefCounted implements ViewerState {
       let layers = [] as Array<Object>
       //image layer
       const dimensions = dataset.dimensions;
-      const imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name };
+      let shaderstring = '#uicontrol int channel slider(min=0, max=4)'
+      shaderstring+='\n#uicontrol vec3 color color(default="gray")'
+      shaderstring+='\n#uicontrol float contrast slider(min=-3, max=3, default=1, step=0.01)'
+      shaderstring+='\n#uicontrol float brightness slider(min=-1, max=1, default=0.15)'
+      shaderstring+='\nvoid main() {\n    emitRGB(color * \n        (toNormalized(getDataValue(channel)) + brightness) *\n        exp(contrast));\n}\n' 
+      const imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name, "shader": shaderstring
+    };
+      console.log(imgLayer)
       layers.push(imgLayer);
+
       if (dataset.layers) {
         for (let layer of dataset.layers) {
           if (layer) {
-            console.log(layer.name)
+            console.log(layer.path)
 
             //fetch the json for the annotations 
             const response = await fetch(layer.path, { method: "GET" });
+
             if (!response.ok) {
               console.log("Response is not ok: " + response.json());
               continue;
             }
 
-            const annots = await response.json()
-            //create a new annotation layer TODO: improve for non-annotation layers if necessary.
-            const newLayer = {
-              "type": layer.type, "source": "local://annotations", "tab": "annotations", "name": layer.name, "shader": "\nvoid main() {\n   setColor(prop_color());\n   setPointMarkerSize(prop_size());\n}\n",
-              "annotationProperties": [{ "id": "color", "type": "rgb", "default": "red" }, { "id": "size", "type": "float32", "default": 5 }],
-              "annotations": annots
+            let resText = await (response.text())
+            let re = new RegExp('(?<=\>)(.*?)(.json)','g');  //parses the resulting page for the file names present in that folder, format is a href="...."
+           
+            let sublayers = [...resText.matchAll(re)]
+            //fetch each layer
+            for (let sublayer of sublayers) {
+              console.log(sublayer[0])
+              
+              const sublayerresponse = await fetch(layer.path + "/" + sublayer[0], {method:"GET"})
+              const annots = await sublayerresponse.json()
+              //create a new annotation layer TODO: improve for non-annotation layers if necessary.
+              const newLayer = {
+                "type": layer.type, "source": "local://annotations", "tab": "annotations", "name": sublayer[0].split(".")[0], "shader": "\nvoid main() {\n   setColor(prop_color());\n   setPointMarkerSize(prop_size());\n}\n",
+                "annotationProperties": [{ "id": "color", "type": "rgb", "default": "red" }, { "id": "size", "type": "float32", "default": 5 }],
+                "annotations": annots
+              }
+              layers.push(newLayer)
             }
-            layers.push(newLayer)
+            
           }
         }
       }
@@ -858,6 +879,7 @@ export class Viewer extends RefCounted implements ViewerState {
         "dimensions": dimensions,
         "position": [100, 100, 100],
         "layers": layers
+
       }
       //console.log(myJSON)
       this.state.restoreState(myJSON);
@@ -879,15 +901,15 @@ export class Viewer extends RefCounted implements ViewerState {
         rootNode.append(responseElement)
       }
 
-      
+
       if (dataset.proteomics.path) {
         let protTable = document.createElement("table")
         protTable.id = "proteomics-table"
-        
+
         responseElement.append(protTable)
-  
+
         let tableHead = document.createElement("thead")
-  
+
         let trEl_head = document.createElement("tr")
         trEl_head.className = "proteomics-row"
         trEl_head.id = "protTableHeadRow"
@@ -923,8 +945,8 @@ export class Viewer extends RefCounted implements ViewerState {
             tbodyEl.append(rowEl)
           }
         }
-        
-        
+
+
       } else {
         console.log("no proteomics")
         responseElement.textContent = "No Proteomics data found."
