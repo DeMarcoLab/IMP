@@ -68,7 +68,6 @@ declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 
 import './viewer.css';
 import 'neuroglancer/noselect.css';
-import { completeQueryStringParameters } from './util/completion';
 
 //import { completeQueryStringParameters } from './util/completion';
 
@@ -825,11 +824,12 @@ export class Viewer extends RefCounted implements ViewerState {
       let layers = [] as Array<Object>
       //image layer
       const dimensions = dataset.dimensions;
-      let shaderstring = '#uicontrol int channel slider(min=0, max=4)'
-      shaderstring+='\n#uicontrol vec3 color color(default="gray")'
-      shaderstring+='\n#uicontrol float contrast slider(min=-3, max=3, default=1, step=0.01)'
-      shaderstring+='\n#uicontrol float brightness slider(min=-1, max=1, default=0.15)'
-      shaderstring+='\nvoid main() {\n    emitRGB(color * \n        (toNormalized(getDataValue(channel)) + brightness) *\n        exp(contrast));\n}\n' 
+ 
+      let shaderstring = '#uicontrol invlerp normalized(range=[0, 1], window=[0, 0.1])';
+      shaderstring+='\n#uicontrol int invertColormap slider(min=0, max=1, step=1, default=0))';
+      shaderstring+='\n#uicontrol vec3 color color(default="white")';
+      shaderstring+='\n float inverter(float val, int invert) {return 0.5 + ((2.0 * (-float(invert) + 0.5)) * (val - 0.5));}';
+      shaderstring+='\nvoid main() {\n   emitRGB(color * inverter(normalized(), invertColormap));}\n' ;
       const imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name, "shader": shaderstring
     };
       console.log(imgLayer)
