@@ -825,11 +825,11 @@ export class Viewer extends RefCounted implements ViewerState {
       //image layer
       const dimensions = dataset.dimensions;
  
-      let shaderstring = '#uicontrol invlerp normalized(range=[0, 1], window=[0, 0.1])';
-      shaderstring+='\n#uicontrol int invertColormap slider(min=0, max=1, step=1, default=0))';
+      let shaderstring = '#uicontrol invlerp normalized(range=[0.02,0.04], window=[-0.01, 0.1])';
+      shaderstring+='\n#uicontrol int invertColormap slider(min=0, max=1, step=1, default=0)';
       shaderstring+='\n#uicontrol vec3 color color(default="white")';
       shaderstring+='\n float inverter(float val, int invert) {return 0.5 + ((2.0 * (-float(invert) + 0.5)) * (val - 0.5));}';
-      shaderstring+='\nvoid main() {\n   emitRGB(color * inverter(normalized(), invertColormap));}\n' ;
+      shaderstring+='\nvoid main() {\n   emitRGB(color * inverter(normalized(), invertColormap));\n}\n' ;
       const imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name, "shader": shaderstring
     };
       console.log(imgLayer)
@@ -878,7 +878,10 @@ export class Viewer extends RefCounted implements ViewerState {
         "partialViewport": [0, 0, 1, 1],
         "dimensions": dimensions,
         "position": [100, 100, 100],
-        "layers": layers
+        "layers": layers,
+        'crossSectionScale': 3,
+        'selectedLayer': { 'layer':dataset.name, 'visible':true}
+
 
       }
       //console.log(myJSON)
