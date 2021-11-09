@@ -824,21 +824,27 @@ export class Viewer extends RefCounted implements ViewerState {
       let layers = [] as Array<Object>
       //image layer
       const dimensions = dataset.dimensions;
- 
+      //get the header information
+      const response = await fetch(dataset.image + "/"+dataset.name+".json", { method: "GET" });
       let shaderstring = '#uicontrol invlerp normalized(range=[0.02,0.04], window=[-0.01, 0.1])';
+      if (response.ok) {
+        const headerdata = await (response.json());
+        console.log(headerdata);
+        shaderstring = '#uicontrol invlerp normalized(range=['+ (headerdata.mean-(headerdata.mean-headerdata.min)/2) +','+(headerdata.mean+(headerdata.max-headerdata.mean)/2)+'], window=['+headerdata.min+','+ headerdata.max+'])';
+      }
+
+      
       shaderstring+='\n#uicontrol int invertColormap slider(min=0, max=1, step=1, default=0)';
       shaderstring+='\n#uicontrol vec3 color color(default="white")';
       shaderstring+='\n float inverter(float val, int invert) {return 0.5 + ((2.0 * (-float(invert) + 0.5)) * (val - 0.5));}';
       shaderstring+='\nvoid main() {\n   emitRGB(color * inverter(normalized(), invertColormap));\n}\n' ;
       const imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name, "shader": shaderstring
     };
-      console.log(imgLayer)
       layers.push(imgLayer);
 
       if (dataset.layers) {
         for (let layer of dataset.layers) {
           if (layer) {
-            console.log(layer.path)
 
             //fetch the json for the annotations 
             const response = await fetch(layer.path, { method: "GET" });
