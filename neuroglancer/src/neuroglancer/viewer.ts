@@ -68,6 +68,7 @@ declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 
 import './viewer.css';
 import 'neuroglancer/noselect.css';
+import { of } from 'gl-matrix/src/gl-matrix/vec2';
 
 //import { completeQueryStringParameters } from './util/completion';
 
@@ -820,26 +821,28 @@ export class Viewer extends RefCounted implements ViewerState {
 
     } else {
       console.log("Has no state file")
-      this.state.reset() //reset state and load new one
-      let layers = [] as Array<Object>
+      this.state.reset(); //reset state and load new one
+      let layers = [] as Array<Object>;
       //image layer
       const dimensions = dataset.dimensions;
       //get the header information
       const response = await fetch(dataset.image + "/"+dataset.name+".json", { method: "GET" });
       let shaderstring = '#uicontrol invlerp normalized(range=[0.02,0.04], window=[-0.01, 0.1])';
       if (response.ok) {
+        //if a header json exists, the correct posistion for the normalized brightness/contrast value is used. if no file is present, best guess defaults are used, which
+        //are likely not great.
         const headerdata = await (response.json());
-        console.log(headerdata);
-        shaderstring = '#uicontrol invlerp normalized(range=['+ (headerdata.mean-(headerdata.mean-headerdata.min)/2) +','+(headerdata.mean+(headerdata.max-headerdata.mean)/2)+'], window=['+headerdata.min+','+ headerdata.max+'])';
+        console.log(headerdata)
+        if(!(headerdata.mean===0 && headerdata.min ===0 && headerdata.max===0)){
+          shaderstring = '#uicontrol invlerp normalized(range=['+ (headerdata.mean-(headerdata.mean-headerdata.min)/2) +','+(headerdata.mean+(headerdata.max-headerdata.mean)/2)+'], window=['+headerdata.min+','+ headerdata.max+'])';
+        }
       }
-
       
       shaderstring+='\n#uicontrol int invertColormap slider(min=0, max=1, step=1, default=0)';
       shaderstring+='\n#uicontrol vec3 color color(default="white")';
       shaderstring+='\n float inverter(float val, int invert) {return 0.5 + ((2.0 * (-float(invert) + 0.5)) * (val - 0.5));}';
       shaderstring+='\nvoid main() {\n   emitRGB(color * inverter(normalized(), invertColormap));\n}\n' ;
-      const imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name, "shader": shaderstring
-    };
+      const imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name, "shader": shaderstring};
       layers.push(imgLayer);
 
       if (dataset.layers) {
@@ -877,7 +880,6 @@ export class Viewer extends RefCounted implements ViewerState {
         }
       }
 
-      //console.log(layers)
       let myJSON = {
 
         "layout": "4panel",
@@ -888,11 +890,8 @@ export class Viewer extends RefCounted implements ViewerState {
         'crossSectionScale': 3,
         'selectedLayer': { 'layer':dataset.name, 'visible':true}
 
-
       }
-      //console.log(myJSON)
       this.state.restoreState(myJSON);
-
     }
     //Proteomics
     //this constructs the div element with proteomics content. it is appended to the root node and not displayed. Once the proteomics tab is activated, this node is 
