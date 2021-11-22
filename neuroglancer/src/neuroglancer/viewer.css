@@ -56,6 +56,13 @@
 }
 
 
+.imp-label-colour-square{
+  width:15px;
+  height:15px;
+  border-radius:2px;
+  margin-right:2px;
+}
+
 .db_ul {
   padding: 0;
   margin: 0;

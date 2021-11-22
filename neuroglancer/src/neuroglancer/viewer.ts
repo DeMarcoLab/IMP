@@ -53,7 +53,7 @@ import { cancellableFetchOk, responseJson } from 'neuroglancer/util/http_request
 import { parseFixedLengthArray, verifyFinitePositiveFloat, verifyObject, verifyOptionalObjectProperty } from 'neuroglancer/util/json';
 import { EventActionMap, KeyboardEventBinder } from 'neuroglancer/util/keyboard_bindings';
 import { NullarySignal, Signal } from 'neuroglancer/util/signal';
-import { CompoundTrackable, optionallyRestoreFromJsonMember } from 'neuroglancer/util/trackable';
+import { CompoundTrackable, optionallyRestoreFromJsonMember, Trackable } from 'neuroglancer/util/trackable';
 import { ViewerState, VisibilityPrioritySpecification } from 'neuroglancer/viewer_state';
 import { WatchableVisibilityPriority } from 'neuroglancer/visibility_priority/frontend';
 import { GL } from 'neuroglancer/webgl/context';
@@ -68,7 +68,6 @@ declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 
 import './viewer.css';
 import 'neuroglancer/noselect.css';
-import { of } from 'gl-matrix/src/gl-matrix/vec2';
 
 //import { completeQueryStringParameters } from './util/completion';
 
@@ -355,6 +354,7 @@ export class Viewer extends RefCounted implements ViewerState {
   jsonStateServer = new TrackableValue<string>('', validateStateServer);
   state: TrackableViewerState;
 
+  testLayers: TrackableValue<Array<Object>>;
   dataContext: Owned<DataManagementContext>;
   visibility: WatchableVisibilityPriority;
   inputEventBindings: InputEventBindings;
@@ -407,6 +407,7 @@ export class Viewer extends RefCounted implements ViewerState {
     this.dataSourceProvider = dataSourceProvider;
     this.uiConfiguration = uiConfiguration;
 
+    this.testLayers = new TrackableValue<Array<Object>>([], validateStateServer)
     this.registerDisposer(observeWatchable(value => {
       this.display.applyWindowedViewportToElement(element, value);
     }, this.partialViewport));
@@ -790,6 +791,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
   currentDataset = {} as Object
   tryFetchByID(selected_id: string) {
+    console.log(selected_id)
     const axios = require('axios').default;
     const url: string = 'https://webdev.imp-db.cloud.edu.au:3005/tomosets/' + selected_id;
     let self = this
@@ -821,30 +823,50 @@ export class Viewer extends RefCounted implements ViewerState {
 
     } else {
       console.log("Has no state file")
-      this.state.reset(); //reset state and load new one
+      this.navigationState.reset();
+      this.perspectiveNavigationState.pose.orientation.reset();
+      this.perspectiveNavigationState.zoomFactor.reset();
+      this.resetInitiated.dispatch();
+      if (!overlaysOpen && this.showLayerDialog && this.visibility.visible) {
+        addNewLayer(this.layerSpecification, this.selectedLayer);
+      }//reset state and load new one
       let layers = [] as Array<Object>;
       //image layer
-      const dimensions = dataset.dimensions;
+      //console.log(dataset.dimensions)
+      let dimensions = dataset.dimensions ? dataset.dimensions : { 'x': [1.0, 'nm'], 'y': [1.0, 'nm'], 'z': [1.0, 'nm'] }
+
       //get the header information
-      const response = await fetch(dataset.image + "/"+dataset.name+".json", { method: "GET" });
+      const response = await fetch(dataset.image + "/" + dataset.name + ".json", { method: "GET" });
       let shaderstring = '#uicontrol invlerp normalized(range=[0.02,0.04], window=[-0.01, 0.1])';
+      let position = [100, 100, 100]
+      //let dimensions = [1,1,1]
       if (response.ok) {
         //if a header json exists, the correct posistion for the normalized brightness/contrast value is used. if no file is present, best guess defaults are used, which
         //are likely not great.
         const headerdata = await (response.json());
         console.log(headerdata)
-        if(!(headerdata.mean===0 && headerdata.min ===0 && headerdata.max===0)){
-          shaderstring = '#uicontrol invlerp normalized(range=['+ (headerdata.mean-(headerdata.mean-headerdata.min)/2) +','+(headerdata.mean+(headerdata.max-headerdata.mean)/2)+'], window=['+headerdata.min+','+ headerdata.max+'])';
+        if (!(headerdata.mean === 0 && headerdata.min === 0 && headerdata.max === 0)) {
+          shaderstring = '#uicontrol invlerp normalized(range=[' + (headerdata.mean - (headerdata.mean - headerdata.min) / 2) + ',' + (headerdata.mean + (headerdata.max - headerdata.mean) / 2) + '], window=[' + headerdata.min + ',' + headerdata.max + '])';
         }
+        position = [headerdata.x / 2, headerdata.y / 2, headerdata.z / 2];
+
+        //console.log(Object.values(headerdata.pixel_spacing))
+
+        if (headerdata.pixel_spacing)
+          dimensions = { 'x': [headerdata.pixel_spacing[0], 'nm'], 'y': [headerdata.pixel_spacing[1], 'nm'], 'z': [headerdata.pixel_spacing[2], 'nm'] }; //if this is in the dataset info, should be more precise
       }
-      
-      shaderstring+='\n#uicontrol int invertColormap slider(min=0, max=1, step=1, default=0)';
-      shaderstring+='\n#uicontrol vec3 color color(default="white")';
-      shaderstring+='\n float inverter(float val, int invert) {return 0.5 + ((2.0 * (-float(invert) + 0.5)) * (val - 0.5));}';
-      shaderstring+='\nvoid main() {\n   emitRGB(color * inverter(normalized(), invertColormap));\n}\n' ;
-      const imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name, "shader": shaderstring};
+
+      shaderstring += '\n#uicontrol int invertColormap slider(min=0, max=1, step=1, default=0)';
+      shaderstring += '\n#uicontrol vec3 color color(default="white")';
+      shaderstring += '\n float inverter(float val, int invert) {return 0.5 + ((2.0 * (-float(invert) + 0.5)) * (val - 0.5));}';
+      shaderstring += '\nvoid main() {\n   emitRGB(color * inverter(normalized(), invertColormap));\n}\n';
+      const imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name, "shader": shaderstring };
       layers.push(imgLayer);
 
+      let tmplayers = []
+      tmplayers.push(imgLayer)
+      let names = []
+      let colours = []
       if (dataset.layers) {
         for (let layer of dataset.layers) {
           if (layer) {
@@ -858,40 +880,86 @@ export class Viewer extends RefCounted implements ViewerState {
             }
 
             let resText = await (response.text())
-            let re = new RegExp('(?<=\>)(.*?)(.json)','g');  //parses the resulting page for the file names present in that folder, format is a href="...."
-           
+            let re = new RegExp('(?<=\>)(.*?)(.json)', 'g');  //parses the resulting page for the file names present in that folder, format is a href="...."
+
             let sublayers = [...resText.matchAll(re)]
+            let a = await fetch(layer.path + "/" + "columns.json", { method: "GET" })
+            let columns = await (a.json());
             //fetch each layer
             for (let sublayer of sublayers) {
-              console.log(sublayer[0])
-              
-              const sublayerresponse = await fetch(layer.path + "/" + sublayer[0], {method:"GET"})
+             
+              if(sublayer[0].indexOf("column")<0){
+
+              const sublayerresponse = await fetch(layer.path + "/" + sublayer[0], { method: "GET" })
               const annots = await sublayerresponse.json()
-              //create a new annotation layer TODO: improve for non-annotation layers if necessary.
+             
+              let shaderstring = "\n#uicontrol int colour_by slider(min=0,max=" + (columns.length > 0 ? columns.length : 1) + ")"
+              shaderstring += "\nvoid main() {\n"
+              //build ugly shaderstring TODO make this nice
+              shaderstring += "\nif(colour_by==0) {\n        setColor(prop_color());\n}";  
+              //build configuration from available columns
+              let annotationProperties = [{ "id": "color", "type": "rgb", "default": "red" }];
+              for(let i = 0; i < columns.length; i++){
+                let obj = {"id": columns[i], "type":"rgb","default":"yellow"}
+                annotationProperties.push(obj)
+                //adjust shader string
+                shaderstring += "\nif(colour_by=="+(i+1)+") {\n        setColor(prop_"+columns[i]+"());\n}";  
+              }
+              shaderstring+="\n}"
               const newLayer = {
-                "type": layer.type, "source": "local://annotations", "tab": "annotations", "name": sublayer[0].split(".")[0], "shader": "\nvoid main() {\n   setColor(prop_color());\n   setPointMarkerSize(prop_size());\n}\n",
-                "annotationProperties": [{ "id": "color", "type": "rgb", "default": "red" }, { "id": "size", "type": "float32", "default": 5 }],
+                "type": layer.type, "source": "local://annotations", "tab": "annotations", "name": sublayer[0].split(".json")[0],
+                "shader": shaderstring,
+                "annotationProperties": annotationProperties,
                 "annotations": annots
               }
+              
               layers.push(newLayer)
-            }
-            
+              names.push(sublayer[0].split(".json")[0])
+              colours.push(annots[0].props[0])
+              //console.log(this.testLayers)
+              /*    let curr = this.testLayers.value
+                  console.log(curr)
+                  if(this.testLayers.value.length === 0){
+                    this.testLayers.value.push(newLayer)
+                  } else {
+                    this.testLayers.value = curr.splice(0,0,newLayer)
+                  }*/
+            }}
+
           }
         }
       }
-
+      console.log(layers)
       let myJSON = {
 
         "layout": "4panel",
         "partialViewport": [0, 0, 1, 1],
         "dimensions": dimensions,
-        "position": [100, 100, 100],
+        "position": position,
         "layers": layers,
-        'crossSectionScale': 3,
-        'selectedLayer': { 'layer':dataset.name, 'visible':true}
+        'crossSectionScale':4,
+        'selectedLayer': { 'layer': dataset.name, 'visible': true }
 
       }
       this.state.restoreState(myJSON);
+
+      //try to grab an element
+      for (let i = 0; i < names.length; i++) {
+        let name = names[i]
+        let labeltabs = document.getElementsByClassName('neuroglancer-layer-item-label');
+        
+          for (let j = 0; j < labeltabs.length; j++) {
+
+              if(labeltabs[j].textContent.indexOf(name) >= 0) {
+                //console.log(labeltabs[j].parentElement)
+                let colourSquare = document.createElement("div")
+                colourSquare.className = 'imp-label-colour-square'
+                colourSquare.style.backgroundColor = colours[i];
+                labeltabs[j].parentElement?.appendChild(colourSquare);
+            }
+          }
+        
+      }
     }
     //Proteomics
     //this constructs the div element with proteomics content. it is appended to the root node and not displayed. Once the proteomics tab is activated, this node is 
@@ -1058,9 +1126,14 @@ export class Viewer extends RefCounted implements ViewerState {
         });
     }
   }
-
+  swapLayers() {
+    const layers_ = this.state.children.get("layers")
+    console.log(layers_)
+    this.state.children.set("layers", this.testLayers)
+    //this.testLayers.value=layers_.
+  }
   openDatabasePanel() {
-    console.log("button clicked");
+    //console.log("button clicked");
     let db_panel = document.getElementById("db_panel")
     if (db_panel !== null) {
       db_panel.style.display = "block"
@@ -1087,6 +1160,9 @@ export class Viewer extends RefCounted implements ViewerState {
       const listDatasets_button = document.createElement('button');
       listDatasets_button.className = "db_btn";
       listDatasets_button.textContent = "Temp"
+      listDatasets_button.onclick = () => {
+        this.swapLayers();
+      }
       topRow.append(listDatasets_button)
       topRow.append(closeButton)
 
