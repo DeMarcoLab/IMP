@@ -53,7 +53,7 @@ import { cancellableFetchOk, responseJson } from 'neuroglancer/util/http_request
 import { parseFixedLengthArray, verifyFinitePositiveFloat, verifyObject, verifyOptionalObjectProperty } from 'neuroglancer/util/json';
 import { EventActionMap, KeyboardEventBinder } from 'neuroglancer/util/keyboard_bindings';
 import { NullarySignal, Signal } from 'neuroglancer/util/signal';
-import { CompoundTrackable, optionallyRestoreFromJsonMember, Trackable } from 'neuroglancer/util/trackable';
+import { CompoundTrackable, optionallyRestoreFromJsonMember } from 'neuroglancer/util/trackable';
 import { ViewerState, VisibilityPrioritySpecification } from 'neuroglancer/viewer_state';
 import { WatchableVisibilityPriority } from 'neuroglancer/visibility_priority/frontend';
 import { GL } from 'neuroglancer/webgl/context';
@@ -892,7 +892,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
               const sublayerresponse = await fetch(layer.path + "/" + sublayer[0], { method: "GET" })
               const annots = await sublayerresponse.json()
-             
+              //console.log(annots)
               let shaderstring = "\n#uicontrol int colour_by slider(min=0,max=" + (columns.length > 0 ? columns.length : 1) + ")"
               shaderstring += "\nvoid main() {\n"
               //build ugly shaderstring TODO make this nice
@@ -949,14 +949,16 @@ export class Viewer extends RefCounted implements ViewerState {
         let labeltabs = document.getElementsByClassName('neuroglancer-layer-item-label');
         
           for (let j = 0; j < labeltabs.length; j++) {
-
-              if(labeltabs[j].textContent.indexOf(name) >= 0) {
-                //console.log(labeltabs[j].parentElement)
-                let colourSquare = document.createElement("div")
-                colourSquare.className = 'imp-label-colour-square'
-                colourSquare.style.backgroundColor = colours[i];
-                labeltabs[j].parentElement?.appendChild(colourSquare);
-            }
+              let text = labeltabs[j].textContent
+              if(text!==null){
+                if(text.indexOf(name) >= 0) {
+                  //console.log(labeltabs[j].parentElement)
+                  let colourSquare = document.createElement("div")
+                  colourSquare.className = 'imp-label-colour-square'
+                  colourSquare.style.backgroundColor = colours[i];
+                  labeltabs[j].parentElement?.appendChild(colourSquare);
+                }
+              }
           }
         
       }

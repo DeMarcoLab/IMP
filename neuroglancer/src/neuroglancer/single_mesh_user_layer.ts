@@ -29,7 +29,7 @@ import {makeMaximizeButton} from 'neuroglancer/widget/maximize_button';
 import {ShaderCodeWidget} from 'neuroglancer/widget/shader_code_widget';
 import {ShaderControls} from 'neuroglancer/widget/shader_controls';
 import {Tab} from 'neuroglancer/widget/tab_view';
-
+import {ObjectTracker_IMP} from 'neuroglancer/ObjectTracker_IMP'
 const SHADER_JSON_KEY = 'shader';
 const SHADER_CONTROLS_JSON_KEY = 'shaderControls';
 
@@ -66,8 +66,11 @@ export class SingleMeshUserLayer extends UserLayer {
         }
         hasSource = true;
         loadedSubsource.activate(refCounted => {
-          loadedSubsource.addRenderLayer(new SingleMeshLayer(
-              singleMesh, this.displayState, loadedSubsource.getRenderLayerTransform()));
+          let lay = new SingleMeshLayer(
+            singleMesh, this.displayState, loadedSubsource.getRenderLayerTransform())
+          loadedSubsource.addRenderLayer(lay);
+              //console.log("....")
+              ObjectTracker_IMP.getInstance().setMesh(lay)
           this.vertexAttributes.value = singleMesh.info.vertexAttributes;
           refCounted.registerDisposer(() => {
             this.vertexAttributes.value = undefined;

@@ -21,7 +21,7 @@
 import './annotations.css';
 import { ProteomicsOptionsTab } from 'neuroglancer/ui/proteomics'
 import { MetadataOptionsTab } from 'neuroglancer/ui/metadataOptions'
-import { Annotation, AnnotationReference, AnnotationSource, annotationToJson, AnnotationType, annotationTypeHandlers, AxisAlignedBoundingBox, Ellipsoid, Line } from 'neuroglancer/annotation';
+import { Annotation, AnnotationReference, AnnotationSource, annotationToJson, AnnotationType, annotationTypeHandlers, AxisAlignedBoundingBox, Ellipsoid, Line, Point } from 'neuroglancer/annotation';
 import { AnnotationDisplayState, AnnotationLayerState } from 'neuroglancer/annotation/annotation_layer_state';
 import { MultiscaleAnnotationSource } from 'neuroglancer/annotation/frontend_source';
 import { AnnotationLayer, PerspectiveViewAnnotationLayer, SliceViewAnnotationLayer } from 'neuroglancer/annotation/renderlayer';
@@ -63,7 +63,8 @@ import { makeFilterButton } from 'neuroglancer/widget/filter_button';
 import { makeIcon } from 'neuroglancer/widget/icon';
 import { makeMoveToButton } from 'neuroglancer/widget/move_to_button';
 import { Tab } from 'neuroglancer/widget/tab_view';
-
+//import { AnnotationSpatialIndexSourceParameters } from '../datasource/precomputed/base';
+import {ObjectTracker_IMP} from 'neuroglancer/ObjectTracker_IMP'
 interface AnnotationIdAndPart {
   id: string, sourceIndex: number;
   subsource?: string;
@@ -820,6 +821,7 @@ export class AnnotationLayerView extends Tab {
     };
 
     let numRows = 0;
+    //TODO NH_SEARCH this adds the annotation element.
     visitTransformedAnnotationGeometry(annotation, chunkTransform, (layerPosition, isVector) => {
       isVector;
       ++numRows;
@@ -888,6 +890,26 @@ export class AnnotationLayerView extends Tab {
           layerPosition, chunkTransform.chunkToLayerTransform, layerRank + 1, chunkPosition,
           layerRank);
         setLayerPosition(this.layer, chunkTransform, layerPosition);
+        //NH_IMP
+        const annot = annotation as Point
+        console.log("move to position " + annot.point + " for class object ")
+        const panels = document.getElementsByClassName('neuroglancer-managed-user-layer-info-panel')  as HTMLCollection;
+        let particleClassName =''
+        for(let i = 0; i < panels.length; i++){
+          let el = panels.item(i) as HTMLElement
+      
+          if(el.style.display !== "none"){
+
+            let tmpEl = el.querySelector('.neuroglancer-layer-side-panel-name') as HTMLInputElement
+      
+            particleClassName = tmpEl.value
+            console.log(particleClassName)
+            
+            ObjectTracker_IMP.getInstance().transformMesh(chunkTransform)
+            break;
+          }
+        }
+        
       }
     });
 
