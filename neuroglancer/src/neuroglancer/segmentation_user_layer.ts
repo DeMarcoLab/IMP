@@ -63,6 +63,7 @@ import {ShaderCodeWidget} from 'neuroglancer/widget/shader_code_widget';
 import {ShaderControls} from 'neuroglancer/widget/shader_controls';
 import {Tab} from 'neuroglancer/widget/tab_view';
 import {VirtualList, VirtualListSource} from 'neuroglancer/widget/virtual_list';
+import { ObjectTracker_IMP } from './ObjectTracker_IMP';
 
 const SELECTED_ALPHA_JSON_KEY = 'selectedAlpha';
 const NOT_SELECTED_ALPHA_JSON_KEY = 'notSelectedAlpha';
@@ -1295,6 +1296,8 @@ class SegmentDisplayTab extends Tab {
                   context.registerDisposer(
                       displayState.segmentStatedColors.changed.add(updateListItems));
                   list.element.classList.add('neuroglancer-segment-list');
+                  console.log(".....")
+                  ObjectTracker_IMP.getInstance().setSegmentationDisplayState(displayState)
                   context.registerDisposer(layer.bindSegmentListWidth(list.element));
                   context.registerDisposer(
                       new MouseEventBinder(list.element, getDefaultSelectBindings()));

@@ -1,10 +1,11 @@
+import { SegmentationDisplayState } from "./segmentation_display_state/frontend";
 import { SingleMeshLayer } from "./single_mesh/frontend";
 
 export class ObjectTracker_IMP {
     private static instance: ObjectTracker_IMP;
 
     private myMesh: SingleMeshLayer;
-
+    private mySegmentationDisplayState: SegmentationDisplayState
     /**
      * The Singleton's constructor should always be private to prevent direct
      * construction calls with the `new` operator.
@@ -25,6 +26,13 @@ export class ObjectTracker_IMP {
         return ObjectTracker_IMP.instance;
     }
 
+    public setSegmentationDisplayState(obj:SegmentationDisplayState){
+        this.mySegmentationDisplayState = obj;
+        console.log(obj)
+    }
+    public getSegmentationDisplayState(){
+        return this.mySegmentationDisplayState;
+    }
     /**
      * Finally, any singleton should define some business logic, which can be
      * executed on its instance.

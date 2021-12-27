@@ -824,12 +824,12 @@ export class AnnotationLayerView extends Tab {
     //TODO NH_SEARCH this adds the annotation element.
     visitTransformedAnnotationGeometry(annotation, chunkTransform, (layerPosition, isVector) => {
       isVector;
-      ++numRows;
-      const position = document.createElement('div');
-      position.className = 'neuroglancer-annotation-position';
-      element.appendChild(position);
-      let i = 0;
-      const addDims =
+      //++numRows;
+    //  const position = document.createElement('div');
+    //  position.className = 'neuroglancer-annotation-position';
+    //  element.appendChild(position);
+     // let i = 0;
+     /* const addDims =
         (viewDimensionIndices: readonly number[], layerDimensionIndices: readonly number[]) => {
           for (const viewDim of viewDimensionIndices) {
             const layerDim = layerDimensionIndices[viewDim];
@@ -844,12 +844,12 @@ export class AnnotationLayerView extends Tab {
             }
             ++i;
           }
-        };
-      addDims(
+        };*/
+     /* addDims(
         this.globalDimensionIndices, chunkTransform.modelTransform.globalToRenderLayerDimensions);
       addDims(
-        this.localDimensionIndices, chunkTransform.modelTransform.localToRenderLayerDimensions);
-      maybeAddDeleteButton();
+        this.localDimensionIndices, chunkTransform.modelTransform.localToRenderLayerDimensions);*/
+      
     });
     if (annotation.description) {
       ++numRows;
@@ -858,6 +858,7 @@ export class AnnotationLayerView extends Tab {
       description.classList.add('neuroglancer-annotation-list-entry-highlight');
       description.textContent = annotation.description;
       element.appendChild(description);
+      //maybeAddDeleteButton();
     }
     icon.style.gridRow = `span ${numRows}`;
     if (deleteButton !== undefined) {
@@ -877,6 +878,7 @@ export class AnnotationLayerView extends Tab {
     });
     element.addEventListener('action:select-position', event => {
       event.stopPropagation();
+     
       this.layer.selectAnnotation(state, annotation.id, 'toggle');
     });
 
@@ -891,24 +893,16 @@ export class AnnotationLayerView extends Tab {
           layerRank);
         setLayerPosition(this.layer, chunkTransform, layerPosition);
         //NH_IMP
-        const annot = annotation as Point
-        console.log("move to position " + annot.point + " for class object ")
-        const panels = document.getElementsByClassName('neuroglancer-managed-user-layer-info-panel')  as HTMLCollection;
-        let particleClassName =''
-        for(let i = 0; i < panels.length; i++){
-          let el = panels.item(i) as HTMLElement
-      
-          if(el.style.display !== "none"){
-
-            let tmpEl = el.querySelector('.neuroglancer-layer-side-panel-name') as HTMLInputElement
-      
-            particleClassName = tmpEl.value
-            console.log(particleClassName)
-            
-            ObjectTracker_IMP.getInstance().transformMesh(chunkTransform)
-            break;
+        console.log(annotation.id)
+        const annot_int: Uint64 = Uint64.parseString(annotation.id)
+        const { visibleSegments } = ObjectTracker_IMP.getInstance().getSegmentationDisplayState();
+          if(visibleSegments!==null){
+            visibleSegments.set( annot_int, !visibleSegments.has(annot_int));
+            event.stopPropagation();
           }
-        }
+        //const annot = annotation as Point
+        console.log("toggle mesh with id: " + annotation.id)
+        
         
       }
     });
@@ -1234,6 +1228,7 @@ function makeRelatedSegmentList(
           setClipboard(segments.map(x => x.toString()).join(', '));
         },
       });
+    
       headerRow.appendChild(copyButton);
       let headerCheckbox: HTMLInputElement | undefined;
       if (segmentationDisplayState != null) {
@@ -1348,6 +1343,7 @@ function makeRelatedSegmentList(
         row.classList.add('neuroglancer-segment-list-entry');
         row.addEventListener('click', () => {
           if (segmentationDisplayState != null) {
+       
             segmentationDisplayState.selectSegment(id, true);
           }
         });
@@ -1454,6 +1450,7 @@ function makeRelatedSegmentList(
           },
           segmentationDisplayState.segmentColorHash.changed,
           segmentationDisplayState.segmentLabelMap.changed));
+
       }
       parent.appendChild(listElement);
     });

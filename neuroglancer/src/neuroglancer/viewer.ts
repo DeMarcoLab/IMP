@@ -844,7 +844,7 @@ export class Viewer extends RefCounted implements ViewerState {
         //if a header json exists, the correct posistion for the normalized brightness/contrast value is used. if no file is present, best guess defaults are used, which
         //are likely not great.
         const headerdata = await (response.json());
-        console.log(headerdata)
+        //console.log(headerdata)
         if (!(headerdata.mean === 0 && headerdata.min === 0 && headerdata.max === 0)) {
           shaderstring = '#uicontrol invlerp normalized(range=[' + (headerdata.mean - (headerdata.mean - headerdata.min) / 2) + ',' + (headerdata.mean + (headerdata.max - headerdata.mean) / 2) + '], window=[' + headerdata.min + ',' + headerdata.max + '])';
         }
@@ -863,8 +863,8 @@ export class Viewer extends RefCounted implements ViewerState {
       const imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name, "shader": shaderstring };
       layers.push(imgLayer);
 
-      let tmplayers = []
-      tmplayers.push(imgLayer)
+      //let tmplayers = []
+      //tmplayers.push(imgLayer)
       let names = []
       let colours = []
       if (dataset.layers) {
@@ -880,56 +880,75 @@ export class Viewer extends RefCounted implements ViewerState {
             }
 
             let resText = await (response.text())
+            
             let re = new RegExp('(?<=\>)(.*?)(.json)', 'g');  //parses the resulting page for the file names present in that folder, format is a href="...."
-
+      
             let sublayers = [...resText.matchAll(re)]
-            let a = await fetch(layer.path + "/" + "columns.json", { method: "GET" })
+
+            let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
+            let meshes = [...resText.matchAll(re1)]
+            //console.log(meshes)
+            let a = await fetch(layer.path + "/columns.json", { method: "GET" })
             let columns = await (a.json());
+          
             //fetch each layer
             for (let sublayer of sublayers) {
              
               if(sublayer[0].indexOf("column")<0){
 
-              const sublayerresponse = await fetch(layer.path + "/" + sublayer[0], { method: "GET" })
-              const annots = await sublayerresponse.json()
-              //console.log(annots)
-              let shaderstring = "\n#uicontrol int colour_by slider(min=0,max=" + (columns.length > 0 ? columns.length : 1) + ")"
-              shaderstring += "\nvoid main() {\n"
-              //build ugly shaderstring TODO make this nice
-              shaderstring += "\nif(colour_by==0) {\n        setColor(prop_color());\n}";  
-              //build configuration from available columns
-              let annotationProperties = [{ "id": "color", "type": "rgb", "default": "red" }];
-              for(let i = 0; i < columns.length; i++){
-                let obj = {"id": columns[i], "type":"rgb","default":"yellow"}
-                annotationProperties.push(obj)
-                //adjust shader string
-                shaderstring += "\nif(colour_by=="+(i+1)+") {\n        setColor(prop_"+columns[i]+"());\n}";  
+                const sublayerresponse = await fetch(layer.path + "/" + sublayer[0], { method: "GET" })
+                const annots = await sublayerresponse.json()
+                console.log(annots)
+                let shaderstring = "\n#uicontrol int colour_by slider(min=0,max=" + (columns.length > 0 ? columns.length : 1) + ")"
+                shaderstring += "\nvoid main() {\n"
+                //build ugly shaderstring TODO make this nice
+                shaderstring += "\nif(colour_by==0) {\n        setColor(prop_color());\n}";  
+                //build configuration from available columns
+                let annotationProperties = [{ "id": "color", "type": "rgb", "default": "red" }];
+                for(let i = 0; i < columns.length; i++){
+                  let obj = {"id": columns[i], "type":"rgb","default":"yellow"}
+                  annotationProperties.push(obj)
+                  //adjust shader string
+                  shaderstring += "\nif(colour_by=="+(i+1)+") {\n        setColor(prop_"+columns[i]+"());\n}";  
+                }
+                shaderstring+="\n}"
+                const newLayer = {
+                  "type": layer.type, "source": "local://annotations", "tab": "annotations", "name": sublayer[0].split(".json")[0],
+                  "shader": shaderstring,
+                  "annotationProperties": annotationProperties,
+                  "annotations": annots,
+                  "visible" : false  //disable layer per default
+                }
+                
+                layers.push(newLayer)
+                names.push(sublayer[0].split(".json")[0])
+                /*try to load the mesh layer if available */
+                for(let mesh of meshes) {
+                  if(mesh[1]===sublayer[0].split(".json")[0]){
+                    const meshlayer = { "type": "segmentation", "source": "precomputed://" + layer.path  + mesh[0], "tab": "source", "name": sublayer[0].split(".json")[0]+"_mesh"};
+                    //console.log("precomputed://" + layer.path  + mesh[0])
+                    layers.push(meshlayer)
+                  }
+                  //const meshlayer = { "type": "mesh", "source": "precomputed://" + layer.path  + mesh[0].split(".json")[0], "tab": "source", "name": sublayer[0].split(".json")[0]+"_mesh"};
+                
+                }
+                //layers.push(meshlayer)
+                colours.push(annots[0].props[0])
+                //console.log(this.testLayers)
+                /*    let curr = this.testLayers.value
+                    console.log(curr)
+                    if(this.testLayers.value.length === 0){
+                      this.testLayers.value.push(newLayer)
+                    } else {
+                      this.testLayers.value = curr.splice(0,0,newLayer)
+                    }*/
               }
-              shaderstring+="\n}"
-              const newLayer = {
-                "type": layer.type, "source": "local://annotations", "tab": "annotations", "name": sublayer[0].split(".json")[0],
-                "shader": shaderstring,
-                "annotationProperties": annotationProperties,
-                "annotations": annots
-              }
-              
-              layers.push(newLayer)
-              names.push(sublayer[0].split(".json")[0])
-              colours.push(annots[0].props[0])
-              //console.log(this.testLayers)
-              /*    let curr = this.testLayers.value
-                  console.log(curr)
-                  if(this.testLayers.value.length === 0){
-                    this.testLayers.value.push(newLayer)
-                  } else {
-                    this.testLayers.value = curr.splice(0,0,newLayer)
-                  }*/
-            }}
+            }
 
           }
         }
       }
-      console.log(layers)
+      //console.log(layers)
       let myJSON = {
 
         "layout": "4panel",
