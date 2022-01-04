@@ -24,9 +24,9 @@
 .neuroglancer-annotation-list { 
   display: grid;
   grid-auto-rows: min-content;
-  margin: 0px;
+  margin: 1px;
   padding: 0px;
-  margin-top: 2px;
+  margin-top: 4px;
   overflow-y: auto;
   height: 0px;
   flex: 1;
@@ -35,8 +35,10 @@
 }
 
 .neuroglancer-annotation-list-entry {
+  margin-top:1px;
   display: contents;
   cursor: pointer;
+  border: 1pt solid transparent;
 }
 
 .neuroglancer-annotation-position {

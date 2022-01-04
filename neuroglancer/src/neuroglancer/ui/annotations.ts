@@ -64,7 +64,7 @@ import { makeIcon } from 'neuroglancer/widget/icon';
 import { makeMoveToButton } from 'neuroglancer/widget/move_to_button';
 import { Tab } from 'neuroglancer/widget/tab_view';
 //import { AnnotationSpatialIndexSourceParameters } from '../datasource/precomputed/base';
-import {ObjectTracker_IMP} from 'neuroglancer/ObjectTracker_IMP'
+import { ObjectTracker_IMP } from 'neuroglancer/ObjectTracker_IMP'
 interface AnnotationIdAndPart {
   id: string, sourceIndex: number;
   subsource?: string;
@@ -821,35 +821,35 @@ export class AnnotationLayerView extends Tab {
     };
 
     let numRows = 0;
-    //TODO NH_SEARCH this adds the annotation element.
+
     visitTransformedAnnotationGeometry(annotation, chunkTransform, (layerPosition, isVector) => {
       isVector;
       //++numRows;
-    //  const position = document.createElement('div');
-    //  position.className = 'neuroglancer-annotation-position';
-    //  element.appendChild(position);
-     // let i = 0;
-     /* const addDims =
-        (viewDimensionIndices: readonly number[], layerDimensionIndices: readonly number[]) => {
-          for (const viewDim of viewDimensionIndices) {
-            const layerDim = layerDimensionIndices[viewDim];
-            if (layerDim !== -1) {
-              const coord = Math.floor(layerPosition[layerDim]);
-              const coordElement = document.createElement('div');
-              coordElement.textContent = coord.toString();
-              coordElement.classList.add('neuroglancer-annotation-coordinate');
-              coordElement.classList.add('neuroglancer-annotation-list-entry-highlight');
-              coordElement.style.gridColumn = `dim ${i + 1}`;
-              position.appendChild(coordElement);
-            }
-            ++i;
-          }
-        };*/
-     /* addDims(
-        this.globalDimensionIndices, chunkTransform.modelTransform.globalToRenderLayerDimensions);
-      addDims(
-        this.localDimensionIndices, chunkTransform.modelTransform.localToRenderLayerDimensions);*/
-      
+      //  const position = document.createElement('div');
+      //  position.className = 'neuroglancer-annotation-position';
+      //  element.appendChild(position);
+      // let i = 0;
+      /* const addDims =
+         (viewDimensionIndices: readonly number[], layerDimensionIndices: readonly number[]) => {
+           for (const viewDim of viewDimensionIndices) {
+             const layerDim = layerDimensionIndices[viewDim];
+             if (layerDim !== -1) {
+               const coord = Math.floor(layerPosition[layerDim]);
+               const coordElement = document.createElement('div');
+               coordElement.textContent = coord.toString();
+               coordElement.classList.add('neuroglancer-annotation-coordinate');
+               coordElement.classList.add('neuroglancer-annotation-list-entry-highlight');
+               coordElement.style.gridColumn = `dim ${i + 1}`;
+               position.appendChild(coordElement);
+             }
+             ++i;
+           }
+         };*/
+      /* addDims(
+         this.globalDimensionIndices, chunkTransform.modelTransform.globalToRenderLayerDimensions);
+       addDims(
+         this.localDimensionIndices, chunkTransform.modelTransform.localToRenderLayerDimensions);*/
+
     });
     if (annotation.description) {
       ++numRows;
@@ -857,6 +857,7 @@ export class AnnotationLayerView extends Tab {
       description.classList.add('neuroglancer-annotation-description');
       description.classList.add('neuroglancer-annotation-list-entry-highlight');
       description.textContent = annotation.description;
+      description.id = "annot_" + annotation.id;
       element.appendChild(description);
       //maybeAddDeleteButton();
     }
@@ -878,12 +879,15 @@ export class AnnotationLayerView extends Tab {
     });
     element.addEventListener('action:select-position', event => {
       event.stopPropagation();
-     
+
       this.layer.selectAnnotation(state, annotation.id, 'toggle');
     });
 
+
+
     element.addEventListener('mouseup', (event: MouseEvent) => {
       if (event.button === 2) {
+        
         const { layerRank } = chunkTransform;
         const chunkPosition = new Float32Array(layerRank);
         const layerPosition = new Float32Array(layerRank);
@@ -892,18 +896,14 @@ export class AnnotationLayerView extends Tab {
           layerPosition, chunkTransform.chunkToLayerTransform, layerRank + 1, chunkPosition,
           layerRank);
         setLayerPosition(this.layer, chunkTransform, layerPosition);
-        //NH_IMP
-        console.log(annotation.id)
-        const annot_int: Uint64 = Uint64.parseString(annotation.id)
-        const { visibleSegments } = ObjectTracker_IMP.getInstance().getSegmentationDisplayState();
-          if(visibleSegments!==null){
-            visibleSegments.set( annot_int, !visibleSegments.has(annot_int));
-            event.stopPropagation();
-          }
-        //const annot = annotation as Point
-        console.log("toggle mesh with id: " + annotation.id)
-        
-        
+        //NH_IMP  TODO change Ribosome to whatever is active
+        let vis = ObjectTracker_IMP.getInstance().toggleSegment("Ribosome",annotation.id);
+        let els = element.querySelector('.neuroglancer-annotation-description') as HTMLElement
+        els.style.backgroundColor = vis==true ? "#99c4a7" : "black";
+        console.log(els)
+        event.stopPropagation();
+
+
       }
     });
 
@@ -1228,7 +1228,7 @@ function makeRelatedSegmentList(
           setClipboard(segments.map(x => x.toString()).join(', '));
         },
       });
-    
+
       headerRow.appendChild(copyButton);
       let headerCheckbox: HTMLInputElement | undefined;
       if (segmentationDisplayState != null) {
@@ -1343,7 +1343,7 @@ function makeRelatedSegmentList(
         row.classList.add('neuroglancer-segment-list-entry');
         row.addEventListener('click', () => {
           if (segmentationDisplayState != null) {
-       
+
             segmentationDisplayState.selectSegment(id, true);
           }
         });
@@ -1485,8 +1485,8 @@ export function UserLayerWithAnnotationsMixin<TBase extends { new(...args: any[]
         { label: 'Proteomics', order: -50, getter: () => new ProteomicsOptionsTab() });
       this.tabs.add(
         'metadata',
-        { label: 'Metadata', order: -60, getter: () => new MetadataOptionsTab( ) });
-        
+        { label: 'Metadata', order: -60, getter: () => new MetadataOptionsTab() });
+
       let annotationStateReadyBinding: (() => void) | undefined;
 
       const updateReadyBinding = () => {

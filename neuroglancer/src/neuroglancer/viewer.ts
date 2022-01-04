@@ -68,6 +68,7 @@ declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 
 import './viewer.css';
 import 'neuroglancer/noselect.css';
+import { ObjectTracker_IMP } from './ObjectTracker_IMP';
 
 //import { completeQueryStringParameters } from './util/completion';
 
@@ -354,7 +355,7 @@ export class Viewer extends RefCounted implements ViewerState {
   jsonStateServer = new TrackableValue<string>('', validateStateServer);
   state: TrackableViewerState;
 
-  testLayers: TrackableValue<Array<Object>>;
+  //testLayers: TrackableValue<Array<Object>>;
   dataContext: Owned<DataManagementContext>;
   visibility: WatchableVisibilityPriority;
   inputEventBindings: InputEventBindings;
@@ -407,7 +408,7 @@ export class Viewer extends RefCounted implements ViewerState {
     this.dataSourceProvider = dataSourceProvider;
     this.uiConfiguration = uiConfiguration;
 
-    this.testLayers = new TrackableValue<Array<Object>>([], validateStateServer)
+    //this.testLayers = new TrackableValue<Array<Object>>([], validateStateServer)
     this.registerDisposer(observeWatchable(value => {
       this.display.applyWindowedViewportToElement(element, value);
     }, this.partialViewport));
@@ -758,7 +759,7 @@ export class Viewer extends RefCounted implements ViewerState {
         .forPromise(
           cancellableFetchOk(json_url, {}, responseJson)
             .then(response => {
-              console.log(response)
+              //console.log(response)
               this.state.restoreState(response);
 
             }),
@@ -898,7 +899,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
                 const sublayerresponse = await fetch(layer.path + "/" + sublayer[0], { method: "GET" })
                 const annots = await sublayerresponse.json()
-                console.log(annots)
+                //console.log(annots)
                 let shaderstring = "\n#uicontrol int colour_by slider(min=0,max=" + (columns.length > 0 ? columns.length : 1) + ")"
                 shaderstring += "\nvoid main() {\n"
                 //build ugly shaderstring TODO make this nice
@@ -919,29 +920,24 @@ export class Viewer extends RefCounted implements ViewerState {
                   "annotations": annots,
                   "visible" : false  //disable layer per default
                 }
-                
-                layers.push(newLayer)
-                names.push(sublayer[0].split(".json")[0])
+                if(newLayer.name==="Ribosome"){
+                  layers.push(newLayer)
+              
+                  names.push(sublayer[0].split(".json")[0])
+
                 /*try to load the mesh layer if available */
                 for(let mesh of meshes) {
                   if(mesh[1]===sublayer[0].split(".json")[0]){
-                    const meshlayer = { "type": "segmentation", "source": "precomputed://" + layer.path  + mesh[0], "tab": "source", "name": sublayer[0].split(".json")[0]+"_mesh"};
-                    //console.log("precomputed://" + layer.path  + mesh[0])
+                    const meshlayer = { "type": "segmentation", 
+                    "source": "precomputed://" + layer.path  + mesh[0], 
+                    "tab": "segments", 
+                    "name": sublayer[0].split(".json")[0]+"_mesh"
+                  };
                     layers.push(meshlayer)
                   }
-                  //const meshlayer = { "type": "mesh", "source": "precomputed://" + layer.path  + mesh[0].split(".json")[0], "tab": "source", "name": sublayer[0].split(".json")[0]+"_mesh"};
-                
                 }
-                //layers.push(meshlayer)
-                colours.push(annots[0].props[0])
-                //console.log(this.testLayers)
-                /*    let curr = this.testLayers.value
-                    console.log(curr)
-                    if(this.testLayers.value.length === 0){
-                      this.testLayers.value.push(newLayer)
-                    } else {
-                      this.testLayers.value = curr.splice(0,0,newLayer)
-                    }*/
+                }
+                colours.push(annots[0].props[0])      
               }
             }
 
@@ -960,9 +956,11 @@ export class Viewer extends RefCounted implements ViewerState {
         'selectedLayer': { 'layer': dataset.name, 'visible': true }
 
       }
+      ObjectTracker_IMP.getInstance().setState(this.state);
+      ObjectTracker_IMP.getInstance().setStateJSON(myJSON);
       this.state.restoreState(myJSON);
-
-      //try to grab an element
+     
+      //add corresponding colour square to the labels 
       for (let i = 0; i < names.length; i++) {
         let name = names[i]
         let labeltabs = document.getElementsByClassName('neuroglancer-layer-item-label');
@@ -982,10 +980,16 @@ export class Viewer extends RefCounted implements ViewerState {
         
       }
     }
+
+    /*      "segments": [
+        "131014",
+      ],*/
+    
     //Proteomics
     //this constructs the div element with proteomics content. it is appended to the root node and not displayed. Once the proteomics tab is activated, this node is 
     //pulled to that panel and displayed there. 
-    const rootNode = document.getElementById("neuroglancer-container")
+    const rootNode = document.getElementById("neuroglancer-container")!;
+  
     let responseElement = document.getElementById("proteomics-content")
 
     if (rootNode !== null) {
@@ -1045,11 +1049,11 @@ export class Viewer extends RefCounted implements ViewerState {
 
 
       } else {
-        console.log("no proteomics")
+        //console.log("no proteomics")
         responseElement.textContent = "No Proteomics data found."
       }
       responseElement.style.display = "none"
-      console.log(responseElement)
+      //console.log(responseElement)
     }
 
 
@@ -1147,12 +1151,7 @@ export class Viewer extends RefCounted implements ViewerState {
         });
     }
   }
-  swapLayers() {
-    const layers_ = this.state.children.get("layers")
-    console.log(layers_)
-    this.state.children.set("layers", this.testLayers)
-    //this.testLayers.value=layers_.
-  }
+  
   openDatabasePanel() {
     //console.log("button clicked");
     let db_panel = document.getElementById("db_panel")
@@ -1178,13 +1177,6 @@ export class Viewer extends RefCounted implements ViewerState {
       const topRow = document.createElement('div');
       topRow.style.display = "flex";
       topRow.style.justifyContent = "space-between";
-      const listDatasets_button = document.createElement('button');
-      listDatasets_button.className = "db_btn";
-      listDatasets_button.textContent = "Temp"
-      listDatasets_button.onclick = () => {
-        this.swapLayers();
-      }
-      topRow.append(listDatasets_button)
       topRow.append(closeButton)
 
       const resultPanel = document.createElement('div');
