@@ -853,11 +853,12 @@ export class AnnotationLayerView extends Tab {
     });
     if (annotation.description) {
       ++numRows;
+      
       const description = document.createElement('div');
       description.classList.add('neuroglancer-annotation-description');
       description.classList.add('neuroglancer-annotation-list-entry-highlight');
       description.textContent = annotation.description;
-      description.id = "annot_" + annotation.id;
+      description.style.backgroundColor = ObjectTracker_IMP.getInstance().isSegmentVisible(annotation.id) ? "green" : "black";
       element.appendChild(description);
       //maybeAddDeleteButton();
     }
@@ -897,10 +898,10 @@ export class AnnotationLayerView extends Tab {
           layerRank);
         setLayerPosition(this.layer, chunkTransform, layerPosition);
         //NH_IMP  TODO change Ribosome to whatever is active
-        let vis = ObjectTracker_IMP.getInstance().toggleSegment("Ribosome",annotation.id);
-        let els = element.querySelector('.neuroglancer-annotation-description') as HTMLElement
-        els.style.backgroundColor = vis==true ? "#99c4a7" : "black";
-        console.log(els)
+        
+        
+        ObjectTracker_IMP.getInstance().toggleSegment("Ribosome",annotation.id);
+        
         event.stopPropagation();
 
 

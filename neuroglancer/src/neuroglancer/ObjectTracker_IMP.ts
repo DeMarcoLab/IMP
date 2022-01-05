@@ -14,6 +14,7 @@ export class ObjectTracker_IMP {
         visible: boolean,
         segments: string[]
     }[];
+    private visibleSegments: string[];
     //private annotArray: string[]
     private state: any;
     private stateJson: any;
@@ -25,6 +26,7 @@ export class ObjectTracker_IMP {
      */
     private constructor() {
         this.layers = []
+        this.visibleSegments=[]
     }
 
     /**
@@ -41,7 +43,7 @@ export class ObjectTracker_IMP {
         return ObjectTracker_IMP.instance;
     }
 
-    private makeStateJSON() {
+    private async makeStateJSON() {
 
         let result = {
             "dimensions": this.stateJson["dimensions"],
@@ -55,15 +57,27 @@ export class ObjectTracker_IMP {
             "partialViewport": this.stateJson["partialViewport"]
 
         }
+        
         this.state.restoreState(result)
+        //colour the annotations based on which segments are visible
+
+        //first, colour all black based on className
+        
     }
 
+    public isSegmentVisible(id:string){
+        return this.visibleSegments.indexOf(id)>-1;
+    }
     public toggleSegment(name: string, id: string) {
         //first copy over the current state
         this.stateJson = this.state.toJSON();
         this.layers = this.stateJson["layers"]
         let layer = this.getLayer(name + "_mesh");
-   
+        if(this.visibleSegments.indexOf(id)>-1){
+            this.visibleSegments.splice(this.visibleSegments.indexOf(id),this.visibleSegments.indexOf(id)+1);
+        } else {
+            this.visibleSegments.push(id);
+        }
         if (layer !== null) {
             if (layer["segments"]) {
                 let ind = layer["segments"].indexOf(id);

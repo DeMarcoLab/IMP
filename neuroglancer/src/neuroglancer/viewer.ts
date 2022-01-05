@@ -959,7 +959,7 @@ export class Viewer extends RefCounted implements ViewerState {
       ObjectTracker_IMP.getInstance().setState(this.state);
       ObjectTracker_IMP.getInstance().setStateJSON(myJSON);
       this.state.restoreState(myJSON);
-     
+      
       //add corresponding colour square to the labels 
       for (let i = 0; i < names.length; i++) {
         let name = names[i]
