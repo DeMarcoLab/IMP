@@ -897,9 +897,8 @@ export class AnnotationLayerView extends Tab {
           layerPosition, chunkTransform.chunkToLayerTransform, layerRank + 1, chunkPosition,
           layerRank);
         setLayerPosition(this.layer, chunkTransform, layerPosition);
-        //NH_IMP  TODO change Ribosome to whatever is active
         
-        
+        //NH-IMP: Ribosome needs to be replaced with what is active
         ObjectTracker_IMP.getInstance().toggleSegment("Ribosome",annotation.id);
         
         event.stopPropagation();
@@ -1236,6 +1235,7 @@ function makeRelatedSegmentList(
         headerCheckbox = document.createElement('input');
         headerCheckbox.type = 'checkbox';
         headerCheckbox.addEventListener('change', () => {
+          
           const { visibleSegments } = segmentationDisplayState;
           const add = segments.some(id => !visibleSegments.has(id));
           for (const id of segments) {
@@ -1365,6 +1365,7 @@ function makeRelatedSegmentList(
           checkbox.addEventListener('click', event => {
             const { visibleSegments } = segmentationDisplayState;
             visibleSegments.set(id, !visibleSegments.has(id));
+
             event.stopPropagation();
           });
           row.appendChild(checkbox);

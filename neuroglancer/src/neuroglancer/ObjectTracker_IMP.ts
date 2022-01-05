@@ -68,6 +68,15 @@ export class ObjectTracker_IMP {
     public isSegmentVisible(id:string){
         return this.visibleSegments.indexOf(id)>-1;
     }
+
+    public toggleSegmentFromSegments(id:string){
+        if(this.visibleSegments.indexOf(id)>-1){
+            this.visibleSegments.splice(this.visibleSegments.indexOf(id),this.visibleSegments.indexOf(id)+1);
+        } else {
+            this.visibleSegments.push(id);
+        }
+        console.log(this.visibleSegments)
+    }
     public toggleSegment(name: string, id: string) {
         //first copy over the current state
         this.stateJson = this.state.toJSON();
@@ -78,6 +87,7 @@ export class ObjectTracker_IMP {
         } else {
             this.visibleSegments.push(id);
         }
+        console.log(this.visibleSegments)
         if (layer !== null) {
             if (layer["segments"]) {
                 let ind = layer["segments"].indexOf(id);
@@ -141,25 +151,5 @@ export class ObjectTracker_IMP {
     public getSegmentationDisplayState() {
         return this.mySegmentationDisplayState;
     }
-    /**
-     * Finally, any singleton should define some business logic, which can be
-     * executed on its instance.
-     */
-    public setMesh(obj: SingleMeshLayer) {
-        console.log("setting mesh.. ")
-        console.log(obj)
-        this.myMesh = obj;
-    }
 
-    public getMesh() {
-        return this.myMesh;
-    }
-
-    public transformMesh(newtransform: any) {
-        console.log(newtransform)
-        //his.myMesh.transform = [1,0,0,10,0,1,0,5,0,0,1,4]
-        this.myMesh.userLayer?.transformPickedValue([1, 0, 0, 10, 0, 1, 0, 5, 0, 0, 1, 4])
-
-
-    }
 }

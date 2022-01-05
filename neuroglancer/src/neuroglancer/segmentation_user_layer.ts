@@ -174,7 +174,7 @@ export class SegmentationUserLayer extends Base {
         'rendering', {label: 'Render', order: -100, getter: () => new DisplayOptionsTab(this)});
     this.tabs.add(
         'segments', {label: 'Seg.', order: -50, getter: () => new SegmentDisplayTab(this)});
-    this.tabs.default = 'rendering';
+    this.tabs.default = 'segments';
   }
 
   get volumeOptions() {
@@ -432,6 +432,7 @@ export class SegmentationUserLayer extends Base {
           const segment = segmentSelectionState.selectedSegment;
           const {visibleSegments} = this.displayState;
           visibleSegments.set(segment, !visibleSegments.has(segment));
+   
         }
         break;
       }
@@ -522,6 +523,7 @@ export class SegmentationUserLayer extends Base {
                            },
                            set value(value: boolean) {
                              visibleSegments.set(mapped, value);
+      
                            },
                          }))
                          .element;
@@ -538,6 +540,7 @@ export class SegmentationUserLayer extends Base {
       this.displayState.segmentSelectionState.set(null);
     });
     checkbox.title = 'Toggle segment visibility';
+   
     const copyButton = makeCopyButton({
       title: `Copy segment ID`,
       onClick: () => {
@@ -1027,6 +1030,10 @@ class SegmentListSource extends RefCounted implements VirtualListSource {
       event.stopPropagation();
       const idString = this.parentElement!.dataset.id!;
       tempUint64.parseString(idString);
+      console.log(idString)
+
+      ObjectTracker_IMP.getInstance().toggleSegmentFromSegments(""+idString)
+      
       const {visibleSegments} = segmentationDisplayState;
       if (this.checked) {
         visibleSegments.add(tempUint64);
@@ -1296,8 +1303,8 @@ class SegmentDisplayTab extends Tab {
                   context.registerDisposer(
                       displayState.segmentStatedColors.changed.add(updateListItems));
                   list.element.classList.add('neuroglancer-segment-list');
-                  console.log(".....")
-                  ObjectTracker_IMP.getInstance().setSegmentationDisplayState(displayState)
+                    
+                  ObjectTracker_IMP.getInstance().setSegmentationDisplayState(displayState);
                   context.registerDisposer(layer.bindSegmentListWidth(list.element));
                   context.registerDisposer(
                       new MouseEventBinder(list.element, getDefaultSelectBindings()));
