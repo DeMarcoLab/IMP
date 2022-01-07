@@ -143,7 +143,12 @@ export class ObjectTracker_IMP {
             return false;
         }
     }
-
+    public reset(){
+        this.availableLayers={}
+        if(this.state){
+            this.state.reset();
+        }
+    }
     private setLayer(name: string, layer: any) {
         this.availableLayers[name].layer = layer;
         this.makeStateJSON();

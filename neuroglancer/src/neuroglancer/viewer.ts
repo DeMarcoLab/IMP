@@ -69,6 +69,7 @@ declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 import './viewer.css';
 import 'neuroglancer/noselect.css';
 import { ObjectTracker_IMP } from './ObjectTracker_IMP';
+import { makeVolumeChunkSpecificationWithDefaultCompression } from './sliceview/volume/base';
 
 //import { completeQueryStringParameters } from './util/completion';
 
@@ -595,7 +596,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
     const impMenu = document.createElement('div');
     impMenu.className = "imp-menu";
-    impMenu.style.width = "300px";
+
     const impMenu_title = document.createElement('div');
     impMenu_title.innerHTML = "Available layers";
     impMenu_title.className = "imp-menu-title";
@@ -604,7 +605,7 @@ export class Viewer extends RefCounted implements ViewerState {
     impMenu_availableLayers_div.className = "imp-menu-available-layers";
     const availableLayers_list = document.createElement('ul');
     availableLayers_list.id = "imp-avail-layers-list";
-    availableLayers_list.className = "imp-list";
+    availableLayers_list.className = "db_ul";
     impMenu_availableLayers_div.appendChild(availableLayers_list);
     impMenu.appendChild(impMenu_availableLayers_div);
 
@@ -881,12 +882,14 @@ export class Viewer extends RefCounted implements ViewerState {
       const imgLayer = { "type": "image", "visible":true,"source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name, "shader": shaderstring };
       //layers.push(imgLayer);
       const list_element = document.createElement("li");
+      list_element.className="db_li";
+      list_element.classList.add(this.getClassNamePerType("image"));
       ObjectTracker_IMP.getInstance().addLayer(imgLayer,true)
       list_element.onclick = () => {
         console.log(list_element.textContent)
         ObjectTracker_IMP.getInstance().toggleLayer(dataset.name)
       }
-      list_element.textContent = dataset.name + " image ";
+      list_element.textContent = dataset.name;
       listElement?.appendChild(list_element)      //let tmplayers = []
       //tmplayers.push(imgLayer)
       let names = []
@@ -945,7 +948,11 @@ export class Viewer extends RefCounted implements ViewerState {
                 }
 
                 const list_element = document.createElement("li");
-                list_element.textContent = sublayer[0].split(".json")[0] + " " + layer.type;
+                list_element.className="db_li";
+                
+                list_element.classList.add(this.getClassNamePerType(layer.type));
+                list_element.textContent = sublayer[0].split(".json")[0];
+
                 list_element.onclick = () => {
                   //console.log(list_element.textContent)
                   ObjectTracker_IMP.getInstance().toggleLayer(sublayer[0].split(".json")[0])
@@ -973,7 +980,9 @@ export class Viewer extends RefCounted implements ViewerState {
                   };
                   ObjectTracker_IMP.getInstance().addLayer(meshlayer,false)
                   const list_element = document.createElement("li");
-                  list_element.textContent = meshlayer.name + " Segmentation";
+                  list_element.className="db_li";
+                  list_element.classList.add(this.getClassNamePerType("segmentation"));
+                  list_element.textContent = meshlayer.name;
                   list_element.onclick = () => {
                     //console.log(list_element.textContent)
                     ObjectTracker_IMP.getInstance().toggleLayer(meshlayer.name)
@@ -1155,7 +1164,25 @@ export class Viewer extends RefCounted implements ViewerState {
     }
   }
 
+  getClassNamePerType(typ:string){
+    let className = "";
+           
+                switch(typ){
+                  case "image":
+                    className = "ngImage";
+                    break;
+                  case "segmentation":
+                    className = "ngSegmentation";
+                    break;
+                  case "annotation":
+                    className = "ngAnnotation";
+                    break;
+                  default:
+                    className = "ngDefault";
 
+                }
+                return className;
+  }
   //uses the unique ID of a dataset to load data. this is either passed directly via the url .../?dataset_id=xyz  or after selecting one on the menu.
 
   promptJsonStateServer(message: string): void {
@@ -1233,6 +1260,10 @@ export class Viewer extends RefCounted implements ViewerState {
         el.textContent = this.datasets[i].name + " " + this.datasets[i]._id;
 
         el.onclick = (ev) => {
+          //delete list of elemets
+          let elList = document.getElementById("imp-avail-layers-list");
+          ObjectTracker_IMP.getInstance().reset();
+          elList!==null?elList.innerHTML="" : "";
           var element = ev.target as HTMLLIElement
           if (element.textContent) {
             this.tryFetchByID(element.textContent.split(" ")[1]);
