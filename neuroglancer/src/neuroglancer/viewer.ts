@@ -593,7 +593,23 @@ export class Viewer extends RefCounted implements ViewerState {
 
     gridContainer.appendChild(topRow);
 
+    const impMenu = document.createElement('div');
+    impMenu.className = "imp-menu";
+    impMenu.style.width = "300px";
+    const impMenu_title = document.createElement('div');
+    impMenu_title.innerHTML = "Available layers";
+    impMenu_title.className = "imp-menu-title";
+    impMenu.appendChild(impMenu_title);
+    const impMenu_availableLayers_div = document.createElement('div');
+    impMenu_availableLayers_div.className = "imp-menu-available-layers";
+    const availableLayers_list = document.createElement('ul');
+    availableLayers_list.id = "imp-avail-layers-list";
+    availableLayers_list.className = "imp-list";
+    impMenu_availableLayers_div.appendChild(availableLayers_list);
+    impMenu.appendChild(impMenu_availableLayers_div);
+
     const layoutAndSidePanel = document.createElement('div');
+    layoutAndSidePanel.append(impMenu)
     layoutAndSidePanel.style.display = 'flex';
     layoutAndSidePanel.style.flex = '1';
     layoutAndSidePanel.style.flexDirection = 'row';
@@ -792,7 +808,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
   currentDataset = {} as Object
   tryFetchByID(selected_id: string) {
-    console.log(selected_id)
+    //console.log(selected_id)
     const axios = require('axios').default;
     const url: string = 'https://webdev.imp-db.cloud.edu.au:3005/tomosets/' + selected_id;
     let self = this
@@ -857,14 +873,21 @@ export class Viewer extends RefCounted implements ViewerState {
           dimensions = { 'x': [headerdata.pixel_spacing[0], 'nm'], 'y': [headerdata.pixel_spacing[1], 'nm'], 'z': [headerdata.pixel_spacing[2], 'nm'] }; //if this is in the dataset info, should be more precise
       }
 
+      const listElement = document.getElementById("imp-avail-layers-list");
       shaderstring += '\n#uicontrol int invertColormap slider(min=0, max=1, step=1, default=0)';
       shaderstring += '\n#uicontrol vec3 color color(default="white")';
       shaderstring += '\n float inverter(float val, int invert) {return 0.5 + ((2.0 * (-float(invert) + 0.5)) * (val - 0.5));}';
       shaderstring += '\nvoid main() {\n   emitRGB(color * inverter(normalized(), invertColormap));\n}\n';
-      const imgLayer = { "type": "image", "source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name, "shader": shaderstring };
-      layers.push(imgLayer);
-
-      //let tmplayers = []
+      const imgLayer = { "type": "image", "visible":true,"source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name, "shader": shaderstring };
+      //layers.push(imgLayer);
+      const list_element = document.createElement("li");
+      ObjectTracker_IMP.getInstance().addLayer(imgLayer,true)
+      list_element.onclick = () => {
+        console.log(list_element.textContent)
+        ObjectTracker_IMP.getInstance().toggleLayer(dataset.name)
+      }
+      list_element.textContent = dataset.name + " image ";
+      listElement?.appendChild(list_element)      //let tmplayers = []
       //tmplayers.push(imgLayer)
       let names = []
       let colours = []
@@ -881,9 +904,9 @@ export class Viewer extends RefCounted implements ViewerState {
             }
 
             let resText = await (response.text())
-            
+
             let re = new RegExp('(?<=\>)(.*?)(.json)', 'g');  //parses the resulting page for the file names present in that folder, format is a href="...."
-      
+
             let sublayers = [...resText.matchAll(re)]
 
             let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
@@ -891,11 +914,11 @@ export class Viewer extends RefCounted implements ViewerState {
             //console.log(meshes)
             let a = await fetch(layer.path + "/columns.json", { method: "GET" })
             let columns = await (a.json());
-          
+
             //fetch each layer
             for (let sublayer of sublayers) {
-             
-              if(sublayer[0].indexOf("column")<0){
+
+              if (sublayer[0].indexOf("column") < 0) {
 
                 const sublayerresponse = await fetch(layer.path + "/" + sublayer[0], { method: "GET" })
                 const annots = await sublayerresponse.json()
@@ -903,46 +926,70 @@ export class Viewer extends RefCounted implements ViewerState {
                 let shaderstring = "\n#uicontrol int colour_by slider(min=0,max=" + (columns.length > 0 ? columns.length : 1) + ")"
                 shaderstring += "\nvoid main() {\n"
                 //build ugly shaderstring TODO make this nice
-                shaderstring += "\nif(colour_by==0) {\n        setColor(prop_color());\n}";  
+                shaderstring += "\nif(colour_by==0) {\n        setColor(prop_color());\n}";
                 //build configuration from available columns
                 let annotationProperties = [{ "id": "color", "type": "rgb", "default": "red" }];
-                for(let i = 0; i < columns.length; i++){
-                  let obj = {"id": columns[i], "type":"rgb","default":"yellow"}
+                for (let i = 0; i < columns.length; i++) {
+                  let obj = { "id": columns[i], "type": "rgb", "default": "yellow" }
                   annotationProperties.push(obj)
                   //adjust shader string
-                  shaderstring += "\nif(colour_by=="+(i+1)+") {\n        setColor(prop_"+columns[i]+"());\n}";  
+                  shaderstring += "\nif(colour_by==" + (i + 1) + ") {\n        setColor(prop_" + columns[i] + "());\n}";
                 }
-                shaderstring+="\n}"
+                shaderstring += "\n}"
                 const newLayer = {
                   "type": layer.type, "source": "local://annotations", "tab": "annotations", "name": sublayer[0].split(".json")[0],
                   "shader": shaderstring,
                   "annotationProperties": annotationProperties,
                   "annotations": annots,
-                  "visible" : false  //disable layer per default
+                  "visible": false  //disable layer per default
                 }
-                if(newLayer.name==="Ribosome"){
-                  layers.push(newLayer)
-              
-                  names.push(sublayer[0].split(".json")[0])
 
-                /*try to load the mesh layer if available */
-                for(let mesh of meshes) {
-                  if(mesh[1]===sublayer[0].split(".json")[0]){
-                    const meshlayer = { "type": "segmentation", 
-                    "source": "precomputed://" + layer.path  + mesh[0], 
-                    "tab": "segments", 
-                    "name": sublayer[0].split(".json")[0]+"_mesh"
+                const list_element = document.createElement("li");
+                list_element.textContent = sublayer[0].split(".json")[0] + " " + layer.type;
+                list_element.onclick = () => {
+                  //console.log(list_element.textContent)
+                  ObjectTracker_IMP.getInstance().toggleLayer(sublayer[0].split(".json")[0])
+                }
+                listElement?.appendChild(list_element)
+            
+                names.push(sublayer[0].split(".json")[0])
+                colours.push(annots[0].props[0])
+                //console.log(newLayer)
+                ObjectTracker_IMP.getInstance().addLayer(newLayer,false)
+
+              }
+
+
+
+              /*try to load the mesh layer if available */
+              for (let mesh of meshes) {
+                if (mesh[1] === sublayer[0].split(".json")[0]) {
+                  const meshlayer = {
+                    "type": "segmentation",
+                    "source": "precomputed://" + layer.path + mesh[0],
+                    "tab": "segments",
+                    "name": sublayer[0].split(".json")[0] + "_mesh",
+                    "visible":false
                   };
-                    layers.push(meshlayer)
+                  ObjectTracker_IMP.getInstance().addLayer(meshlayer,false)
+                  const list_element = document.createElement("li");
+                  list_element.textContent = meshlayer.name + " Segmentation";
+                  list_element.onclick = () => {
+                    //console.log(list_element.textContent)
+                    ObjectTracker_IMP.getInstance().toggleLayer(meshlayer.name)
+  
                   }
+                  listElement?.appendChild(list_element)
                 }
-                }
-                colours.push(annots[0].props[0])      
               }
             }
+            //console.log(ObjectTracker_IMP.getInstance().getLayers())
 
           }
         }
+
+
+
       }
       //console.log(layers)
       let myJSON = {
@@ -952,44 +999,41 @@ export class Viewer extends RefCounted implements ViewerState {
         "dimensions": dimensions,
         "position": position,
         "layers": layers,
-        'crossSectionScale':4,
+        'crossSectionScale': 4,
         'selectedLayer': { 'layer': dataset.name, 'visible': true }
 
       }
       ObjectTracker_IMP.getInstance().setState(this.state);
       ObjectTracker_IMP.getInstance().setStateJSON(myJSON);
-      this.state.restoreState(myJSON);
-      
+      ObjectTracker_IMP.getInstance().makeStateJSON();
+
       //add corresponding colour square to the labels 
       for (let i = 0; i < names.length; i++) {
         let name = names[i]
         let labeltabs = document.getElementsByClassName('neuroglancer-layer-item-label');
-        
-          for (let j = 0; j < labeltabs.length; j++) {
-              let text = labeltabs[j].textContent
-              if(text!==null){
-                if(text.indexOf(name) >= 0) {
-                  //console.log(labeltabs[j].parentElement)
-                  let colourSquare = document.createElement("div")
-                  colourSquare.className = 'imp-label-colour-square'
-                  colourSquare.style.backgroundColor = colours[i];
-                  labeltabs[j].parentElement?.appendChild(colourSquare);
-                }
-              }
+
+        for (let j = 0; j < labeltabs.length; j++) {
+          let text = labeltabs[j].textContent
+          if (text !== null) {
+            if (text.indexOf(name) >= 0) {
+              //console.log(labeltabs[j].parentElement)
+              let colourSquare = document.createElement("div")
+              colourSquare.className = 'imp-label-colour-square'
+              colourSquare.style.backgroundColor = colours[i];
+              labeltabs[j].parentElement?.appendChild(colourSquare);
+            }
           }
-        
+        }
+
       }
     }
 
-    /*      "segments": [
-        "131014",
-      ],*/
     
     //Proteomics
     //this constructs the div element with proteomics content. it is appended to the root node and not displayed. Once the proteomics tab is activated, this node is 
     //pulled to that panel and displayed there. 
     const rootNode = document.getElementById("neuroglancer-container")!;
-  
+
     let responseElement = document.getElementById("proteomics-content")
 
     if (rootNode !== null) {
@@ -1151,7 +1195,7 @@ export class Viewer extends RefCounted implements ViewerState {
         });
     }
   }
-  
+
   openDatabasePanel() {
     //console.log("button clicked");
     let db_panel = document.getElementById("db_panel")
@@ -1209,7 +1253,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
 
       const rootNode = document.getElementById("neuroglancer-container")
-      console.log(rootNode)
+      //console.log(rootNode)
       if (rootNode !== null) {
         rootNode.append(db_panel)
       }

@@ -860,7 +860,7 @@ export class AnnotationLayerView extends Tab {
       description.textContent = annotation.description;
       description.style.backgroundColor = ObjectTracker_IMP.getInstance().isSegmentVisible(annotation.id) ? "green" : "black";
       element.appendChild(description);
-      //maybeAddDeleteButton();
+      maybeAddDeleteButton();
     }
     icon.style.gridRow = `span ${numRows}`;
     if (deleteButton !== undefined) {

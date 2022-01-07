@@ -1,40 +1,31 @@
 import { SegmentationDisplayState } from "./segmentation_display_state/frontend";
 import { SingleMeshLayer } from "./single_mesh/frontend";
 
+
+interface AvailableLayers {
+    [key: string]: any
+}
 export class ObjectTracker_IMP {
+
+   
+    
     private static instance: ObjectTracker_IMP;
-    private layers: {
-        type: string,
-        name: string,
-        source: string,
-        tab: string,
-        shader: string,
-        annotations: { point: number[], type: "string", id: string, description: string, props: string[] }[],
-        annotationProperties: { id: string, type: string, default: string }[],
-        visible: boolean,
-        segments: string[]
-    }[];
     private visibleSegments: string[];
     //private annotArray: string[]
     private state: any;
     private stateJson: any;
-    private myMesh: SingleMeshLayer;
+    
+    private availableLayers: AvailableLayers;
     private mySegmentationDisplayState: SegmentationDisplayState
     /**
      * The Singleton's constructor should always be private to prevent direct
      * construction calls with the `new` operator.
      */
     private constructor() {
-        this.layers = []
         this.visibleSegments=[]
+        this.availableLayers = {}
     }
 
-    /**
-     * The static method that controls the access to the singleton instance.
-     *
-     * This implementation let you subclass the Singleton class while keeping
-     * just one instance of each subclass around.
-     */
     public static getInstance(): ObjectTracker_IMP {
         if (!ObjectTracker_IMP.instance) {
             ObjectTracker_IMP.instance = new ObjectTracker_IMP();
@@ -43,26 +34,64 @@ export class ObjectTracker_IMP {
         return ObjectTracker_IMP.instance;
     }
 
-    private async makeStateJSON() {
+    public addLayer(layer:any, active:boolean){
+        //console.log(layer.annotations)
+        this.availableLayers[layer.name] = {"layer":layer,"active":active}
+       // console.log(layer)
+    }
 
-        let result = {
+    public toggleLayer(name:string){
+        this.availableLayers[name].active =  !this.availableLayers[name].active;
+        this.makeStateJSON()
+    }
+
+    public getLayers(){
+        return this.availableLayers;
+    }
+    public makeStateJSON() {
+
+        //create layers array:
+        let result = this.state.toJSON() //copy current state
+        let layer_res = []
+        let found = false;
+
+        //cases:
+    
+        //find active layers
+        for(let key in this.availableLayers){ 
+            if(this.availableLayers[key].active){
+                found = false;
+                for(let activeLayer of result["layers"]){
+                    if(activeLayer.name === key){
+                        //this layer is already in the current state, keep as is
+                        this.availableLayers[key].layer.visible = activeLayer.visible;
+                        layer_res.push(this.availableLayers[key].layer) 
+                        found = true;
+                    }
+                }
+                if(!found){
+                    //the available layer is not yet in the state. add it to the layers.
+                    layer_res.push(this.availableLayers[key].layer)
+                }
+            }
+        }
+    
+
+        //add new active layers to the state, remove others
+        let result2= {
             "dimensions": this.stateJson["dimensions"],
             "position": this.stateJson["position"],
             "crossSectionScale": this.stateJson["crossSectionScale"],
             "projectionOrientation": this.stateJson["projectionOrientation"],
             "projectionScale": this.stateJson["projectionScale"],
-            "layers": this.layers,
+            "layers": layer_res,
             "selectedLayer": this.stateJson["selectedLayer"],
             "layout": this.stateJson["layout"],
             "partialViewport": this.stateJson["partialViewport"]
 
         }
-        
-        this.state.restoreState(result)
-        //colour the annotations based on which segments are visible
-
-        //first, colour all black based on className
-        
+        this.state.reset()
+        this.state.restoreState(result2)
     }
 
     public isSegmentVisible(id:string){
@@ -75,19 +104,18 @@ export class ObjectTracker_IMP {
         } else {
             this.visibleSegments.push(id);
         }
-        console.log(this.visibleSegments)
+       // console.log(this.visibleSegments)
     }
     public toggleSegment(name: string, id: string) {
         //first copy over the current state
         this.stateJson = this.state.toJSON();
-        this.layers = this.stateJson["layers"]
         let layer = this.getLayer(name + "_mesh");
         if(this.visibleSegments.indexOf(id)>-1){
             this.visibleSegments.splice(this.visibleSegments.indexOf(id),this.visibleSegments.indexOf(id)+1);
         } else {
             this.visibleSegments.push(id);
         }
-        console.log(this.visibleSegments)
+        //console.log(this.visibleSegments)
         if (layer !== null) {
             if (layer["segments"]) {
                 let ind = layer["segments"].indexOf(id);
@@ -117,29 +145,20 @@ export class ObjectTracker_IMP {
     }
 
     private setLayer(name: string, layer: any) {
-        for (let item of this.layers) {
-            if (item["name"] === name) {
-                item = layer;
-            }
-        }
+        this.availableLayers[name].layer = layer;
         this.makeStateJSON();
     }
 
 
     private getLayer(name: string) {
-        for (let item of this.layers) {
-            if (item["name"] === name) {
-                return item;
-            }
-        }
-        return null;
+        return this.availableLayers[name].layer
     }
     public setState(state: any) {
         this.state = state;
     }
     public setStateJSON(js: any) {
         this.stateJson = js;
-        this.layers = js["layers"]
+       
     }
     public restoreState() {
         this.state.restoreState(this.stateJson)

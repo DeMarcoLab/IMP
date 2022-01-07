@@ -1030,7 +1030,7 @@ class SegmentListSource extends RefCounted implements VirtualListSource {
       event.stopPropagation();
       const idString = this.parentElement!.dataset.id!;
       tempUint64.parseString(idString);
-      console.log(idString)
+      //console.log(idString)
 
       ObjectTracker_IMP.getInstance().toggleSegmentFromSegments(""+idString)
       
