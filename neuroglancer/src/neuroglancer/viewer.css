@@ -192,5 +192,6 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#eeeeee', end
   width:240px;
   background: white;
   z-index: 1000;
+  color:black;
 }
 
