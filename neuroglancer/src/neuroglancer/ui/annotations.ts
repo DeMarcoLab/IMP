@@ -695,7 +695,7 @@ export class AnnotationLayerView extends Tab {
       }
       headerRow.appendChild(deletePlaceholder);
       this.listContainer.style.gridTemplateColumns =
-        `[symbol] min-content repeat(${i}, [dim] min-content) [delete] min-content`;
+        `min-content repeat(${i}, [dim] min-content)`;
       this.prevCoordinateSpaceGeneration = this.curCoordinateSpaceGeneration;
     }
     if (this.updated) {
@@ -899,6 +899,7 @@ export class AnnotationLayerView extends Tab {
         setLayerPosition(this.layer, chunkTransform, layerPosition);
         
         //NH-IMP: Ribosome needs to be replaced with what is active
+        console.log(annotation)
         ObjectTracker_IMP.getInstance().toggleSegment("Ribosome",annotation.id);
         
         event.stopPropagation();

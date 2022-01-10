@@ -16,14 +16,14 @@ export class ObjectTracker_IMP {
     private stateJson: any;
     
     private availableLayers: AvailableLayers;
-    private mySegmentationDisplayState: SegmentationDisplayState
-    /**
-     * The Singleton's constructor should always be private to prevent direct
-     * construction calls with the `new` operator.
-     */
+    private mySegmentationDisplayState: SegmentationDisplayState;
+
+    private colorStorage: any;
+   
     private constructor() {
-        this.visibleSegments=[]
-        this.availableLayers = {}
+        this.visibleSegments=[];
+        this.availableLayers = {};
+        this.colorStorage= {};
     }
 
     public static getInstance(): ObjectTracker_IMP {
@@ -38,8 +38,17 @@ export class ObjectTracker_IMP {
         //console.log(layer.annotations)
         this.availableLayers[layer.name] = {"layer":layer,"active":active}
        // console.log(layer)
+       if(layer.type=="annotation"){
+           for(const annotation of layer.annotations) {
+               this.colorStorage[annotation["id"]]=annotation["props"];
+           }
+       }
     }
 
+
+    public setAnnotationColors(colourBy: string){
+
+    }
     public toggleLayer(name:string){
         this.availableLayers[name].active =  !this.availableLayers[name].active;
         this.makeStateJSON()
@@ -65,8 +74,13 @@ export class ObjectTracker_IMP {
                     if(activeLayer.name === key){
                         //this layer is already in the current state, keep as is
                         this.availableLayers[key].layer.visible = activeLayer.visible;
+
+                     
                         layer_res.push(this.availableLayers[key].layer) 
                         found = true;
+
+                        //set colour
+                       
                     }
                 }
                 if(!found){
@@ -75,7 +89,9 @@ export class ObjectTracker_IMP {
                 }
             }
         }
-    
+        
+        //match segment colours with annotation colours
+        
 
         //add new active layers to the state, remove others
         let result2= {
@@ -121,18 +137,21 @@ export class ObjectTracker_IMP {
                 let ind = layer["segments"].indexOf(id);
                 if (ind > -1) {
                     //segment is currently visible, remove.
-                    layer["segments"].splice(ind, ind+1)
+                    layer["segments"].splice(ind, ind+1);
+                    delete layer["segmentColors"][id];
                     this.setLayer(name + "_mesh", layer);
                     return false;
                     //layer["segments"] = lay
                 } else {
                     layer["segments"].push(id)
+                    layer["segmentColors"][id] = this.colorStorage[id][0]; //tODO change to whatever is active
                     this.setLayer(name + "_mesh", layer);
                     return true;
                 }
             } else {
                 layer["segments"] = [id];
-
+                layer["segmentColors"] = {};
+                layer["segmentColors"][id] = this.colorStorage[id][0];
                 this.setLayer(name + "_mesh", layer);
                 return true;
             }
@@ -142,6 +161,11 @@ export class ObjectTracker_IMP {
             console.log(name + "_mesh layer does not exist.")
             return false;
         }
+    }
+
+    private getAnnotationColor(name:string,bid:string){
+        //finds the current colour of the annotation
+
     }
     public reset(){
         this.availableLayers={}

@@ -975,6 +975,7 @@ export class Viewer extends RefCounted implements ViewerState {
                     "type": "segmentation",
                     "source": "precomputed://" + layer.path + mesh[0],
                     "tab": "segments",
+                    "segmentDefaultColor": "red",
                     "name": sublayer[0].split(".json")[0] + "_mesh",
                     "visible":false
                   };

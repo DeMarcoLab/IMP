@@ -26,20 +26,21 @@
   grid-auto-rows: min-content;
   margin: 1px;
   padding: 0px;
-  margin-top: 4px;
   overflow-y: auto;
   height: 0px;
   flex: 1;
   flex-basis: 0px;
   min-height: 0px;
+  row-gap: 4px;
+  
+  
 }
 
 .neuroglancer-annotation-list-entry {
-  margin-top:1px;
   display: contents;
   cursor: pointer;
-  border: 1pt solid transparent;
 }
+
 
 .neuroglancer-annotation-position {
   display: contents;
@@ -57,7 +58,7 @@
 }
 
 .neuroglancer-annotation-list-header {
-  display: contents;
+  display: none;
 }
 
 .neuroglancer-annotation-list-header > * {
@@ -73,12 +74,13 @@
 }
 
 .neuroglancer-annotation-icon {
+  display: none;
   grid-column: symbol;
   padding-right: 5px;
 }
 
 .neuroglancer-annotation-description {
-  grid-column: dim / -1;
+  /*grid-column: dim / -1;*/
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
