@@ -58,6 +58,7 @@ export class ShaderControls extends Tab {
 
   updateControls() {
     const {element} = this;
+   
     if (this.controlDisposer !== undefined) {
       this.controlDisposer.dispose();
       removeChildren(element);

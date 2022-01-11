@@ -1014,7 +1014,6 @@ export class Viewer extends RefCounted implements ViewerState {
 
       }
       ObjectTracker_IMP.getInstance().setState(this.state);
-      ObjectTracker_IMP.getInstance().setStateJSON(myJSON);
       ObjectTracker_IMP.getInstance().makeStateJSON();
 
       //add corresponding colour square to the labels 

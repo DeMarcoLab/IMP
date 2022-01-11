@@ -17,6 +17,7 @@
 import {TrackableValueInterface} from 'neuroglancer/trackable_value';
 import {RefCounted} from 'neuroglancer/util/disposable';
 import {removeFromParent} from 'neuroglancer/util/dom';
+import { ObjectTracker_IMP } from '../ObjectTracker_IMP';
 
 import './range.css';
 
@@ -37,6 +38,9 @@ export class RangeWidget extends RefCounted {
       el.step = '' + step;
       el.valueAsNumber = this.value.value;
       const inputValueChanged = () => {
+        if(this.value.value!==el.valueAsNumber){
+          ObjectTracker_IMP.getInstance().updateAttribute(el.valueAsNumber);
+        }
         this.value.value = el.valueAsNumber;
       };
       this.registerEventListener(el, 'change', inputValueChanged);

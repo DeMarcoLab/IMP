@@ -28,6 +28,7 @@ import {GL} from 'neuroglancer/webgl/context';
 import {HistogramChannelSpecification, HistogramSpecifications} from 'neuroglancer/webgl/empirical_cdf';
 import {DataTypeInterval, dataTypeIntervalToJson, defaultDataTypeRange, defineInvlerpShaderFunction, enableLerpShaderFunction, normalizeDataTypeInterval, parseDataTypeInterval, validateDataTypeInterval} from 'neuroglancer/webgl/lerp';
 import {ShaderBuilder, ShaderProgram} from 'neuroglancer/webgl/shader';
+import { ObjectTracker_IMP } from '../ObjectTracker_IMP';
 
 export interface ShaderSliderControl {
   type: 'slider';
@@ -735,6 +736,7 @@ export class ShaderControlState extends RefCounted implements
       let controlState = state_.get(name);
       if (controlState !== undefined &&
           JSON.stringify(controlState.control) !== JSON.stringify(control)) {
+      
         controlState.trackable.changed.remove(this.changed.dispatch);
         controlState = undefined;
       }
@@ -860,7 +862,10 @@ export function setControlsInShader(
   const {state} = shaderControlState;
   if (shaderControlState.controls.value === controls) {
     // Case when shader doesn't have any errors.
+    
     for (const [name, controlState] of state) {
+      //ObjectTracker_IMP.getInstance().updateAttribute(name,controlState.trackable.value)
+    //console.log(controlState)
       setControlInShader(gl, shader, name, controlState.control, controlState.trackable.value);
     }
   } else {
