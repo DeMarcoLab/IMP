@@ -9,6 +9,7 @@ import streamlit as st
 from st_aggrid import AgGrid, GridUpdateMode
 from st_aggrid.grid_options_builder import GridOptionsBuilder
 
+
 def get_bio_db(name="bio_db"):
     pymongo_client = pymongo.MongoClient()
 
@@ -33,47 +34,9 @@ def main():
 
     bio_db = get_bio_db()
 
-    # mode = st.sidebar.selectbox("Select a Mode", ["Search", "Insert"])
-
-    # if mode == "Search":
-    #     query_form = st.form(key="query")
-    #     collection = query_form.selectbox(
-    #         "Select a collection", bio_db.list_collection_names()
-    #     )
-
-    #     query_text = query_form.text_area("Search query", {})
-
-    #     query_submit_button = query_form.form_submit_button("Search")
-
-    #     if query_submit_button:
-
-    #         query_json = json.loads(query_text)
-    #         st.write("Query: ", query_json)
-
-    #         query_result = list(
-    #             bio_db[collection].find(query_json, {"_id": 0})
-    #         )  # return all cols except internal object _id
-
-    #         df_table = pd.DataFrame(query_result)
-
-    #         st.header("Results")
-    #         st.table(df_table)
-
-    #         return_table = AgGrid(
-    #             df_table,
-    #             editable=True,
-    #             theme="streamlit",
-    #             fit_columns_on_grid_load=True,
-    #             update_mode=GridUpdateMode.MANUAL,
-    #         )
-
-    #         # dont fully refresh when editing table?
-    #         st.write("---")
-    #         st.write(return_table["data"])
-
-    # if mode == "Insert":
-
     collection = st.selectbox("Select a collection", bio_db.list_collection_names())
+    
+    # search (read)
     query_text = st.text_input("Search query", {})
 
     st.write(query_text)
@@ -99,10 +62,10 @@ def main():
         update_mode=GridUpdateMode.SELECTION_CHANGED,
     )
 
-
+    # with st.expander("Expander"):
     cols = st.columns(3)
 
-    # insert
+    # insert (create)
     insert_form = cols[0].form(key="insert")
     insert_form.subheader("Add Data")
     insert_text = insert_form.text_area("Data to Add", {})
@@ -120,24 +83,28 @@ def main():
 
     # update
     update_form = cols[1].form(key="update")
-    selected_data = df_new["selected_rows"]
     update_form.subheader("Update Data")
-    update_data = update_form.text_area("Updated Data: ", selected_data)
+    selected_data = df_new["selected_rows"]
+    if len(selected_data) >= 1:
+        selected_data = selected_data[0]
+
+        column_names = list(selected_data.keys())
+        column_values = []
+        for k, v in selected_data.items():
+            column_values.append(update_form.text_input(k, v))
+
 
     update_form_button = update_form.form_submit_button("Update")
 
-    # TODO: doesnt work with nested dictionary
-
     if update_form_button:
 
-        # TODO: assert correct json?
-        update_json = json.loads(update_data.replace("'", '"'))[
-            0
-        ]  # TODO: generalise all this
+        update_json = {}
+        for k, v in zip(column_names, column_values):
+            update_json[k] = v
 
         update_json = {"$set": update_json}
 
-        bio_db[collection].update_one(selected_data[0], update_json, upsert=True)
+        bio_db[collection].update_one(selected_data, update_json, upsert=True)
         update_form.success("Successfully updated the database.")
 
     # delete
@@ -157,6 +124,7 @@ def main():
         bio_db[collection].delete_one(delete_json)
         delete_form.success("Successfully deleted data from the database.")
 
+
 # TODO
 # when keys are null, can't delete the row
 # beter inserting of columns, rather than having to write it in json
@@ -164,14 +132,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# print(myclient.list_database_names())
-# st.write("Collections: ", bio_db.list_collection_names())
-
-# for col_name in bio_db.list_collection_names():
-
-#     collection = bio_db[col_name]
-#     st.write("Collection: ", col_name)
-#     for x in collection.find():
-#         st.write(x)
