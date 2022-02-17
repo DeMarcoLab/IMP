@@ -27,11 +27,11 @@ import {MultiscaleVolumeChunkSource} from 'neuroglancer/sliceview/volume/fronten
 import {defineImageLayerShader, getTrackableFragmentMain, ImageRenderLayer} from 'neuroglancer/sliceview/volume/image_renderlayer';
 import {trackableAlphaValue} from 'neuroglancer/trackable_alpha';
 import {trackableBlendModeValue} from 'neuroglancer/trackable_blend';
-import {TrackableBoolean, TrackableBooleanCheckbox} from 'neuroglancer/trackable_boolean';
+import {TrackableBoolean} from 'neuroglancer/trackable_boolean';
 import {makeCachedDerivedWatchableValue, makeCachedLazyDerivedWatchableValue, registerNested, WatchableValue, WatchableValueInterface} from 'neuroglancer/trackable_value';
 import {UserLayerWithAnnotationsMixin} from 'neuroglancer/ui/annotations';
 import {setClipboard} from 'neuroglancer/util/clipboard';
-import {Borrowed, RefCounted} from 'neuroglancer/util/disposable';
+import {Borrowed} from 'neuroglancer/util/disposable';
 import {makeValueOrError} from 'neuroglancer/util/error';
 import {verifyOptionalObjectProperty} from 'neuroglancer/util/json';
 import {VolumeRenderingRenderLayer} from 'neuroglancer/volume_rendering/volume_render_layer';
@@ -39,14 +39,16 @@ import {makeWatchableShaderError, ParameterizedShaderGetterResult} from 'neurogl
 import {setControlsInShader, ShaderControlsBuilderState, ShaderControlState} from 'neuroglancer/webgl/shader_ui_controls';
 import {ChannelDimensionsWidget} from 'neuroglancer/widget/channel_dimensions_widget';
 import {makeCopyButton} from 'neuroglancer/widget/copy_button';
-import {DependentViewWidget} from 'neuroglancer/widget/dependent_view_widget';
-import {EnumSelectWidget} from 'neuroglancer/widget/enum_widget';
+import {DependentViewContext} from 'neuroglancer/widget/dependent_view_widget';
 import {makeHelpButton} from 'neuroglancer/widget/help_button';
+import {addLayerControlToOptionsTab, LayerControlDefinition, registerLayerControl} from 'neuroglancer/widget/layer_control';
+import {checkboxLayerControl} from 'neuroglancer/widget/layer_control_checkbox';
+import {enumLayerControl} from 'neuroglancer/widget/layer_control_enum';
+import {rangeLayerControl} from 'neuroglancer/widget/layer_control_range';
 import {makeMaximizeButton} from 'neuroglancer/widget/maximize_button';
-import {RangeWidget} from 'neuroglancer/widget/range';
-import {RenderScaleWidget} from 'neuroglancer/widget/render_scale_widget';
+import {renderScaleLayerControl} from 'neuroglancer/widget/render_scale_widget';
 import {ShaderCodeWidget} from 'neuroglancer/widget/shader_code_widget';
-import {LegendShaderOptions, ShaderControls} from 'neuroglancer/widget/shader_controls';
+import {LegendShaderOptions, registerLayerShaderControlsTool, ShaderControls} from 'neuroglancer/widget/shader_controls';
 import {Tab} from 'neuroglancer/widget/tab_view';
 
 const OPACITY_JSON_KEY = 'opacity';
@@ -56,14 +58,11 @@ const SHADER_CONTROLS_JSON_KEY = 'shaderControls';
 const CROSS_SECTION_RENDER_SCALE_JSON_KEY = 'crossSectionRenderScale';
 const CHANNEL_DIMENSIONS_JSON_KEY = 'channelDimensions';
 const VOLUME_RENDERING_JSON_KEY = 'volumeRendering';
+const VOLUME_RENDER_SCALE_JSON_KEY = 'volumeRenderScale';
 
 export interface ImageLayerSelectionState extends UserLayerSelectionState {
   value: any;
 }
-
-const MIN_JSON_KEY = "min";
-const MAX_JSON_KEY = "max";
-const COLOR_JSON_KEY = "color";
 
 const Base = UserLayerWithAnnotationsMixin(UserLayer);
 export class ImageUserLayer extends Base {
@@ -117,8 +116,8 @@ export class ImageUserLayer extends Base {
 
   selectionState: ImageLayerSelectionState;
 
-  constructor(managedLayer: Borrowed<ManagedUserLayer>, specification: any) {
-    super(managedLayer, specification);
+  constructor(managedLayer: Borrowed<ManagedUserLayer>) {
+    super(managedLayer);
     this.localCoordinateSpaceCombiner.includeDimensionPredicate = isLocalDimension;
     this.blendMode.changed.add(this.specificationChanged.dispatch);
     this.opacity.changed.add(this.specificationChanged.dispatch);
@@ -129,7 +128,6 @@ export class ImageUserLayer extends Base {
     this.tabs.add(
         'rendering',
         {label: 'Rendering', order: -100, getter: () => new RenderingOptionsTab(this)});
-    
     this.tabs.default = 'rendering';
   }
 
@@ -188,23 +186,7 @@ export class ImageUserLayer extends Base {
     verifyOptionalObjectProperty(
         specification, BLEND_JSON_KEY, blendValue => this.blendMode.restoreState(blendValue));
     this.fragmentMain.restoreState(specification[SHADER_JSON_KEY]);
-    let shader_controls = {} as any;
-    if (SHADER_CONTROLS_JSON_KEY in specification){
-      shader_controls = specification[SHADER_CONTROLS_JSON_KEY];
-    }
-
-    // old neurodata viz links
-    if (MIN_JSON_KEY in specification){
-      shader_controls[MIN_JSON_KEY] = specification[MIN_JSON_KEY];
-    }
-    if (MAX_JSON_KEY in specification){
-      shader_controls[MAX_JSON_KEY] = specification[MAX_JSON_KEY];
-    }
-    if (COLOR_JSON_KEY in specification){
-      shader_controls[COLOR_JSON_KEY] = specification[COLOR_JSON_KEY];
-    }
-
-    this.shaderControlState.restoreState(shader_controls);
+    this.shaderControlState.restoreState(specification[SHADER_CONTROLS_JSON_KEY]);
     this.sliceViewRenderScaleTarget.restoreState(
         specification[CROSS_SECTION_RENDER_SCALE_JSON_KEY]);
     this.channelCoordinateSpace.restoreState(specification[CHANNEL_DIMENSIONS_JSON_KEY]);
@@ -266,14 +248,37 @@ export class ImageUserLayer extends Base {
     return true;
   }
 
-  displaySelectionState(state: this['selectionState'], parent: HTMLElement, context: RefCounted):
-      boolean {
+  displaySelectionState(
+      state: this['selectionState'], parent: HTMLElement, context: DependentViewContext): boolean {
     let displayed = this.displayImageSelectionState(state, parent);
     if (super.displaySelectionState(state, parent, context)) displayed = true;
     return displayed;
   }
 
+  getLegendShaderOptions(): LegendShaderOptions {
+    return {
+      memoizeKey: `ImageUserLayer`,
+      parameters: this.shaderControlState.builderState,
+      // fixme: support fallback
+      encodeParameters: p => p.key,
+      defineShader: (builder, shaderBuilderState: ShaderControlsBuilderState) => {
+        builder.addFragmentCode(`
+#define uOpacity 1.0
+`);
+        defineImageLayerShader(builder, shaderBuilderState);
+      },
+      initializeShader:
+          (shaderResult: ParameterizedShaderGetterResult<ShaderControlsBuilderState>) => {
+            const shader = shaderResult.shader!;
+            setControlsInShader(
+                this.manager.root.display.gl, shader, this.shaderControlState,
+                shaderResult.parameters.parseResult.controls);
+          },
+    };
+  }
+
   static type = 'image';
+  static typeAbbreviation = 'img';
 }
 
 function makeShaderCodeWidget(layer: ImageUserLayer) {
@@ -284,59 +289,62 @@ function makeShaderCodeWidget(layer: ImageUserLayer) {
   });
 }
 
+const LAYER_CONTROLS: LayerControlDefinition<ImageUserLayer>[] = [
+  {
+    label: 'Resolution (slice)',
+    toolJson: CROSS_SECTION_RENDER_SCALE_JSON_KEY,
+    ...renderScaleLayerControl(layer => ({
+                                 histogram: layer.sliceViewRenderScaleHistogram,
+                                 target: layer.sliceViewRenderScaleTarget
+                               })),
+  },
+  {
+    label: 'Blending',
+    toolJson: BLEND_JSON_KEY,
+    ...enumLayerControl(layer => layer.blendMode),
+  },
+  {
+    label: 'Volume rendering (experimental)',
+    toolJson: VOLUME_RENDERING_JSON_KEY,
+    ...checkboxLayerControl(layer => layer.volumeRendering),
+  },
+  {
+    label: 'Resolution (3d)',
+    toolJson: VOLUME_RENDER_SCALE_JSON_KEY,
+    isValid: layer => layer.volumeRendering,
+    ...renderScaleLayerControl(layer => ({
+                                 histogram: layer.volumeRenderingRenderScaleHistogram,
+                                 target: layer.volumeRenderingRenderScaleTarget
+                               })),
+  },
+  {
+    label: 'Opacity',
+    toolJson: OPACITY_JSON_KEY,
+    ...rangeLayerControl(layer => ({value: layer.opacity})),
+  },
+];
+
+for (const control of LAYER_CONTROLS) {
+  registerLayerControl(ImageUserLayer, control);
+}
+
 class RenderingOptionsTab extends Tab {
-  opacityWidget = this.registerDisposer(new RangeWidget(this.layer.opacity));
   codeWidget = this.registerDisposer(makeShaderCodeWidget(this.layer));
   constructor(public layer: ImageUserLayer) {
     super();
     const {element} = this;
     element.classList.add('neuroglancer-image-dropdown');
-    let {opacityWidget} = this;
-    let topRow = document.createElement('div');
-    topRow.className = 'neuroglancer-image-dropdown-top-row';
-    opacityWidget.promptElement.textContent = 'Opacity';
 
-    {
-      const renderScaleWidget = this.registerDisposer(new RenderScaleWidget(
-          this.layer.sliceViewRenderScaleHistogram, this.layer.sliceViewRenderScaleTarget));
-      renderScaleWidget.label.textContent = 'Resolution (slice)';
-      element.appendChild(renderScaleWidget.element);
+    for (const control of LAYER_CONTROLS) {
+      element.appendChild(addLayerControlToOptionsTab(this, layer, this.visibility, control));
     }
-
-    {
-      const label = document.createElement('label');
-      label.textContent = 'Blending';
-      label.appendChild(this.registerDisposer(new EnumSelectWidget(layer.blendMode)).element);
-      element.appendChild(label);
-    }
-
-    {
-      const checkbox = this.registerDisposer(new TrackableBooleanCheckbox(layer.volumeRendering));
-      checkbox.element.className = 'neuroglancer-noselect';
-      const label = document.createElement('label');
-      label.className = 'neuroglancer-noselect';
-      label.appendChild(document.createTextNode('Volume rendering (experimental)'));
-      label.appendChild(checkbox.element);
-      element.appendChild(label);
-    }
-
-    const controls3d = this.registerDisposer(
-        new DependentViewWidget(layer.volumeRendering, (volumeRendering, parent, context) => {
-          if (!volumeRendering) return;
-          {
-            const renderScaleWidget = context.registerDisposer(new RenderScaleWidget(
-                this.layer.volumeRenderingRenderScaleHistogram,
-                this.layer.volumeRenderingRenderScaleTarget));
-            renderScaleWidget.label.textContent = 'Resolution (3d)';
-            parent.appendChild(renderScaleWidget.element);
-          }
-        }, this.visibility));
-    element.appendChild(controls3d.element);
 
     let spacer = document.createElement('div');
     spacer.style.flex = '1';
 
-    topRow.appendChild(this.opacityWidget.element);
+    let topRow = document.createElement('div');
+    topRow.className = 'neuroglancer-image-dropdown-top-row';
+    topRow.appendChild(document.createTextNode('Shader'));
     topRow.appendChild(spacer);
     topRow.appendChild(makeMaximizeButton({
       title: 'Show larger editor view',
@@ -355,35 +363,16 @@ class RenderingOptionsTab extends Tab {
         this.registerDisposer(new ChannelDimensionsWidget(layer.channelCoordinateSpaceCombiner))
             .element);
     element.appendChild(this.codeWidget.element);
-    const legendShaderOptions: LegendShaderOptions = {
-      memoizeKey: `ImageUserLayer`,
-      parameters: layer.shaderControlState.builderState,
-      // fixme: support fallback
-      encodeParameters: p => p.key,
-      defineShader: (builder, shaderBuilderState: ShaderControlsBuilderState) => {
-        builder.addFragmentCode(`
-#define uOpacity 1.0
-`);
-        defineImageLayerShader(builder, shaderBuilderState);
-      },
-      initializeShader:
-          (shaderResult: ParameterizedShaderGetterResult<ShaderControlsBuilderState>) => {
-            const shader = shaderResult.shader!;
-            setControlsInShader(
-                layer.manager.root.display.gl, shader, layer.shaderControlState,
-                shaderResult.parameters.parseResult.controls);
-          },
-    };
     element.appendChild(
-        this.registerDisposer(
-                new ShaderControls(layer.shaderControlState, this.layer.manager.root.display, {
+        this
+            .registerDisposer(new ShaderControls(
+                layer.shaderControlState, this.layer.manager.root.display, this.layer, {
                   visibility: this.visibility,
-                  legendShaderOptions,
+                  legendShaderOptions: this.layer.getLegendShaderOptions(),
                 }))
             .element);
   }
 }
-
 
 class ShaderCodeOverlay extends Overlay {
   codeWidget = this.registerDisposer(makeShaderCodeWidget(this.layer));
@@ -395,7 +384,7 @@ class ShaderCodeOverlay extends Overlay {
   }
 }
 
-registerLayerType('image', ImageUserLayer);
+registerLayerType(ImageUserLayer);
 registerVolumeLayerType(VolumeType.IMAGE, ImageUserLayer);
 // Use ImageUserLayer as a fallback layer type if there is a `volume` subsource.
 registerLayerTypeDetector(subsource => {
@@ -404,3 +393,9 @@ registerLayerTypeDetector(subsource => {
   if (volume.volumeType !== VolumeType.UNKNOWN) return undefined;
   return {layerConstructor: ImageUserLayer, priority: -100};
 });
+
+registerLayerShaderControlsTool(
+    ImageUserLayer, layer => ({
+                      shaderControlState: layer.shaderControlState,
+                      legendShaderOptions: layer.getLegendShaderOptions()
+                    }));

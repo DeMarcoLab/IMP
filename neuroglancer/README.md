@@ -1,10 +1,14 @@
+Neuroglancer: Web-based volumetric data visualization
+-----------------------------------------------------
+
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![PyPI](https://img.shields.io/pypi/v/neuroglancer)](https://pypi.org/project/neuroglancer)
+![Build](https://github.com/google/neuroglancer/workflows/Build/badge.svg)
+[![DOI](https://zenodo.org/badge/59798355.svg)](https://zenodo.org/badge/latestdoi/59798355)
+
 Neuroglancer is a WebGL-based viewer for volumetric data.  It is capable of displaying arbitrary (non axis-aligned) cross-sectional views of volumetric data, as well as 3-D meshes and line-segment based models (skeletons).
 
 This is not an official Google product.
-
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Travis CI Build Status](https://travis-ci.org/google/neuroglancer.svg?branch=master)](https://travis-ci.org/google/neuroglancer)
-[![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/2npw99gr2x7kh763/branch/master?svg=true)](https://ci.appveyor.com/project/jbms/neuroglancer/branch/master)
 
 # Examples
 
@@ -28,19 +32,20 @@ The four-pane view consists of 3 orthogonal cross-sectional views as well as a 3
 
 Neuroglancer itself is purely a client-side program, but it depends on data being accessible via HTTP in a suitable format.  It is designed to easily support many different data sources, and there is existing support for the following data APIs/formats:
 
+- [Neuroglancer precomputed format](src/neuroglancer/datasource/precomputed)
+- [N5](src/neuroglancer/datasource/n5)
+- [Zarr](src/neuroglancer/datasource/zarr)
+- [Python in-memory volumes](python/README.md) (with automatic mesh generation)
 - BOSS <https://bossdb.org/>
 - DVID <https://github.com/janelia-flyem/dvid>
 - Render <https://github.com/saalfeldlab/render>
-- [Precomputed chunk/mesh fragments exposed over HTTP](src/neuroglancer/datasource/precomputed)
 - Single NIfTI files <https://www.nitrc.org/projects/nifti>
-- [Python in-memory volumes](python/README.md) (with automatic mesh generation)
-- N5 <https://github.com/saalfeldlab/n5>
-- [Zarr](src/neuroglancer/datasource/zarr)
 
 # Supported browsers
 
 - Chrome >= 51
 - Firefox >= 46
+- Safari >= 15.0
 
 # Keyboard and mouse bindings
 
@@ -136,13 +141,13 @@ node.js is required to build the viewer.
    
    `npm test`
    
-   To run only tests in files matching a given regular expression pattern:
+   To run only tests in files matching a given glob pattern:
    
    `npm test -- --pattern='<pattern>'`
    
    For example,
    
-   `npm test -- --pattern='util/uint64'`
+   `npm test -- --pattern='src/neuroglancer/util/uint64*'`
 
 6. See [package.json](package.json) for other commands available.
 
@@ -166,6 +171,7 @@ There is a Google Group/mailing list for discussion related to Neuroglancer:
   as a useful example for converting other datasets.
 - [BigArrays.jl](https://github.com/seung-lab/BigArrays.jl) - Julia interface of neuroglancer precomputed data format.
 - [cloudvolume](https://github.com/seung-lab/cloud-volume) - Python interface of neuroglancer precomputed data format.
+- [multiresolution-mesh-creator](https://github.com/janelia-cosem/multiresolution-mesh-creator) - Python tool for creating [multi-resolution meshes](https://github.com/google/neuroglancer/blob/master/src/neuroglancer/datasource/precomputed/meshes.md#multi-resolution-mesh-format) from single resolution - or multiscale - meshes.
 
 # Contributing
 

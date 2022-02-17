@@ -36,12 +36,6 @@ export class Uint64Set extends SharedObjectCounterpart implements
     return obj;
   }
 
-  disposed() {
-    super.disposed();
-    this.hashTable = <any>undefined;
-    this.changed = <any>undefined;
-  }
-
   set(x: Uint64, value: boolean) {
     if (!value) {
       this.delete(x);
@@ -108,6 +102,13 @@ export class Uint64Set extends SharedObjectCounterpart implements
     // Need to sort entries, otherwise serialization changes every time.
     result.sort();
     return result;
+  }
+
+  assignFrom(other: Uint64Set) {
+    this.clear();
+    for (const key of other) {
+      this.add(key);
+    }
   }
 }
 

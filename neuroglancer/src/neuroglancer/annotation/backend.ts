@@ -18,20 +18,18 @@ import {Annotation, AnnotationId, fixAnnotationAfterStructuredCloning, Serialize
 import {ANNOTATION_COMMIT_UPDATE_RESULT_RPC_ID, ANNOTATION_COMMIT_UPDATE_RPC_ID, ANNOTATION_METADATA_CHUNK_SOURCE_RPC_ID, ANNOTATION_PERSPECTIVE_RENDER_LAYER_UPDATE_SOURCES_RPC_ID, ANNOTATION_REFERENCE_ADD_RPC_ID, ANNOTATION_REFERENCE_DELETE_RPC_ID, ANNOTATION_RENDER_LAYER_RPC_ID, ANNOTATION_RENDER_LAYER_UPDATE_SEGMENTATION_RPC_ID, ANNOTATION_SPATIALLY_INDEXED_RENDER_LAYER_RPC_ID, ANNOTATION_SUBSET_GEOMETRY_CHUNK_SOURCE_RPC_ID, AnnotationGeometryChunkSpecification, forEachVisibleAnnotationChunk} from 'neuroglancer/annotation/base';
 import {Chunk, ChunkManager, ChunkRenderLayerBackend, ChunkSource, withChunkManager} from 'neuroglancer/chunk_manager/backend';
 import {ChunkPriorityTier, ChunkState} from 'neuroglancer/chunk_manager/base';
-import {DisplayDimensionRenderInfo} from 'neuroglancer/navigation_state';
+import {DisplayDimensionRenderInfo, displayDimensionRenderInfosEqual} from 'neuroglancer/navigation_state';
 import {RenderedViewBackend, RenderLayerBackend, RenderLayerBackendAttachment} from 'neuroglancer/render_layer_backend';
-import {forEachVisibleSegment, getObjectKey} from 'neuroglancer/segmentation_display_state/base';
-import {SharedDisjointUint64Sets} from 'neuroglancer/shared_disjoint_sets';
+import {receiveVisibleSegmentsState} from 'neuroglancer/segmentation_display_state/backend';
+import {forEachVisibleSegment, getObjectKey, onTemporaryVisibleSegmentsStateChanged, onVisibleSegmentsStateChanged, VisibleSegmentsState} from 'neuroglancer/segmentation_display_state/base';
 import {SharedWatchableValue} from 'neuroglancer/shared_watchable_value';
 import {deserializeTransformedSources, SCALE_PRIORITY_MULTIPLIER, SliceViewChunk, SliceViewChunkSourceBackend} from 'neuroglancer/sliceview/backend';
 import {TransformedSource} from 'neuroglancer/sliceview/base';
 import {registerNested, WatchableValue} from 'neuroglancer/trackable_value';
-import {Uint64Set} from 'neuroglancer/uint64_set';
 import {CancellationToken} from 'neuroglancer/util/cancellation';
 import {Borrowed} from 'neuroglancer/util/disposable';
 import {Uint64} from 'neuroglancer/util/uint64';
-import {getBasePriority, getPriorityTier} from 'neuroglancer/visibility_priority/backend';
-import {withSharedVisibility} from 'neuroglancer/visibility_priority/backend';
+import {getBasePriority, getPriorityTier, withSharedVisibility} from 'neuroglancer/visibility_priority/backend';
 import {registerRPC, registerSharedObject, RPC, SharedObjectCounterpart} from 'neuroglancer/worker_rpc';
 
 const ANNOTATION_METADATA_CHUNK_PRIORITY = 200;
@@ -308,12 +306,17 @@ class AnnotationSpatiallyIndexedRenderLayerBackend extends withChunkManager
       if (visibility === Number.NEGATIVE_INFINITY) {
         continue;
       }
-      const {transformedSources, displayDimensionRenderInfo} =
-          attachment.state! as AnnotationRenderLayerAttachmentState;
-      if (transformedSources.length === 0 ||
-          displayDimensionRenderInfo !==
-              view.projectionParameters.value.displayDimensionRenderInfo) {
-        continue;
+      const attachmentState = attachment.state! as AnnotationRenderLayerAttachmentState;
+      const {transformedSources, displayDimensionRenderInfo} = attachmentState;
+      if (transformedSources.length === 0) continue;
+      const viewDisplayDimensionRenderInfo =
+          view.projectionParameters.value.displayDimensionRenderInfo;
+      if (displayDimensionRenderInfo !== viewDisplayDimensionRenderInfo) {
+        if (!displayDimensionRenderInfosEqual(
+                displayDimensionRenderInfo, viewDisplayDimensionRenderInfo)) {
+          continue;
+        }
+        attachmentState.displayDimensionRenderInfo = viewDisplayDimensionRenderInfo;
       }
       const priorityTier = getPriorityTier(visibility);
       const basePriority = getBasePriority(visibility);
@@ -349,15 +352,11 @@ registerRPC(ANNOTATION_PERSPECTIVE_RENDER_LAYER_UPDATE_SOURCES_RPC_ID, function(
   attachment.state!.transformedSources = deserializeTransformedSources<
       AnnotationGeometryChunkSourceBackend, AnnotationSpatiallyIndexedRenderLayerBackend>(
       this, x.sources, layer);
-  attachment.state!.displayDimensionRenderInfo =
-      attachment.view.projectionParameters.value.displayDimensionRenderInfo;
+  attachment.state!.displayDimensionRenderInfo = x.displayDimensionRenderInfo;
   layer.chunkManager.scheduleUpdateChunkPriorities();
 });
 
-type AnnotationLayerSegmentationState = {
-  visibleSegments: Uint64Set,
-  segmentEquivalences: SharedDisjointUint64Sets
-}|undefined|null;
+type AnnotationLayerSegmentationState = VisibleSegmentsState|undefined|null;
 
 
 @registerSharedObject(ANNOTATION_RENDER_LAYER_RPC_ID)
@@ -378,9 +377,8 @@ class AnnotationLayerSharedObjectCounterpart extends withSharedVisibility
       if (states === undefined) return;
       for (const state of states) {
         if (state == null) continue;
-        context.registerDisposer(state.visibleSegments.changed.add(scheduleUpdateChunkPriorities));
-        context.registerDisposer(
-            state.segmentEquivalences.changed.add(scheduleUpdateChunkPriorities));
+        onVisibleSegmentsStateChanged(context, state, scheduleUpdateChunkPriorities);
+        onTemporaryVisibleSegmentsStateChanged(context, state, scheduleUpdateChunkPriorities);
       }
       scheduleUpdateChunkPriorities();
     }, this.segmentationStates));
@@ -418,16 +416,13 @@ class AnnotationLayerSharedObjectCounterpart extends withSharedVisibility
     }
   }
 
-  getSegmentationState(msg: any[]|undefined) {
+  getSegmentationState(msg: any[]|undefined): AnnotationLayerSegmentationState[]|undefined {
     if (msg === undefined) return undefined;
     return msg.map(x => {
       if (x == null) {
         return x as (undefined | null);
       }
-      return {
-        visibleSegments: this.rpc!.get(x.visibleSegments),
-        segmentEquivalences: this.rpc!.get(x.segmentEquivalences)
-      };
+      return receiveVisibleSegmentsState(this.rpc!, x);
     });
   }
 }

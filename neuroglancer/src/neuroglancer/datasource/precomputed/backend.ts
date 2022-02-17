@@ -21,6 +21,7 @@ import {decodeGzip} from 'neuroglancer/async_computation/decode_gzip_request';
 import {requestAsyncComputation} from 'neuroglancer/async_computation/request';
 import {Chunk, ChunkManager, WithParameters} from 'neuroglancer/chunk_manager/backend';
 import {GenericSharedDataSource} from 'neuroglancer/chunk_manager/generic_file_source';
+import {WithSharedCredentialsProviderCounterpart} from 'neuroglancer/credentials_provider/shared_counterpart';
 import {AnnotationSourceParameters, AnnotationSpatialIndexSourceParameters, DataEncoding, IndexedSegmentPropertySourceParameters, MeshSourceParameters, MultiscaleMeshSourceParameters, ShardingHashFunction, ShardingParameters, SkeletonSourceParameters, VolumeChunkEncoding, VolumeChunkSourceParameters} from 'neuroglancer/datasource/precomputed/base';
 import {assignMeshFragmentData, assignMultiscaleMeshFragmentData, computeOctreeChildOffsets, decodeJsonManifestChunk, decodeTriangleVertexPositionsAndIndices, FragmentChunk, generateHigherOctreeLevel, ManifestChunk, MeshSource, MultiscaleFragmentChunk, MultiscaleManifestChunk, MultiscaleMeshSource} from 'neuroglancer/mesh/backend';
 import {IndexedSegmentPropertySourceBackend} from 'neuroglancer/segmentation_display_state/backend';
@@ -28,7 +29,9 @@ import {SkeletonChunk, SkeletonSource} from 'neuroglancer/skeleton/backend';
 import {decodeSkeletonChunk} from 'neuroglancer/skeleton/decode_precomputed_skeleton';
 import {ChunkDecoder} from 'neuroglancer/sliceview/backend_chunk_decoders';
 import {decodeCompressedSegmentationChunk} from 'neuroglancer/sliceview/backend_chunk_decoders/compressed_segmentation';
+import {decodeCompressoChunk} from 'neuroglancer/sliceview/backend_chunk_decoders/compresso';
 import {decodeJpegChunk} from 'neuroglancer/sliceview/backend_chunk_decoders/jpeg';
+import {decodePngChunk} from 'neuroglancer/sliceview/backend_chunk_decoders/png';
 import {decodeRawChunk} from 'neuroglancer/sliceview/backend_chunk_decoders/raw';
 import {VolumeChunk, VolumeChunkSource} from 'neuroglancer/sliceview/volume/backend';
 import {fetchSpecialHttpByteRange} from 'neuroglancer/util/byte_range_http_requests';
@@ -37,11 +40,16 @@ import {Borrowed} from 'neuroglancer/util/disposable';
 import {convertEndian32, Endianness} from 'neuroglancer/util/endian';
 import {vec3} from 'neuroglancer/util/geom';
 import {murmurHash3_x86_128Hash64Bits} from 'neuroglancer/util/hash';
-import {cancellableFetchSpecialOk, isNotFoundError, responseArrayBuffer, responseJson} from 'neuroglancer/util/http_request';
+import {isNotFoundError, responseArrayBuffer, responseJson} from 'neuroglancer/util/http_request';
 import {stableStringify} from 'neuroglancer/util/json';
+import {getObjectId} from 'neuroglancer/util/object_id';
+import {cancellableFetchSpecialOk, SpecialProtocolCredentials, SpecialProtocolCredentialsProvider} from 'neuroglancer/util/special_protocol_request';
 import {Uint64} from 'neuroglancer/util/uint64';
-import {encodeZIndexCompressed} from 'neuroglancer/util/zorder';
+import {encodeZIndexCompressed, encodeZIndexCompressed3d, zorder3LessThan} from 'neuroglancer/util/zorder';
 import {registerSharedObject} from 'neuroglancer/worker_rpc';
+
+// Set to true to validate the multiscale index.
+const DEBUG_MULTISCALE_INDEX = false;
 
 const shardingHashFunctions: Map<ShardingHashFunction, (out: Uint64) => void> = new Map([
   [
@@ -66,17 +74,24 @@ interface DecodedMinishardIndex {
 interface MinishardIndexSource extends
     GenericSharedDataSource<Uint64, DecodedMinishardIndex|undefined> {
   sharding: ShardingParameters;
+  credentialsProvider: SpecialProtocolCredentialsProvider;
 }
 
 function getMinishardIndexDataSource(
-    chunkManager: Borrowed<ChunkManager>,
+    chunkManager: Borrowed<ChunkManager>, credentialsProvider: SpecialProtocolCredentialsProvider,
     parameters: {url: string, sharding: ShardingParameters|undefined}): MinishardIndexSource|
     undefined {
   const {url, sharding} = parameters;
   if (sharding === undefined) return undefined;
   const source =
       GenericSharedDataSource.get<Uint64, DecodedMinishardIndex|undefined>(
-          chunkManager, stableStringify({type: 'precomputed:shardedDataSource', url, sharding}), {
+          chunkManager, stableStringify({
+            type: 'precomputed:shardedDataSource',
+            url,
+            sharding,
+            credentialsProvider: getObjectId(credentialsProvider),
+          }),
+          {
             download: async function(
                 shardAndMinishard: Uint64, cancellationToken: CancellationToken) {
               const minishard = Uint64.lowMask(new Uint64(), sharding.minishardBits);
@@ -97,7 +112,8 @@ function getMinishardIndexDataSource(
               let shardIndexResponse: ArrayBuffer;
               try {
                 shardIndexResponse = await fetchSpecialHttpByteRange(
-                    shardUrl, shardIndexStart, shardIndexEnd, cancellationToken);
+                    credentialsProvider, shardUrl, shardIndexStart, shardIndexEnd,
+                    cancellationToken);
               } catch (e) {
                 if (isNotFoundError(e)) return {data: undefined, size: 0};
                 throw e;
@@ -121,7 +137,8 @@ function getMinishardIndexDataSource(
               Uint64.add(minishardEndOffset, minishardEndOffset, shardIndexSize);
 
               let minishardIndexResponse = await fetchSpecialHttpByteRange(
-                  shardUrl, minishardStartOffset, minishardEndOffset, cancellationToken);
+                  credentialsProvider, shardUrl, minishardStartOffset, minishardEndOffset,
+                  cancellationToken);
               if (sharding.minishardIndexEncoding === DataEncoding.GZIP) {
                 minishardIndexResponse =
                     (await requestAsyncComputation(
@@ -176,6 +193,7 @@ function getMinishardIndexDataSource(
             sourceQueueLevel: 1,
           }) as MinishardIndexSource;
   source.sharding = sharding;
+  source.credentialsProvider = credentialsProvider;
   return source;
 }
 
@@ -218,7 +236,8 @@ async function getShardedData(
   if (minishardEntry === undefined) return undefined;
   const {startOffset, endOffset} = minishardEntry;
   let data = await fetchSpecialHttpByteRange(
-      minishardIndex.shardUrl, startOffset, endOffset, cancellationToken);
+      minishardIndexSource.credentialsProvider, minishardIndex.shardUrl, startOffset, endOffset,
+      cancellationToken);
   if (minishardIndexSource.sharding.dataEncoding === DataEncoding.GZIP) {
     data =
         (await requestAsyncComputation(decodeGzip, cancellationToken, [data], new Uint8Array(data)))
@@ -236,11 +255,14 @@ const chunkDecoders = new Map<VolumeChunkEncoding, ChunkDecoder>();
 chunkDecoders.set(VolumeChunkEncoding.RAW, decodeRawChunk);
 chunkDecoders.set(VolumeChunkEncoding.JPEG, decodeJpegChunk);
 chunkDecoders.set(VolumeChunkEncoding.COMPRESSED_SEGMENTATION, decodeCompressedSegmentationChunk);
+chunkDecoders.set(VolumeChunkEncoding.COMPRESSO, decodeCompressoChunk);
+chunkDecoders.set(VolumeChunkEncoding.PNG, decodePngChunk);
 
 @registerSharedObject() export class PrecomputedVolumeChunkSource extends
-(WithParameters(VolumeChunkSource, VolumeChunkSourceParameters)) {
+(WithParameters(WithSharedCredentialsProviderCounterpart<SpecialProtocolCredentials>()(VolumeChunkSource), VolumeChunkSourceParameters)) {
   chunkDecoder = chunkDecoders.get(this.parameters.encoding)!;
-  private minishardIndexSource = getMinishardIndexDataSource(this.chunkManager, this.parameters);
+  private minishardIndexSource =
+      getMinishardIndexDataSource(this.chunkManager, this.credentialsProvider, this.parameters);
 
   gridShape = (() => {
     const gridShape = new Uint32Array(3);
@@ -267,14 +289,15 @@ chunkDecoders.set(VolumeChunkEncoding.COMPRESSED_SEGMENTATION, decodeCompressedS
             `${chunkPosition[1]}-${chunkPosition[1] + chunkDataSize[1]}_` +
             `${chunkPosition[2]}-${chunkPosition[2] + chunkDataSize[2]}`;
       }
-      response = await cancellableFetchSpecialOk(url, {}, responseArrayBuffer, cancellationToken);
+      response = await cancellableFetchSpecialOk(
+          this.credentialsProvider, url, {}, responseArrayBuffer, cancellationToken);
     } else {
       this.computeChunkBounds(chunk);
       const {gridShape} = this;
       const {chunkGridPosition} = chunk;
       const xBits = Math.ceil(Math.log2(gridShape[0])), yBits = Math.ceil(Math.log2(gridShape[1])),
             zBits = Math.ceil(Math.log2(gridShape[2]));
-      const chunkIndex = encodeZIndexCompressed(
+      const chunkIndex = encodeZIndexCompressed3d(
           new Uint64(), xBits, yBits, zBits, chunkGridPosition[0], chunkGridPosition[1],
           chunkGridPosition[2]);
       response = (getOrNotFoundError(await getShardedData(
@@ -299,19 +322,20 @@ export function decodeFragmentChunk(chunk: FragmentChunk, response: ArrayBuffer)
 }
 
 @registerSharedObject() export class PrecomputedMeshSource extends
-(WithParameters(MeshSource, MeshSourceParameters)) {
+(WithParameters(WithSharedCredentialsProviderCounterpart<SpecialProtocolCredentials>()(MeshSource), MeshSourceParameters)) {
   async download(chunk: ManifestChunk, cancellationToken: CancellationToken) {
     const {parameters} = this;
     const response = await cancellableFetchSpecialOk(
-        `${parameters.url}/${chunk.objectId}:${parameters.lod}`, {}, responseJson,
-        cancellationToken);
+        this.credentialsProvider, `${parameters.url}/${chunk.objectId}:${parameters.lod}`, {},
+        responseJson, cancellationToken);
     decodeManifestChunk(chunk, response);
   }
 
   async downloadFragment(chunk: FragmentChunk, cancellationToken: CancellationToken) {
     const {parameters} = this;
     const response = await cancellableFetchSpecialOk(
-        `${parameters.url}/${chunk.fragmentId}`, {}, responseArrayBuffer, cancellationToken);
+        this.credentialsProvider, `${parameters.url}/${chunk.fragmentId}`, {}, responseArrayBuffer,
+        cancellationToken);
     decodeFragmentChunk(chunk, response);
   }
 }
@@ -365,15 +389,35 @@ function decodeMultiscaleManifestChunk(
   }
   const fragmentInfo = new Uint32Array(response, offset);
   convertEndian32(fragmentInfo, Endianness.LITTLE);
-  const clipUpperBound =
-      vec3.fromValues(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
   const clipLowerBound =
+      vec3.fromValues(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
+  const clipUpperBound =
       vec3.fromValues(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY);
   let numLods = Math.max(1, storedLodScales.length);
+  // Compute `clipLowerBound` and `clipUpperBound` and `numLods`.  Note that `numLods` is >=
+  // `storedLodScales.length`; it may contain additional levels since at the highest level the
+  // octree must be a single node.
   {
     let fragmentBase = 0;
     for (let lodIndex = 0; lodIndex < numStoredLods; ++lodIndex) {
       const numFragments = numFragmentsPerLod[lodIndex];
+      if (DEBUG_MULTISCALE_INDEX) {
+        for (let i = 1; i < numFragments; ++i) {
+          let x0 = fragmentInfo[fragmentBase + numFragments * 0 + (i - 1)];
+          let y0 = fragmentInfo[fragmentBase + numFragments * 1 + (i - 1)];
+          let z0 = fragmentInfo[fragmentBase + numFragments * 2 + (i - 1)];
+          let x1 = fragmentInfo[fragmentBase + numFragments * 0 + i];
+          let y1 = fragmentInfo[fragmentBase + numFragments * 1 + i];
+          let z1 = fragmentInfo[fragmentBase + numFragments * 2 + i];
+          if (!zorder3LessThan(x0, y0, z0, x1, y1, z1)) {
+            console.log(
+                `Fragment index violates zorder constraint: ` +
+                `lod=${lodIndex}, ` +
+                `chunk ${i - 1} = [${x0},${y0},${z0}], ` +
+                `chunk ${i} = [${x1},${y1},${z1}]`);
+          }
+        }
+      }
       for (let i = 0; i < 3; ++i) {
         let upperBoundValue = Number.NEGATIVE_INFINITY;
         let lowerBoundValue = Number.POSITIVE_INFINITY;
@@ -399,6 +443,8 @@ function decodeMultiscaleManifestChunk(
     }
   }
 
+  // Compute upper bound on number of nodes that will be in the octree, so that we can allocate a
+  // sufficiently large buffer without having to worry about resizing.
   let maxFragments = 0;
   {
     let prevNumFragments = 0;
@@ -489,9 +535,10 @@ async function decodeMultiscaleFragmentChunk(
 
 @registerSharedObject() //
 export class PrecomputedMultiscaleMeshSource extends
-(WithParameters(MultiscaleMeshSource, MultiscaleMeshSourceParameters)) {
+(WithParameters(WithSharedCredentialsProviderCounterpart<SpecialProtocolCredentials>()(MultiscaleMeshSource), MultiscaleMeshSourceParameters)) {
   private minishardIndexSource = getMinishardIndexDataSource(
-      this.chunkManager, {url: this.parameters.url, sharding: this.parameters.metadata.sharding});
+      this.chunkManager, this.credentialsProvider,
+      {url: this.parameters.url, sharding: this.parameters.metadata.sharding});
 
   async download(chunk: PrecomputedMultiscaleManifestChunk, cancellationToken: CancellationToken):
       Promise<void> {
@@ -499,7 +546,8 @@ export class PrecomputedMultiscaleMeshSource extends
     let data: ArrayBuffer;
     if (minishardIndexSource === undefined) {
       data = await cancellableFetchSpecialOk(
-          `${parameters.url}/${chunk.objectId}.index`, {}, responseArrayBuffer, cancellationToken);
+          this.credentialsProvider, `${parameters.url}/${chunk.objectId}.index`, {},
+          responseArrayBuffer, cancellationToken);
     } else {
       ({data, shardInfo: chunk.shardInfo} = getOrNotFoundError(
            await getShardedData(minishardIndexSource, chunk, chunk.objectId, cancellationToken)));
@@ -544,18 +592,20 @@ export class PrecomputedMultiscaleMeshSource extends
       adjustedEndOffset = endOffset;
     }
     const response = await fetchSpecialHttpByteRange(
-        requestUrl, adjustedStartOffset, adjustedEndOffset, cancellationToken);
+        this.credentialsProvider, requestUrl, adjustedStartOffset, adjustedEndOffset,
+        cancellationToken);
     await decodeMultiscaleFragmentChunk(chunk, response);
   }
 }
 
 async function fetchByUint64(
-    url: string, chunk: Chunk, minishardIndexSource: MinishardIndexSource|undefined, id: Uint64,
+    credentialsProvider: SpecialProtocolCredentialsProvider, url: string, chunk: Chunk,
+    minishardIndexSource: MinishardIndexSource|undefined, id: Uint64,
     cancellationToken: CancellationToken) {
   if (minishardIndexSource === undefined) {
     try {
       return await cancellableFetchSpecialOk(
-          `${url}/${id}`, {}, responseArrayBuffer, cancellationToken);
+          credentialsProvider, `${url}/${id}`, {}, responseArrayBuffer, cancellationToken);
     } catch (e) {
       if (isNotFoundError(e)) return undefined;
       throw e;
@@ -568,13 +618,15 @@ async function fetchByUint64(
 
 @registerSharedObject() //
 export class PrecomputedSkeletonSource extends
-(WithParameters(SkeletonSource, SkeletonSourceParameters)) {
+(WithParameters(WithSharedCredentialsProviderCounterpart<SpecialProtocolCredentials>()(SkeletonSource), SkeletonSourceParameters)) {
   private minishardIndexSource = getMinishardIndexDataSource(
-      this.chunkManager, {url: this.parameters.url, sharding: this.parameters.metadata.sharding});
+      this.chunkManager, this.credentialsProvider,
+      {url: this.parameters.url, sharding: this.parameters.metadata.sharding});
   async download(chunk: SkeletonChunk, cancellationToken: CancellationToken) {
     const {parameters} = this;
     const response = getOrNotFoundError(await fetchByUint64(
-        parameters.url, chunk, this.minishardIndexSource, chunk.objectId, cancellationToken));
+        this.credentialsProvider, parameters.url, chunk, this.minishardIndexSource, chunk.objectId,
+        cancellationToken));
     decodeSkeletonChunk(chunk, response, parameters.metadata.vertexAttributes);
   }
 }
@@ -656,8 +708,9 @@ function parseSingleAnnotation(
 }
 
 @registerSharedObject() //
-export class PrecomputedAnnotationSpatialIndexSourceBackend extends (WithParameters(AnnotationGeometryChunkSourceBackend, AnnotationSpatialIndexSourceParameters)) {
-  private minishardIndexSource = getMinishardIndexDataSource(this.chunkManager, this.parameters);
+export class PrecomputedAnnotationSpatialIndexSourceBackend extends (WithParameters(WithSharedCredentialsProviderCounterpart<SpecialProtocolCredentials>()(AnnotationGeometryChunkSourceBackend), AnnotationSpatialIndexSourceParameters)) {
+  private minishardIndexSource =
+      getMinishardIndexDataSource(this.chunkManager, this.credentialsProvider, this.parameters);
   parent: PrecomputedAnnotationSourceBackend;
   async download(chunk: AnnotationGeometryChunk, cancellationToken: CancellationToken) {
     const {parameters} = this;
@@ -669,19 +722,15 @@ export class PrecomputedAnnotationSpatialIndexSourceBackend extends (WithParamet
     if (minishardIndexSource === undefined) {
       const url = `${parameters.url}/${chunkGridPosition.join('_')}`;
       try {
-        response = await cancellableFetchSpecialOk(url, {}, responseArrayBuffer, cancellationToken);
+        response = await cancellableFetchSpecialOk(
+            this.credentialsProvider, url, {}, responseArrayBuffer, cancellationToken);
       } catch (e) {
         if (!isNotFoundError(e)) throw e;
       }
     } else {
       const {upperChunkBound} = this.spec;
       const {chunkGridPosition} = chunk;
-      const xBits = Math.ceil(Math.log2(upperChunkBound[0])),
-            yBits = Math.ceil(Math.log2(upperChunkBound[1])),
-            zBits = Math.ceil(Math.log2(upperChunkBound[2]));
-      const chunkIndex = encodeZIndexCompressed(
-          new Uint64(), xBits, yBits, zBits, chunkGridPosition[0], chunkGridPosition[1],
-          chunkGridPosition[2]);
+      const chunkIndex = encodeZIndexCompressed(new Uint64(), chunkGridPosition, upperChunkBound);
       const result =
           await getShardedData(minishardIndexSource, chunk, chunkIndex, cancellationToken);
       if (result !== undefined) response = result.data;
@@ -694,11 +743,11 @@ export class PrecomputedAnnotationSpatialIndexSourceBackend extends (WithParamet
 }
 
 @registerSharedObject() //
-export class PrecomputedAnnotationSourceBackend extends (WithParameters(AnnotationSource, AnnotationSourceParameters)) {
-  private byIdMinishardIndexSource =
-      getMinishardIndexDataSource(this.chunkManager, this.parameters.byId);
-  private relationshipIndexSource =
-      this.parameters.relationships.map(x => getMinishardIndexDataSource(this.chunkManager, x));
+export class PrecomputedAnnotationSourceBackend extends (WithParameters(WithSharedCredentialsProviderCounterpart<SpecialProtocolCredentials>()(AnnotationSource), AnnotationSourceParameters)) {
+  private byIdMinishardIndexSource = getMinishardIndexDataSource(
+      this.chunkManager, this.credentialsProvider, this.parameters.byId);
+  private relationshipIndexSource = this.parameters.relationships.map(
+      x => getMinishardIndexDataSource(this.chunkManager, this.credentialsProvider, x));
   annotationPropertySerializer =
       new AnnotationPropertySerializer(this.parameters.rank, this.parameters.properties);
 
@@ -707,7 +756,7 @@ export class PrecomputedAnnotationSourceBackend extends (WithParameters(Annotati
       cancellationToken: CancellationToken) {
     const {parameters} = this;
     const response = await fetchByUint64(
-        parameters.relationships[relationshipIndex].url, chunk,
+        this.credentialsProvider, parameters.relationships[relationshipIndex].url, chunk,
         this.relationshipIndexSource[relationshipIndex], chunk.objectId, cancellationToken);
     if (response !== undefined) {
       chunk.data = parseAnnotations(response, this.parameters, this.annotationPropertySerializer);
@@ -718,7 +767,8 @@ export class PrecomputedAnnotationSourceBackend extends (WithParameters(Annotati
     const {parameters} = this;
     const id = Uint64.parseString(chunk.key!);
     const response = await fetchByUint64(
-        parameters.byId.url, chunk, this.byIdMinishardIndexSource, id, cancellationToken);
+        this.credentialsProvider, parameters.byId.url, chunk, this.byIdMinishardIndexSource, id,
+        cancellationToken);
     if (response === undefined) {
       chunk.annotation = null;
     } else {
@@ -730,6 +780,9 @@ export class PrecomputedAnnotationSourceBackend extends (WithParameters(Annotati
 
 @registerSharedObject()
 export class PrecomputedIndexedSegmentPropertySourceBackend extends WithParameters
-(IndexedSegmentPropertySourceBackend, IndexedSegmentPropertySourceParameters) {
-  minishardIndexSource = getMinishardIndexDataSource(this.chunkManager, this.parameters);
+(WithSharedCredentialsProviderCounterpart<SpecialProtocolCredentials>()(
+     IndexedSegmentPropertySourceBackend),
+ IndexedSegmentPropertySourceParameters) {
+  minishardIndexSource =
+      getMinishardIndexDataSource(this.chunkManager, this.credentialsProvider, this.parameters);
 }

@@ -15,6 +15,7 @@
  */
 
 import {CoordinateSpaceCombiner} from 'neuroglancer/coordinate_transform';
+import {TrackableBoolean} from 'neuroglancer/trackable_boolean';
 import {constantWatchableValue, makeCachedDerivedWatchableValue, makeCachedLazyDerivedWatchableValue, TrackableValue, TrackableValueInterface, WatchableValueInterface} from 'neuroglancer/trackable_value';
 import {arraysEqual, arraysEqualWithPredicate} from 'neuroglancer/util/array';
 import {parseRGBColorSpecification, TrackableRGB} from 'neuroglancer/util/color';
@@ -22,13 +23,13 @@ import {DataType} from 'neuroglancer/util/data_type';
 import {RefCounted} from 'neuroglancer/util/disposable';
 import {vec3} from 'neuroglancer/util/geom';
 import {parseFixedLengthArray, verifyFiniteFloat, verifyInt, verifyObject, verifyOptionalObjectProperty} from 'neuroglancer/util/json';
+import {DataTypeInterval, dataTypeIntervalToJson, defaultDataTypeRange, normalizeDataTypeInterval, parseDataTypeInterval, validateDataTypeInterval} from 'neuroglancer/util/lerp';
 import {NullarySignal} from 'neuroglancer/util/signal';
 import {Trackable} from 'neuroglancer/util/trackable';
 import {GL} from 'neuroglancer/webgl/context';
 import {HistogramChannelSpecification, HistogramSpecifications} from 'neuroglancer/webgl/empirical_cdf';
-import {DataTypeInterval, dataTypeIntervalToJson, defaultDataTypeRange, defineInvlerpShaderFunction, enableLerpShaderFunction, normalizeDataTypeInterval, parseDataTypeInterval, validateDataTypeInterval} from 'neuroglancer/webgl/lerp';
+import {defineInvlerpShaderFunction, enableLerpShaderFunction} from 'neuroglancer/webgl/lerp';
 import {ShaderBuilder, ShaderProgram} from 'neuroglancer/webgl/shader';
-import { ObjectTracker_IMP } from '../ObjectTracker_IMP';
 
 export interface ShaderSliderControl {
   type: 'slider';
@@ -53,7 +54,14 @@ export interface ShaderInvlerpControl {
   default: InvlerpParameters;
 }
 
-export type ShaderUiControl = ShaderSliderControl|ShaderColorControl|ShaderInvlerpControl;
+export interface ShaderCheckboxControl {
+  type: 'checkbox';
+  valueType: 'bool';
+  default: boolean;
+}
+
+export type ShaderUiControl =
+    ShaderSliderControl|ShaderColorControl|ShaderInvlerpControl|ShaderCheckboxControl;
 
 export interface ShaderControlParseError {
   line: number;
@@ -61,7 +69,9 @@ export interface ShaderControlParseError {
 }
 
 export interface ShaderControlsParseResult {
+  // Original source code entered by user.
   source: string;
+  // Source code with comments stripped and UI controls replaced by appropriate text.
   code: string;
   controls: Map<string, ShaderUiControl>;
   errors: ShaderControlParseError[];
@@ -251,6 +261,34 @@ function parseSliderDirective(
   }
 }
 
+function parseCheckboxDirective(
+    valueType: string, parameters: DirectiveParameters): DirectiveParseResult {
+  let defaultValue: boolean = false;
+  let errors = [];
+  if (valueType !== 'bool') {
+    errors.push('type must be bool');
+  }
+  for (const [key, value] of parameters) {
+    if (key === 'default') {
+      if (typeof value !== 'boolean') {
+        errors.push(`Expected ${key} argument to be a boolean`);
+        continue;
+      }
+      defaultValue = value;
+    } else {
+      errors.push(`Invalid parameter: ${key}`);
+    }
+  }
+  if (errors.length > 0) {
+    return {errors};
+  } else {
+    return {
+      control: {type: 'checkbox', valueType, default: defaultValue} as ShaderCheckboxControl,
+      errors: undefined,
+    };
+  }
+}
+
 function parseColorDirective(
     valueType: string, parameters: DirectiveParameters): DirectiveParseResult {
   let defaultColor = 'white';
@@ -375,6 +413,7 @@ const controlParsers = new Map<
   ['slider', parseSliderDirective],
   ['color', parseColorDirective],
   ['invlerp', parseInvlerpDirective],
+  ['checkbox', parseCheckboxDirective],
 ]);
 
 export function parseShaderUiControls(
@@ -439,7 +478,7 @@ function uniformName(controlName: string) {
 }
 
 export function addControlsToBuilder(
-  builderState: ShaderControlsBuilderState, builder: ShaderBuilder) {
+    builderState: ShaderControlsBuilderState, builder: ShaderBuilder) {
   const {builderValues} = builderState;
   for (const [name, control] of builderState.parseResult.controls) {
     const uName = uniformName(name);
@@ -455,6 +494,12 @@ float ${uName}() {
         ];
         builder.addFragmentCode(code);
         builder.addFragmentCode(`#define ${name} ${uName}\n`);
+        break;
+      }
+      case 'checkbox': {
+        const code = `#define ${name} ${builderValue.value}\n`;
+        builder.addFragmentCode(code);
+        builder.addVertexCode(code);
         break;
       }
       default: {
@@ -564,14 +609,21 @@ function getControlTrackable(control: ShaderUiControl):
         getBuilderValue: (value: InvlerpParameters) =>
             ({channel: value.channel, dataType: control.dataType}),
       };
+    case 'checkbox':
+      return {
+        trackable: new TrackableBoolean(control.default),
+        getBuilderValue: value => ({value}),
+      };
   }
 }
 
-export type ShaderControlMap = Map<string, {
-  control: ShaderUiControl,
-  trackable: TrackableValueInterface<any>,
-  getBuilderValue: (value: any) => any,
-}>;
+export interface SingleShaderControlState {
+  control: ShaderUiControl;
+  trackable: TrackableValueInterface<any>;
+  getBuilderValue: (value: any) => any;
+}
+
+export type ShaderControlMap = Map<string, SingleShaderControlState>;
 
 export type ShaderBuilderValues = {
   [key: string]: any
@@ -711,6 +763,7 @@ export class ShaderControlState extends RefCounted implements
   }
 
   private handleControlsChanged() {
+
     const generation = this.controls.changed.count;
     if (generation === this.controlsGeneration) {
       return;
@@ -729,6 +782,7 @@ export class ShaderControlState extends RefCounted implements
         controlState.trackable.changed.remove(this.changed.dispatch);
         state_.delete(name);
         changed = true;
+
         continue;
       }
     }
@@ -736,7 +790,6 @@ export class ShaderControlState extends RefCounted implements
       let controlState = state_.get(name);
       if (controlState !== undefined &&
           JSON.stringify(controlState.control) !== JSON.stringify(control)) {
-      
         controlState.trackable.changed.remove(this.changed.dispatch);
         controlState = undefined;
       }
@@ -762,6 +815,7 @@ export class ShaderControlState extends RefCounted implements
     this.unparsedJson = undefined;
     if (changed) {
       this.changed.dispatch();
+  
     }
   }
 
@@ -854,6 +908,9 @@ function setControlInShader(
     case 'invlerp':
       enableLerpShaderFunction(shader, uName, control.dataType, value.range);
       break;
+    case 'checkbox':
+      // Value is hard-coded in shader.
+      break;
   }
 }
 
@@ -862,10 +919,7 @@ export function setControlsInShader(
   const {state} = shaderControlState;
   if (shaderControlState.controls.value === controls) {
     // Case when shader doesn't have any errors.
-    
     for (const [name, controlState] of state) {
-      //ObjectTracker_IMP.getInstance().updateAttribute(name,controlState.trackable.value)
-    //console.log(controlState)
       setControlInShader(gl, shader, name, controlState.control, controlState.trackable.value);
     }
   } else {

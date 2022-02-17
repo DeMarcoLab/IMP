@@ -40,6 +40,12 @@ members:
 - `"sharding"`: If specified, indicates that the mesh is stored using the [sharded
     format](./sharded.md).  Must be a [sharding specification](./sharded.md#sharding-specification).  If not
     specified, the unsharded storage representation is used.
+- `"segment_properties"`: Optional.  If specified, it must be a string value specifying the name of
+  the subdirectory containing a [segment properties](./segment_properties.md) representation.  Note
+  that Neuroglancer only uses these segment properties if this mesh source is specified as a data
+  source directly.  If it is specified indirectly via the `"mesh"` property in a [multi-scale
+  volume](./volume.md), then you must instead specify the properties using use the
+  `"segment_properties"` member in the volume's `info` file.
 
 ### Multi-resolution mesh manifest file format
 
@@ -122,8 +128,13 @@ and the sum of the mesh fragment sizes specified in the manifest.
 
 In addition to the multi-resolution mesh format, an older single-resolution mesh format is also
 supported.  This format is specified by either the absence of an `info` file in the mesh
-subdirectory or an `info` file contanining a JSON object with the following members:
+subdirectory or an `info` file containing a JSON object with the following members:
 - `"@type"`: Must be `"neuroglancer_legacy_mesh"`.
+
+To specify a legacy single-resolution mesh dataset that lacks an `info` file as a Neuroglancer data
+source, use the data source URL syntax `precomputed://FILE_URL#type=mesh`, where `FILE_URL` is the
+URL to the directory containing the mesh data using any [supported file
+protocol](../file_protocols.md).
 
 The surface mesh representation for a given segmented object may be split into one or more separate
 fragments (e.g. corresponding to subvolumes).

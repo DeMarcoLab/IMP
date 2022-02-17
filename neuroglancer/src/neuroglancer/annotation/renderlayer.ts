@@ -19,14 +19,14 @@ import 'neuroglancer/annotation/line';
 import 'neuroglancer/annotation/point';
 import 'neuroglancer/annotation/ellipsoid';
 
-import {AnnotationBase, AnnotationSerializer, AnnotationSource, annotationTypeHandlers, annotationTypes, SerializedAnnotations} from 'neuroglancer/annotation';
-import {AnnotationLayerState} from 'neuroglancer/annotation/annotation_layer_state';
+import {AnnotationBase, AnnotationSerializer, AnnotationSource, annotationTypeHandlers, annotationTypes, formatAnnotationPropertyValue, SerializedAnnotations} from 'neuroglancer/annotation';
+import {AnnotationLayerState, OptionalSegmentationDisplayState} from 'neuroglancer/annotation/annotation_layer_state';
 import {ANNOTATION_PERSPECTIVE_RENDER_LAYER_UPDATE_SOURCES_RPC_ID, ANNOTATION_RENDER_LAYER_RPC_ID, ANNOTATION_RENDER_LAYER_UPDATE_SEGMENTATION_RPC_ID, ANNOTATION_SPATIALLY_INDEXED_RENDER_LAYER_RPC_ID, forEachVisibleAnnotationChunk} from 'neuroglancer/annotation/base';
 import {AnnotationGeometryChunkSource, AnnotationGeometryData, computeNumPickIds, MultiscaleAnnotationSource} from 'neuroglancer/annotation/frontend_source';
 import {AnnotationRenderContext, AnnotationRenderHelper, getAnnotationTypeRenderHandler} from 'neuroglancer/annotation/type_handler';
 import {ChunkState, LayerChunkProgressInfo} from 'neuroglancer/chunk_manager/base';
 import {ChunkManager, ChunkRenderLayerFrontend} from 'neuroglancer/chunk_manager/frontend';
-import {LayerView, MouseSelectionState, VisibleLayerInfo} from 'neuroglancer/layer';
+import {LayerView, MouseSelectionState, PickState, VisibleLayerInfo} from 'neuroglancer/layer';
 import {DisplayDimensionRenderInfo} from 'neuroglancer/navigation_state';
 import {PerspectivePanel} from 'neuroglancer/perspective_view/panel';
 import {PerspectiveViewRenderContext, PerspectiveViewRenderLayer} from 'neuroglancer/perspective_view/render_layer';
@@ -34,15 +34,16 @@ import {ChunkDisplayTransformParameters, ChunkTransformParameters, getChunkDispl
 import {RenderScaleHistogram} from 'neuroglancer/render_scale_statistics';
 import {ThreeDimensionalRenderContext, VisibilityTrackedRenderLayer} from 'neuroglancer/renderlayer';
 import {forEachVisibleSegment, getObjectKey} from 'neuroglancer/segmentation_display_state/base';
-import {SegmentationDisplayState} from 'neuroglancer/segmentation_display_state/frontend';
+import {sendVisibleSegmentsState} from 'neuroglancer/segmentation_display_state/frontend';
 import {SharedWatchableValue} from 'neuroglancer/shared_watchable_value';
 import {SliceViewProjectionParameters} from 'neuroglancer/sliceview/base';
 import {FrontendTransformedSource, getVolumetricTransformedSources, serializeAllTransformedSources} from 'neuroglancer/sliceview/frontend';
 import {SliceViewPanelRenderContext, SliceViewPanelRenderLayer, SliceViewRenderLayer} from 'neuroglancer/sliceview/renderlayer';
 import {crossSectionBoxWireFrameShader, projectionViewBoxWireFrameShader} from 'neuroglancer/sliceview/wire_frame';
-import {constantWatchableValue, makeCachedDerivedWatchableValue, NestedStateManager, registerNested, WatchableValueInterface} from 'neuroglancer/trackable_value';
+import {constantWatchableValue, makeCachedDerivedWatchableValue, NestedStateManager, registerNested, registerNestedSync, WatchableValueInterface} from 'neuroglancer/trackable_value';
 import {arraysEqual} from 'neuroglancer/util/array';
 import {Borrowed, Owned, RefCounted} from 'neuroglancer/util/disposable';
+import {Endianness, ENDIANNESS} from 'neuroglancer/util/endian';
 import {ValueOrError} from 'neuroglancer/util/error';
 import {mat4} from 'neuroglancer/util/geom';
 import {MessageList, MessageSeverity} from 'neuroglancer/util/message_list';
@@ -57,8 +58,8 @@ import {registerSharedObjectOwner, SharedObject} from 'neuroglancer/worker_rpc';
 
 const tempMat = mat4.create();
 
-function segmentationFilter(
-    segmentationStates: readonly(SegmentationDisplayState | undefined | null)[]|undefined) {
+function segmentationFilter(segmentationStates: readonly OptionalSegmentationDisplayState[]|
+                            undefined) {
   if (segmentationStates === undefined) return undefined;
   return (annotation: AnnotationBase) => {
     const {relatedSegments: relatedSegments} = annotation;
@@ -68,7 +69,7 @@ function segmentationFilter(
     for (let i = 0, count = relatedSegments.length; i < count; ++i) {
       const segmentationState = segmentationStates[i];
       if (segmentationState == null) continue;
-      const {visibleSegments, segmentEquivalences} = segmentationState;
+      const {visibleSegments, segmentEquivalences} = segmentationState.segmentationGroupState.value;
       for (const segment of relatedSegments[i]) {
         if (visibleSegments.has(segmentEquivalences.get(segment))) {
           return true;
@@ -97,7 +98,7 @@ class AnnotationLayerSharedObject extends withSharedVisibility
       public chunkManager: Borrowed<ChunkManager>,
       public source: Borrowed<MultiscaleAnnotationSource>,
       public segmentationStates:
-          WatchableValueInterface<(SegmentationDisplayState | undefined | null)[]|undefined>,
+          WatchableValueInterface<OptionalSegmentationDisplayState[]|undefined>,
       chunkRenderLayer: LayerChunkProgressInfo) {
     super(chunkRenderLayer);
 
@@ -119,10 +120,7 @@ class AnnotationLayerSharedObject extends withSharedVisibility
     if (segmentationStates === undefined) return undefined;
     return segmentationStates.map(segmentationState => {
       if (segmentationState == null) return segmentationState;
-      return {
-        segmentEquivalences: segmentationState.segmentEquivalences.rpcId,
-        visibleSegments: segmentationState.visibleSegments.rpcId
-      };
+      return sendVisibleSegmentsState(segmentationState.segmentationGroupState.value);
     });
   }
 }
@@ -198,10 +196,12 @@ export class AnnotationLayer extends RefCounted {
       if (segmentationStates === undefined) return;
       for (const segmentationState of segmentationStates) {
         if (segmentationState == null) continue;
-        context.registerDisposer(segmentationState.visibleSegments.changed.add(
-            () => this.handleChangeAffectingBuffer()));
-        context.registerDisposer(segmentationState.segmentEquivalences.changed.add(
-            () => this.handleChangeAffectingBuffer()));
+        context.registerDisposer(registerNestedSync((context, group) => {
+          context.registerDisposer(
+              group.visibleSegments.changed.add(() => this.handleChangeAffectingBuffer()));
+          context.registerDisposer(
+              group.segmentEquivalences.changed.add(() => this.handleChangeAffectingBuffer()));
+        }, segmentationState.segmentationGroupState));
       }
     }, this.segmentationStates));
     if (!(this.source instanceof AnnotationSource)) {
@@ -498,6 +498,7 @@ function AnnotationRenderLayer<TBase extends AnyConstructor<VisibilityTrackedRen
           mouseState.pickedAnnotationLayer = this.base.state;
           mouseState.pickedOffset = partIndex;
           mouseState.pickedAnnotationBuffer = serializedAnnotations.data.buffer;
+          mouseState.pickedAnnotationType = annotationType;
           mouseState.pickedAnnotationBufferOffset = serializedAnnotations.data.byteOffset +
               typeToOffset[annotationType] +
               instanceIndex *
@@ -536,8 +537,21 @@ function AnnotationRenderLayer<TBase extends AnyConstructor<VisibilityTrackedRen
       }
     }
 
-    transformPickedValue(_pickedValue: Uint64, _pickedOffset: number) {
-      return undefined;
+    transformPickedValue(pickState: PickState) {
+      const {pickedAnnotationBuffer} = pickState;
+      if (pickedAnnotationBuffer === undefined) return undefined;
+      const {properties} = this.base.source;
+      if (properties.length === 0) return undefined;
+      const {pickedAnnotationBufferOffset, pickedAnnotationType} = pickState;
+      const handler = annotationTypeHandlers[pickedAnnotationType!];
+      const {rank, annotationPropertySerializer} = this.base.source;
+      const baseNumBytes = handler.serializedBytes(rank);
+      // Check if there are any properties.
+      const propertyValues = new Array(properties.length);
+      annotationPropertySerializer.deserialize(
+          new DataView(pickedAnnotationBuffer), pickedAnnotationBufferOffset! + baseNumBytes,
+          /*isLittleEndian=*/ Endianness.LITTLE === ENDIANNESS, propertyValues);
+      return formatAnnotationPropertyValue(properties[0], propertyValues[0]);
     }
 
     isReady() {
@@ -554,7 +568,7 @@ function AnnotationRenderLayer<TBase extends AnyConstructor<VisibilityTrackedRen
         if (segmentationState === undefined) continue;
         const chunks = source.segmentFilteredSources[i].chunks;
         let missing = false;
-        forEachVisibleSegment(segmentationState, objectId => {
+        forEachVisibleSegment(segmentationState.segmentationGroupState.value, objectId => {
           const key = getObjectKey(objectId);
           if (!chunks.has(key)) {
             missing = true;
@@ -601,7 +615,7 @@ const NonSpatiallyIndexedAnnotationRenderLayer =
           const segmentationState = segmentationStates[i];
           if (segmentationState == null) continue;
           const chunks = source.segmentFilteredSources[i].chunks;
-          forEachVisibleSegment(segmentationState, objectId => {
+          forEachVisibleSegment(segmentationState.segmentationGroupState.value, objectId => {
             const key = getObjectKey(objectId);
             const chunk = chunks.get(key);
             if (chunk !== undefined && chunk.state === ChunkState.GPU_MEMORY) {
@@ -680,6 +694,7 @@ const SpatiallyIndexedAnnotationLayer = <TBase extends AnyConstructor<Annotation
             this.backend.rpc!.invoke(ANNOTATION_PERSPECTIVE_RENDER_LAYER_UPDATE_SOURCES_RPC_ID, {
               layer: this.backend.rpcId,
               view: attachment.view.rpcId,
+              displayDimensionRenderInfo,
               sources: serializeAllTransformedSources(transformedSources),
             });
             this.redrawNeeded.dispatch();

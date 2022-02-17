@@ -9,7 +9,7 @@ Each (optionally multi-scale) volume is represented as a directory tree (served 
 - One subdirectory with a name equal to the `"skeletons"` key value in the `json` file (only if a
   `"skeletons"` key is specified, and only for segmentation volumes).  This subdirectory contains
   [skeleton representations](./skeletons.md) of objects in the volume.
-  
+
 Within neuroglancer, a precomputed data source is specified using a URL of the form:
 `precomputed://https://host/path/to/root/directory`.  If the data is being served from Google Cloud
 Storage (GCS), `precomputed://gs://bucket/path/to/root/directory` may be used as an alias for
@@ -157,7 +157,7 @@ grid_size`, the compressed Morton code is computed as follows:
 2. For `i` from `0` to `n-1`, where `n` is the number of bits needed to encode the grid cell
    coordinates:
    - For `dim` in `0, 1, 2` (corresponding to `x`, `y`, `z`):
-     - If `2**i <= grid_size[dim]`:
+     - If `2**i < grid_size[dim]`:
        - Set output bit `j` of the compressed Morton code to bit `i` of `g[dim]`.
        - Set `j := j + 1`.
        

@@ -34,6 +34,9 @@ import {startRelativeMouseDrag} from 'neuroglancer/util/mouse_drag';
 import {TouchEventBinder, TouchPinchInfo, TouchTranslateInfo} from 'neuroglancer/util/touch_bindings';
 import {getWheelZoomAmount} from 'neuroglancer/util/wheel_zoom';
 import {ViewerState} from 'neuroglancer/viewer_state';
+import { ObjectTracker_IMP } from './ObjectTracker_IMP';
+
+declare var NEUROGLANCER_SHOW_OBJECT_SELECTION_TOOLTIP: boolean|undefined;
 
 const tempVec3 = vec3.create();
 
@@ -391,10 +394,17 @@ export abstract class RenderedDataPanel extends RenderedPanel {
     element.classList.add('neuroglancer-rendered-data-panel');
     element.classList.add('neuroglancer-panel');
     element.classList.add('neuroglancer-noselect');
+    if (typeof NEUROGLANCER_SHOW_OBJECT_SELECTION_TOOLTIP !== 'undefined' &&
+        NEUROGLANCER_SHOW_OBJECT_SELECTION_TOOLTIP === true) {
+      element.title =
+          'Double click to toggle display of object under mouse pointer.  Control+rightclick to pin/unpin selection.';
+    }
 
     this.registerDisposer(new AutomaticallyFocusedElement(element));
     this.registerDisposer(new KeyboardEventBinder(element, this.inputEventMap));
-    this.registerDisposer(new MouseEventBinder(element, this.inputEventMap));
+    this.registerDisposer(new MouseEventBinder(element, this.inputEventMap, event => {
+      this.onMousemove(event);
+    }));
     this.registerDisposer(new TouchEventBinder(element, this.inputEventMap));
 
     this.registerEventListener(element, 'mousemove', this.onMousemove.bind(this));
@@ -429,10 +439,6 @@ export abstract class RenderedDataPanel extends RenderedPanel {
 
     registerActionListener(element, 'depth-range-increase', () => {
       this.navigationState.depthRange.value *= 2;
-    });
-
-    registerActionListener(element, 'highlight', () => {
-      this.viewer.layerManager.invokeAction('highlight');
     });
 
     for (let axis = 0; axis < 3; ++axis) {
@@ -504,9 +510,14 @@ export abstract class RenderedDataPanel extends RenderedPanel {
     }
 
     registerActionListener(element, 'move-to-mouse-position', () => {
+      
       const {mouseState} = this.viewer;
       if (mouseState.updateUnconditionally()) {
-        this.navigationState.position.value = mouseState.position;
+        /* SEARCH: NH */
+        console.log(mouseState.pickedAnnotationId)
+         ObjectTracker_IMP.getInstance().toggleSegment(mouseState.pickedAnnotationId!);
+        //NH: Remove behaviour that the view changes on annotation click.
+        //this.navigationState.position.value = mouseState.position;
       }
     });
 

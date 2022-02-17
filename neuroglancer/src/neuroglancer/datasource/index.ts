@@ -18,8 +18,10 @@ import {AnnotationSource} from 'neuroglancer/annotation';
 import {MultiscaleAnnotationSource} from 'neuroglancer/annotation/frontend_source';
 import {ChunkManager} from 'neuroglancer/chunk_manager/frontend';
 import {CoordinateSpace, CoordinateSpaceTransform, CoordinateTransformSpecification, emptyValidCoordinateSpace, makeCoordinateSpace, makeIdentityTransform} from 'neuroglancer/coordinate_transform';
+import {CredentialsManager} from 'neuroglancer/credentials_provider';
 import {MeshSource, MultiscaleMeshSource} from 'neuroglancer/mesh/frontend';
 import {SegmentPropertyMap} from 'neuroglancer/segmentation_display_state/property_map';
+import {SegmentationGraphSource} from 'neuroglancer/segmentation_graph/source';
 import {SingleMeshSource} from 'neuroglancer/single_mesh/frontend';
 import {SkeletonSource} from 'neuroglancer/skeleton/frontend';
 import {MultiscaleVolumeChunkSource} from 'neuroglancer/sliceview/volume/frontend';
@@ -82,6 +84,7 @@ export interface GetDataSourceOptions extends GetDataSourceOptionsBase {
   providerUrl: string;
   cancellationToken: CancellationToken;
   providerProtocol: string;
+  credentialsManager: CredentialsManager;
 }
 
 export interface ConvertLegacyUrlOptionsBase {
@@ -107,6 +110,7 @@ export interface NormalizeUrlOptions extends NormalizeUrlOptionsBase {
 
 export enum LocalDataSource {
   annotations,
+  equivalences,
 }
 
 export interface DataSubsource {
@@ -117,6 +121,7 @@ export interface DataSubsource {
   local?: LocalDataSource;
   singleMesh?: SingleMeshSource;
   segmentPropertyMap?: SegmentPropertyMap;
+  segmentationGraph?: SegmentationGraphSource;
 }
 
 export interface CompleteUrlOptionsBase {
@@ -129,6 +134,7 @@ export interface CompleteUrlOptions extends CompleteUrlOptionsBase {
   registry: DataSourceProviderRegistry;
   providerUrl: string;
   cancellationToken: CancellationToken;
+  credentialsManager: CredentialsManager;
 }
 
 export interface DataSubsourceEntry {
@@ -216,6 +222,7 @@ export abstract class DataSourceProvider extends RefCounted {
 }
 
 export const localAnnotationsUrl = 'local://annotations';
+export const localEquivalencesUrl = 'local://equivalences';
 
 class LocalDataSourceProvider extends DataSourceProvider {
   get description() {
@@ -223,42 +230,59 @@ class LocalDataSourceProvider extends DataSourceProvider {
   }
 
   async get(options: GetDataSourceOptions): Promise<DataSource> {
-    if (options.url === localAnnotationsUrl) {
-      const {transform} = options;
-      let modelTransform: CoordinateSpaceTransform;
-      if (transform === undefined) {
-        const baseSpace = options.globalCoordinateSpace.value;
-        const {rank, names, scales, units} = baseSpace;
-        const inputSpace = makeCoordinateSpace({
-          rank,
-          scales,
-          units,
-          names: names.map((_, i) => `${i}`),
-        });
-        const outputSpace = makeCoordinateSpace({rank, scales, units, names});
-        modelTransform = {
-          rank,
-          sourceRank: rank,
-          inputSpace,
-          outputSpace,
-          transform: createIdentity(Float64Array, rank + 1),
-        };
-      } else {
-        modelTransform = makeIdentityTransform(emptyValidCoordinateSpace);
-      }
-      return {
-        modelTransform,
-        canChangeModelSpaceRank: true,
-        subsources: [
-          {
-            id: 'default',
-            default: true,
-            subsource: {
-              local: LocalDataSource.annotations,
+    switch (options.url) {
+      case localAnnotationsUrl: {
+        const {transform} = options;
+        let modelTransform: CoordinateSpaceTransform;
+        if (transform === undefined) {
+          const baseSpace = options.globalCoordinateSpace.value;
+          const {rank, names, scales, units} = baseSpace;
+          const inputSpace = makeCoordinateSpace({
+            rank,
+            scales,
+            units,
+            names: names.map((_, i) => `${i}`),
+          });
+          const outputSpace = makeCoordinateSpace({rank, scales, units, names});
+          modelTransform = {
+            rank,
+            sourceRank: rank,
+            inputSpace,
+            outputSpace,
+            transform: createIdentity(Float64Array, rank + 1),
+          };
+        } else {
+          modelTransform = makeIdentityTransform(emptyValidCoordinateSpace);
+        }
+        return {
+          modelTransform,
+          canChangeModelSpaceRank: true,
+          subsources: [
+            {
+              id: 'default',
+              default: true,
+              subsource: {
+                local: LocalDataSource.annotations,
+              },
             },
-          },
-        ],
-      };
+          ],
+        };
+      }
+      case localEquivalencesUrl: {
+        return {
+          modelTransform: makeIdentityTransform(emptyValidCoordinateSpace),
+          canChangeModelSpaceRank: false,
+          subsources: [
+            {
+              id: 'default',
+              default: true,
+              subsource: {
+                local: LocalDataSource.equivalences,
+              },
+            },
+          ],
+        };
+      }
     }
     throw new Error('Invalid local data source URL');
   }
@@ -268,7 +292,16 @@ class LocalDataSourceProvider extends DataSourceProvider {
       offset: 0,
       completions: getPrefixMatchesWithDescriptions(
           options.providerUrl,
-          [{value: 'annotations', description: 'Annotations stored in the JSON state'}],
+          [
+            {
+              value: 'annotations',
+              description: 'Annotations stored in the JSON state',
+            },
+            {
+              value: 'equivalences',
+              description: 'Segmentation equivalence graph stored in the JSON state'
+            },
+          ],
           x => x.value, x => x.description)
     };
   }
@@ -277,6 +310,9 @@ class LocalDataSourceProvider extends DataSourceProvider {
 const protocolPattern = /^(?:([a-zA-Z][a-zA-Z0-9-+_]*):\/\/)?(.*)$/;
 
 export class DataSourceProviderRegistry extends RefCounted {
+  constructor(public credentialsManager: CredentialsManager) {
+    super();
+  }
   dataSources =
       new Map<string, Owned<DataSourceProvider>>([['local', new LocalDataSourceProvider()]]);
 
@@ -305,8 +341,15 @@ export class DataSourceProviderRegistry extends RefCounted {
       const [provider, providerUrl, providerProtocol] = this.getProvider(options.url);
       redirectLog.add(options.url);
       try {
-        return provider.get(
-            {...options, url, providerProtocol, providerUrl, registry: this, cancellationToken});
+        return provider.get({
+          ...options,
+          url,
+          providerProtocol,
+          providerUrl,
+          registry: this,
+          cancellationToken,
+          credentialsManager: this.credentialsManager,
+        });
       } catch (e) {
         if (e instanceof RedirectError) {
           const redirect = e.redirectTarget;
@@ -363,7 +406,8 @@ export class DataSourceProviderRegistry extends RefCounted {
           url,
           providerUrl: protocolMatch[2],
           chunkManager: options.chunkManager,
-          cancellationToken
+          cancellationToken,
+          credentialsManager: this.credentialsManager,
         });
         return applyCompletionOffset(protocol.length + 3, completions);
       }

@@ -12,13 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import credentials_provider, google_credentials
+from . import credentials_provider, google_credentials, dvid_credentials
 
 default_credentials_manager = credentials_provider.CredentialsManager()
 default_credentials_manager.register(
     u'google-brainmaps',
-    lambda _parameters: google_credentials.GoogleCredentialsProvider(
+    lambda _parameters: google_credentials.GoogleOAuth2FlowCredentialsProvider(
         client_id=u'639403125587-ue3c18dalqidqehs1n1p5rjvgni5f7qu.apps.googleusercontent.com',
         client_secret=u'kuaqECaVXOKEJ2L6ifZu4Aqt',
         scopes=[u'https://www.googleapis.com/auth/brainmaps'],
     ))
+
+default_credentials_manager.register(
+    u'gcs',
+    lambda _parameters: google_credentials.get_google_application_default_credentials_provider())
+
+default_credentials_manager.register(
+    u'DVID',
+    lambda parameters: dvid_credentials.get_tokenbased_application_default_credentials_provider(parameters))

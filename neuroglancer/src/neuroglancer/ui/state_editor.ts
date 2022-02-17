@@ -38,22 +38,23 @@ const valueUpdateDelay = 100;
 export class StateEditorDialog extends Overlay {
   textEditor: CodeMirror.Editor;
   applyButton: HTMLButtonElement;
-  exportButton: HTMLButtonElement;
+  closeButton: HTMLButtonElement;
   constructor(public viewer: Viewer) {
     super();
 
     this.content.classList.add('neuroglancer-state-editor');
 
-    const button = this.applyButton = document.createElement('button');
-    button.textContent = 'Apply changes';
-    this.content.appendChild(button);
-    button.addEventListener('click', () => this.applyChanges());
-    button.disabled = true;
+    const buttonApply = this.applyButton = document.createElement('button');
+    buttonApply.textContent = 'Apply changes';
+    this.content.appendChild(buttonApply);
+    buttonApply.addEventListener('click', () => this.applyChanges());
+    buttonApply.disabled = true;
 
-    const exportButton = this.exportButton = document.createElement('button');
-    exportButton.textContent = 'Export';
-    this.content.appendChild(exportButton);
-    exportButton.addEventListener('click', () => this.exportState());
+    const buttonClose = this.closeButton = document.createElement('button');
+    buttonClose.classList.add('close-button');
+    buttonClose.textContent = 'Close';
+    this.content.appendChild(buttonClose);
+    buttonClose.addEventListener('click', () => this.dispose());
 
     this.textEditor = CodeMirror(_element => {}, <any>{
       value: '',
@@ -72,16 +73,6 @@ export class StateEditorDialog extends Overlay {
 
     this.content.appendChild(this.textEditor.getWrapperElement());
     this.textEditor.refresh();
-  }
-
-  private exportState() {
-    var downloadLink = document.createElement('a');
-    var blob = new Blob([this.getJson()], {type: 'text/json'});
-    var blobUrl = URL.createObjectURL(blob);
-    downloadLink.href = blobUrl;
-    downloadLink.download = 'state.json';
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
   }
 
   private applyChanges() {

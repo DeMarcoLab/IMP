@@ -42,7 +42,7 @@ import {LayerReferenceWidget} from 'neuroglancer/widget/layer_reference';
 import {makeMaximizeButton} from 'neuroglancer/widget/maximize_button';
 import {RenderScaleWidget} from 'neuroglancer/widget/render_scale_widget';
 import {ShaderCodeWidget} from 'neuroglancer/widget/shader_code_widget';
-import {ShaderControls} from 'neuroglancer/widget/shader_controls';
+import {registerLayerShaderControlsTool, ShaderControls} from 'neuroglancer/widget/shader_controls';
 import {Tab} from 'neuroglancer/widget/tab_view';
 
 const POINTS_JSON_KEY = 'points';
@@ -331,13 +331,21 @@ export class AnnotationUserLayer extends Base {
     super.disposed();
   }
 
-  constructor(managedLayer: Borrowed<ManagedUserLayer>, specification: any) {
-    super(managedLayer, specification);
-    this.linkedSegmentationLayers.restoreState(specification);
+  constructor(managedLayer: Borrowed<ManagedUserLayer>) {
+    super(managedLayer);
     this.linkedSegmentationLayers.changed.add(this.specificationChanged.dispatch);
     this.annotationDisplayState.ignoreNullSegmentFilter.changed.add(
         this.specificationChanged.dispatch);
     this.annotationCrossSectionRenderScaleTarget.changed.add(this.specificationChanged.dispatch);
+    this.tabs.add(
+        'rendering',
+        {label: 'Rendering', order: -100, getter: () => new RenderingOptionsTab(this)});
+    this.tabs.default = 'annotations';
+  }
+
+  restoreState(specification: any) {
+    super.restoreState(specification);
+    this.linkedSegmentationLayers.restoreState(specification);
     this.localAnnotationsJson = specification[ANNOTATIONS_JSON_KEY];
     this.localAnnotationProperties = verifyOptionalObjectProperty(
         specification, ANNOTATION_PROPERTIES_JSON_KEY, parseAnnotationPropertySpecs);
@@ -350,24 +358,17 @@ export class AnnotationUserLayer extends Base {
         specification[PROJECTION_RENDER_SCALE_JSON_KEY]);
     this.annotationDisplayState.ignoreNullSegmentFilter.restoreState(
         specification[IGNORE_NULL_SEGMENT_FILTER_JSON_KEY]);
-    this.tabs.add(
-        'rendering',
-        {label: 'Rendering', order: -100, getter: () => new RenderingOptionsTab(this)});
-    this.tabs.default = 'annotations';
-  }
-
-  restoreState(specification: any) {
-    super.restoreState(specification);
     this.annotationDisplayState.shader.restoreState(specification[SHADER_JSON_KEY]);
     this.annotationDisplayState.shaderControls.restoreState(
         specification[SHADER_CONTROLS_JSON_KEY]);
   }
 
   getLegacyDataSourceSpecifications(
-      sourceSpec: any, layerSpec: any,
-      legacyTransform: CoordinateTransformSpecification|undefined): DataSourceSpecification[] {
+      sourceSpec: any, layerSpec: any, legacyTransform: CoordinateTransformSpecification|undefined,
+      explicitSpecs: DataSourceSpecification[]): DataSourceSpecification[] {
     if (Object.prototype.hasOwnProperty.call(layerSpec, 'source')) {
-      return super.getLegacyDataSourceSpecifications(sourceSpec, layerSpec, legacyTransform);
+      return super.getLegacyDataSourceSpecifications(
+          sourceSpec, layerSpec, legacyTransform, explicitSpecs);
     }
     const scales = verifyOptionalObjectProperty(
         layerSpec, 'voxelSize',
@@ -545,6 +546,7 @@ export class AnnotationUserLayer extends Base {
   }
 
   static type = 'annotation';
+  static typeAbbreviation = 'ann';
 }
 
 function makeShaderCodeWidget(layer: AnnotationUserLayer) {
@@ -569,12 +571,16 @@ class RenderingOptionsTab extends Tab {
   constructor(public layer: AnnotationUserLayer) {
     super();
     const {element} = this;
+    element.classList.add('neuroglancer-annotation-rendering-tab');
     element.appendChild(
         this
             .registerDisposer(new DependentViewWidget(
                 layer.annotationProperties,
                 (properties, parent) => {
-                  if (properties === undefined) return;
+                  if (properties === undefined || properties.length === 0) return;
+                  const propertyList = document.createElement('div');
+                  parent.appendChild(propertyList);
+                  propertyList.classList.add('neuroglancer-annotation-shader-property-list');
                   for (const property of properties) {
                     const div = document.createElement('div');
                     div.classList.add('neuroglancer-annotation-shader-property');
@@ -590,7 +596,7 @@ class RenderingOptionsTab extends Tab {
                     if (description !== undefined) {
                       div.title = description;
                     }
-                    parent.appendChild(div);
+                    propertyList.appendChild(div);
                   }
                 }))
             .element);
@@ -614,16 +620,16 @@ class RenderingOptionsTab extends Tab {
     element.appendChild(topRow);
 
     element.appendChild(this.codeWidget.element);
-    element.appendChild(
-        this.registerDisposer(new ShaderControls(
-                                  layer.annotationDisplayState.shaderControls,
-                                  this.layer.manager.root.display, {visibility: this.visibility}))
-            .element);
+    element.appendChild(this.registerDisposer(new ShaderControls(
+                                                  layer.annotationDisplayState.shaderControls,
+                                                  this.layer.manager.root.display, this.layer,
+                                                  {visibility: this.visibility}))
+                            .element);
   }
 }
 
-registerLayerType('annotation', AnnotationUserLayer);
-registerLayerType('pointAnnotation', AnnotationUserLayer);
+registerLayerType(AnnotationUserLayer);
+registerLayerType(AnnotationUserLayer, 'pointAnnotation');
 registerLayerTypeDetector(subsource => {
   if (subsource.local === LocalDataSource.annotations) {
     return {layerConstructor: AnnotationUserLayer, priority: 100};
@@ -633,3 +639,8 @@ registerLayerTypeDetector(subsource => {
   }
   return undefined;
 });
+
+registerLayerShaderControlsTool(
+    AnnotationUserLayer, layer => ({
+                           shaderControlState: layer.annotationDisplayState.shaderControls,
+                         }));

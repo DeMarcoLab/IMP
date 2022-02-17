@@ -28,7 +28,11 @@ from . import trackable_state
 class Skeleton(object):
     def __init__(self, vertex_positions, edges, vertex_attributes=None):
         self.vertex_positions = np.array(vertex_positions, dtype='<f4')
+        if self.vertex_positions.ndim != 2 or self.vertex_positions.shape[1] != 3:
+            raise ValueError('vertex_positions must be array of shape (N, 3)')
         self.edges = np.array(edges, dtype='<u4')
+        if self.edges.ndim != 2 or self.edges.shape[1] != 2:
+            raise ValueError('edges must be array of shape (N, 2)')
         self.vertex_attributes = vertex_attributes
 
     def encode(self, source):
@@ -36,7 +40,7 @@ class Skeleton(object):
         edges = self.edges
         vertex_positions = self.vertex_positions
         vertex_attributes = self.vertex_attributes
-        result.write(struct.pack('<II', vertex_positions.shape[0], edges.shape[0] // 2))
+        result.write(struct.pack('<II', vertex_positions.shape[0], edges.shape[0]))
         result.write(vertex_positions.tobytes())
         result.write(edges.tobytes())
         if len(source.vertex_attributes) > 0:

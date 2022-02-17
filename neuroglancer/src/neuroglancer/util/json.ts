@@ -584,9 +584,29 @@ export function verifyStringArray(a: any) {
   return <string[]>a;
 }
 
+export function verifyIntegerArray(a: unknown) {
+  if (!Array.isArray(a)) {
+    throw new Error(`Expected array, received: ${JSON.stringify(a)}.`);
+  }
+  for (let x of a) {
+    if (!Number.isInteger(x)) {
+      throw new Error(`Expected integer, received: ${JSON.stringify(x)}.`);
+    }
+  }
+  return <number[]>a;
+}
+
 export function verifyBoolean(x: any) {
   if (typeof x !== 'boolean') {
     throw new Error(`Expected boolean, received: ${JSON.stringify(x)}`);
   }
   return x;
+}
+
+// If `x` is an empty object/array/string, returns undefined.  Otherwise returns `x`.
+export function emptyToUndefined(x: any) {
+  for (const _ in x) {
+    return x;
+  }
+  return undefined;
 }

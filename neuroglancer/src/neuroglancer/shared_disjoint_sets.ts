@@ -24,6 +24,8 @@ import {registerRPC, registerSharedObject, RPC, SharedObjectCounterpart} from 'n
 const RPC_TYPE_ID = 'DisjointUint64Sets';
 const ADD_METHOD_ID = 'DisjointUint64Sets.add';
 const CLEAR_METHOD_ID = 'DisjointUint64Sets.clear';
+const HIGH_BIT_REPRESENTATIVE_CHANGED_ID = 'DisjointUint64Sets.highBitRepresentativeChanged';
+const DELETE_SET_METHOD_ID = 'DisjointUint64Sets.deleteSet';
 
 @registerSharedObject(RPC_TYPE_ID)
 export class SharedDisjointUint64Sets extends SharedObjectCounterpart implements
@@ -38,9 +40,16 @@ export class SharedDisjointUint64Sets extends SharedObjectCounterpart implements
     return this;
   }
 
-  static makeWithCounterpart(rpc: RPC) {
+  static makeWithCounterpart(rpc: RPC, highBitRepresentative: WatchableValueInterface<boolean>) {
     let obj = new this();
+    obj.disjointSets.highBitRepresentative = highBitRepresentative;
+    obj.registerDisposer(highBitRepresentative.changed.add(() => {
+      updateHighBitRepresentative(obj);
+    }));
     obj.initializeCounterpart(rpc);
+    if (highBitRepresentative.value) {
+      updateHighBitRepresentative(obj);
+    }
     return obj;
   }
 
@@ -59,6 +68,14 @@ export class SharedDisjointUint64Sets extends SharedObjectCounterpart implements
             {'id': this.rpcId, 'al': a.low, 'ah': a.high, 'bl': b.low, 'bh': b.high});
       }
       this.changed.dispatch();
+      return true;
+    }
+    return false;
+  }
+
+  linkAll(ids: Uint64[]) {
+    for (let i = 1, length = ids.length; i < length; ++i) {
+      this.link(ids[0], ids[i]);
     }
   }
 
@@ -80,6 +97,16 @@ export class SharedDisjointUint64Sets extends SharedObjectCounterpart implements
     return this.disjointSets.setElements(a);
   }
 
+  deleteSet(x: Uint64) {
+    if (this.disjointSets.deleteSet(x)) {
+      let {rpc} = this;
+      if (rpc) {
+        rpc.invoke(DELETE_SET_METHOD_ID, {'id': this.rpcId, 'l': x.low, 'h': x.high});
+      }
+      this.changed.dispatch();
+    }
+  }
+
   get size() {
     return this.disjointSets.size;
   }
@@ -92,7 +119,6 @@ export class SharedDisjointUint64Sets extends SharedObjectCounterpart implements
    * Restores the state from a JSON representation.
    */
   restoreState(obj: any) {
-    this.clear();
     if (obj !== undefined) {
       let ids = [new Uint64(), new Uint64()];
       parseArray(obj, z => {
@@ -103,6 +129,16 @@ export class SharedDisjointUint64Sets extends SharedObjectCounterpart implements
           }
         });
       });
+    }
+  }
+
+  assignFrom(other: SharedDisjointUint64Sets|DisjointUint64Sets) {
+    this.clear();
+    if (other instanceof SharedDisjointUint64Sets) {
+      other = other.disjointSets;
+    }
+    for (const [a, b] of other) {
+      this.link(a, b);
     }
   }
 }
@@ -124,6 +160,26 @@ registerRPC(ADD_METHOD_ID, function(x) {
 registerRPC(CLEAR_METHOD_ID, function(x) {
   let obj = <SharedDisjointUint64Sets>this.get(x['id']);
   if (obj.disjointSets.clear()) {
+    obj.changed.dispatch();
+  }
+});
+
+function updateHighBitRepresentative(obj: SharedDisjointUint64Sets) {
+  obj.rpc!.invoke(
+      HIGH_BIT_REPRESENTATIVE_CHANGED_ID,
+      {'id': obj.rpcId, 'value': obj.disjointSets.highBitRepresentative.value});
+}
+
+registerRPC(HIGH_BIT_REPRESENTATIVE_CHANGED_ID, function(x) {
+  let obj = this.get(x['id']) as SharedDisjointUint64Sets;
+  obj.disjointSets.highBitRepresentative.value = x['value'];
+});
+
+registerRPC(DELETE_SET_METHOD_ID, function(x) {
+  let obj = <SharedDisjointUint64Sets>this.get(x['id']);
+  tempA.low = x['l'];
+  tempA.high = x['h'];
+  if (obj.disjointSets.deleteSet(tempA)) {
     obj.changed.dispatch();
   }
 });

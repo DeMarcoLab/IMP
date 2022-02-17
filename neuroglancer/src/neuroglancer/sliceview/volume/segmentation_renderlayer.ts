@@ -17,14 +17,13 @@
 import {HashMapUint64} from 'neuroglancer/gpu_hash/hash_table';
 import {GPUHashTable, HashMapShaderManager, HashSetShaderManager} from 'neuroglancer/gpu_hash/shader';
 import {SegmentColorShaderManager, SegmentStatedColorShaderManager} from 'neuroglancer/segment_color';
+import {getVisibleSegments} from 'neuroglancer/segmentation_display_state/base';
 import {registerRedrawWhenSegmentationDisplayStateChanged, SegmentationDisplayState} from 'neuroglancer/segmentation_display_state/frontend';
 import {SliceViewSourceOptions} from 'neuroglancer/sliceview/base';
 import {SliceView, SliceViewSingleResolutionSource} from 'neuroglancer/sliceview/frontend';
 import {MultiscaleVolumeChunkSource, VolumeChunkSource} from 'neuroglancer/sliceview/volume/frontend';
 import {RenderLayerBaseOptions, SliceViewVolumeRenderLayer} from 'neuroglancer/sliceview/volume/renderlayer';
-import {TrackableAlphaValue} from 'neuroglancer/trackable_alpha';
-import {TrackableBoolean} from 'neuroglancer/trackable_boolean';
-import {AggregateWatchableValue, makeCachedDerivedWatchableValue} from 'neuroglancer/trackable_value';
+import {AggregateWatchableValue, makeCachedDerivedWatchableValue, WatchableValueInterface} from 'neuroglancer/trackable_value';
 import {DisjointUint64Sets} from 'neuroglancer/util/disjoint_sets';
 import {ShaderBuilder, ShaderProgram} from 'neuroglancer/webgl/shader';
 
@@ -48,36 +47,40 @@ export class EquivalencesHashMap {
 
 export interface SliceViewSegmentationDisplayState extends SegmentationDisplayState,
                                                            RenderLayerBaseOptions {
-  selectedAlpha: TrackableAlphaValue;
-  notSelectedAlpha: TrackableAlphaValue;
-  hideSegmentZero: TrackableBoolean;
-  ignoreNullVisibleSet: TrackableBoolean;
+  selectedAlpha: WatchableValueInterface<number>;
+  notSelectedAlpha: WatchableValueInterface<number>;
+  hideSegmentZero: WatchableValueInterface<boolean>;
+  ignoreNullVisibleSet: WatchableValueInterface<boolean>;
 }
 
 interface ShaderParameters {
   hasEquivalences: boolean;
+  baseSegmentColoring: boolean;
   hasSegmentStatedColors: boolean;
-  hasHighlightedSegments: boolean;
   hideSegmentZero: boolean;
+  hasSegmentDefaultColor: boolean;
 }
 
 export class SegmentationRenderLayer extends SliceViewVolumeRenderLayer<ShaderParameters> {
+  public readonly segmentationGroupState = this.displayState.segmentationGroupState.value;
   protected segmentColorShaderManager = new SegmentColorShaderManager('segmentColorHash');
   protected segmentStatedColorShaderManager =
       new SegmentStatedColorShaderManager('segmentStatedColor');
-  private gpuSegmentStatedColorHashTable =
-      GPUHashTable.get(this.gl, this.displayState.segmentStatedColors.hashTable);
-
+  private gpuSegmentStatedColorHashTable: GPUHashTable<HashMapUint64>|undefined;
   private hashTableManager = new HashSetShaderManager('visibleSegments');
-  private gpuHashTable = GPUHashTable.get(this.gl, this.displayState.visibleSegments.hashTable);
-  private hashTableManagerHighlighted = new HashSetShaderManager('highlightedSegments');
-  private gpuHashTableHighlighted =
-      GPUHashTable.get(this.gl, this.displayState.highlightedSegments.hashTable);
-
+  private gpuHashTable = this.registerDisposer(
+      GPUHashTable.get(this.gl, this.segmentationGroupState.visibleSegments.hashTable));
+  private gpuTemporaryHashTable =
+      GPUHashTable.get(this.gl, this.segmentationGroupState.temporaryVisibleSegments.hashTable);
   private equivalencesShaderManager = new HashMapShaderManager('equivalences');
   private equivalencesHashMap =
-      new EquivalencesHashMap(this.displayState.segmentEquivalences.disjointSets);
-  private gpuEquivalencesHashTable = GPUHashTable.get(this.gl, this.equivalencesHashMap.hashMap);
+      new EquivalencesHashMap(this.segmentationGroupState.segmentEquivalences.disjointSets);
+  private temporaryEquivalencesHashMap =
+      new EquivalencesHashMap(this.segmentationGroupState.temporarySegmentEquivalences.disjointSets);
+  private gpuEquivalencesHashTable =
+      this.registerDisposer(GPUHashTable.get(this.gl, this.equivalencesHashMap.hashMap));
+  private gpuTemporaryEquivalencesHashTable =
+      this.registerDisposer(GPUHashTable.get(this.gl, this.temporaryEquivalencesHashMap.hashMap));
 
   constructor(
       multiscaleSource: MultiscaleVolumeChunkSource,
@@ -86,12 +89,14 @@ export class SegmentationRenderLayer extends SliceViewVolumeRenderLayer<ShaderPa
       shaderParameters: new AggregateWatchableValue(
           refCounted => ({
             hasEquivalences: refCounted.registerDisposer(makeCachedDerivedWatchableValue(
-                x => x.size !== 0, [displayState.segmentEquivalences])),
-            hasHighlightedSegments: refCounted.registerDisposer(makeCachedDerivedWatchableValue(
-                x => x.size !== 0, [displayState.highlightedSegments])),
+                x => x.size !== 0,
+                [displayState.segmentationGroupState.value.segmentEquivalences])),
             hasSegmentStatedColors: refCounted.registerDisposer(makeCachedDerivedWatchableValue(
                 x => x.size !== 0, [displayState.segmentStatedColors])),
+            hasSegmentDefaultColor: refCounted.registerDisposer(makeCachedDerivedWatchableValue(
+                x => x !== undefined, [displayState.segmentDefaultColor])),
             hideSegmentZero: displayState.hideSegmentZero,
+            baseSegmentColoring: displayState.baseSegmentColoring,
           })),
       transform: displayState.transform,
       renderScaleHistogram: displayState.renderScaleHistogram,
@@ -106,6 +111,10 @@ export class SegmentationRenderLayer extends SliceViewVolumeRenderLayer<ShaderPa
         displayState.ignoreNullVisibleSet.changed.add(this.redrawNeeded.dispatch));
   }
 
+  disposed() {
+    this.gpuSegmentStatedColorHashTable?.dispose();
+  }
+
   getSources(options: SliceViewSourceOptions):
       SliceViewSingleResolutionSource<VolumeChunkSource>[][] {
     return this.multiscaleSource.getSources({...options, discreteValues: true});
@@ -113,16 +122,18 @@ export class SegmentationRenderLayer extends SliceViewVolumeRenderLayer<ShaderPa
 
   defineShader(builder: ShaderBuilder, parameters: ShaderParameters) {
     this.hashTableManager.defineShader(builder);
-    builder.addFragmentCode(`
+    let getUint64Code = `
 uint64_t getUint64DataValue() {
-  return toUint64(getDataValue());
+  uint64_t x = toUint64(getDataValue());
+`;
+    getUint64Code += `return x;
 }
-`);
+`;
+    builder.addFragmentCode(getUint64Code);
     if (parameters.hasEquivalences) {
       this.equivalencesShaderManager.defineShader(builder);
       builder.addFragmentCode(`
-uint64_t getMappedObjectId() {
-  uint64_t value = getUint64DataValue();
+uint64_t getMappedObjectId(uint64_t value) {
   uint64_t mappedValue;
   if (${this.equivalencesShaderManager.getFunctionName}(value, mappedValue)) {
     return mappedValue;
@@ -132,19 +143,20 @@ uint64_t getMappedObjectId() {
 `);
     } else {
       builder.addFragmentCode(`
-uint64_t getMappedObjectId() {
-  return getUint64DataValue();
+uint64_t getMappedObjectId(uint64_t value) {
+  return value;
 }
 `);
     }
-    this.segmentColorShaderManager.defineShader(builder);
     builder.addUniform('highp uvec2', 'uSelectedSegment');
     builder.addUniform('highp uint', 'uShowAllSegments');
     builder.addUniform('highp float', 'uSelectedAlpha');
     builder.addUniform('highp float', 'uNotSelectedAlpha');
     builder.addUniform('highp float', 'uSaturation');
     let fragmentMain = `
-  uint64_t value = getMappedObjectId();
+  uint64_t baseValue = getUint64DataValue();
+  uint64_t value = getMappedObjectId(baseValue);
+  uint64_t valueForColor = ${parameters.baseSegmentColoring?'baseValue':'value'};
 
   float alpha = uSelectedAlpha;
   float saturation = uSaturation;
@@ -170,33 +182,35 @@ uint64_t getMappedObjectId() {
     alpha = uNotSelectedAlpha;
   }
 `;
+
+    let getMappedIdColor = `vec3 getMappedIdColor(uint64_t value) {
+`;
     // If the value has a mapped color, use it; otherwise, compute the color.
     if (parameters.hasSegmentStatedColors) {
       this.segmentStatedColorShaderManager.defineShader(builder);
-      fragmentMain += `
+      getMappedIdColor += `
   vec3 rgb;
-  if (!${this.segmentStatedColorShaderManager.getFunctionName}(value, rgb)) {
-    rgb = segmentColorHash(value);
+  if (${this.segmentStatedColorShaderManager.getFunctionName}(value, rgb)) {
+    return rgb;
   }
 `;
+    }
+    if (parameters.hasSegmentDefaultColor) {
+      builder.addUniform('highp vec3', 'uSegmentDefaultColor');
+      getMappedIdColor += `  return uSegmentDefaultColor;
+`;
     } else {
-      fragmentMain += `
-  vec3 rgb = segmentColorHash(value);
+      this.segmentColorShaderManager.defineShader(builder);
+      getMappedIdColor += `  return segmentColorHash(value);
 `;
     }
-
-    if (parameters.hasHighlightedSegments) {
-      this.hashTableManagerHighlighted.defineShader(builder);
-      // Override color for all highlighted segments.
-      fragmentMain += `
-  if (${this.hashTableManagerHighlighted.hasFunctionName}(value)) {
-    rgb = vec3(0.2,0.2,2.0);
-    saturation = 1.0;
-  };
+    getMappedIdColor += `
+}
 `;
-    }
+    builder.addFragmentCode(getMappedIdColor);
 
     fragmentMain += `
+  vec3 rgb = getMappedIdColor(valueForColor);
   emit(vec4(mix(vec3(1.0,1.0,1.0), rgb, saturation), alpha));
 `;
     builder.setFragmentMain(fragmentMain);
@@ -204,8 +218,10 @@ uint64_t getMappedObjectId() {
 
   initializeShader(_sliceView: SliceView, shader: ShaderProgram, parameters: ShaderParameters) {
     const {gl} = this;
-    const {displayState} = this;
-    const {segmentSelectionState, visibleSegments} = this.displayState;
+    const {displayState, segmentationGroupState} = this;
+    const {segmentSelectionState} = this.displayState;
+    const {segmentDefaultColor: {value: segmentDefaultColor}, segmentColorHash: {value: segmentColorHash}} = this.displayState;
+    const visibleSegments = getVisibleSegments(segmentationGroupState);
     const ignoreNullSegmentSet = this.displayState.ignoreNullVisibleSet.value;
     let selectedSegmentLow = 0, selectedSegmentHigh = 0;
     if (segmentSelectionState.hasSelectedSegment) {
@@ -213,33 +229,44 @@ uint64_t getMappedObjectId() {
       selectedSegmentLow = seg.low;
       selectedSegmentHigh = seg.high;
     }
-    gl.uniform1f(shader.uniform('uSelectedAlpha'), this.displayState.selectedAlpha.value);
-    gl.uniform1f(shader.uniform('uSaturation'), this.displayState.saturation.value);
-    gl.uniform1f(shader.uniform('uNotSelectedAlpha'), this.displayState.notSelectedAlpha.value);
+    gl.uniform1f(shader.uniform('uSelectedAlpha'), displayState.selectedAlpha.value);
+    gl.uniform1f(shader.uniform('uSaturation'), displayState.saturation.value);
+    gl.uniform1f(shader.uniform('uNotSelectedAlpha'), displayState.notSelectedAlpha.value);
     gl.uniform2ui(shader.uniform('uSelectedSegment'), selectedSegmentLow, selectedSegmentHigh);
     gl.uniform1ui(
         shader.uniform('uShowAllSegments'),
         visibleSegments.hashTable.size || !ignoreNullSegmentSet ? 0 : 1);
-    this.hashTableManager.enable(gl, shader, this.gpuHashTable);
-    if (parameters.hasHighlightedSegments) {
-      this.hashTableManagerHighlighted.enable(gl, shader, this.gpuHashTableHighlighted);
-    }
+    this.hashTableManager.enable(
+        gl, shader,
+        segmentationGroupState.useTemporaryVisibleSegments.value ? this.gpuTemporaryHashTable :
+                                                                   this.gpuHashTable);
     if (parameters.hasEquivalences) {
-      this.equivalencesHashMap.update();
-      this.equivalencesShaderManager.enable(gl, shader, this.gpuEquivalencesHashTable);
+      const useTemp = segmentationGroupState.useTemporarySegmentEquivalences.value;
+      (useTemp ? this.temporaryEquivalencesHashMap : this.equivalencesHashMap).update();
+      this.equivalencesShaderManager.enable(
+          gl, shader,
+          useTemp ? this.gpuTemporaryEquivalencesHashTable : this.gpuEquivalencesHashTable);
     }
-
-    this.segmentColorShaderManager.enable(gl, shader, displayState.segmentColorHash);
+    if (segmentDefaultColor === undefined) {
+      this.segmentColorShaderManager.enable(gl, shader, segmentColorHash);
+    } else {
+      gl.uniform3fv(shader.uniform('uSegmentDefaultColor'), segmentDefaultColor);
+    }
     if (parameters.hasSegmentStatedColors) {
-      this.segmentStatedColorShaderManager.enable(gl, shader, this.gpuSegmentStatedColorHashTable);
+      const segmentStatedColors = this.displayState.segmentStatedColors.value;
+      let {gpuSegmentStatedColorHashTable} = this;
+      if (gpuSegmentStatedColorHashTable === undefined ||
+          gpuSegmentStatedColorHashTable.hashTable !== segmentStatedColors.hashTable) {
+        gpuSegmentStatedColorHashTable?.dispose();
+        this.gpuSegmentStatedColorHashTable = gpuSegmentStatedColorHashTable =
+            GPUHashTable.get(gl, segmentStatedColors.hashTable);
+      }
+      this.segmentStatedColorShaderManager.enable(gl, shader, gpuSegmentStatedColorHashTable);
     }
   }
   endSlice(sliceView: SliceView, shader: ShaderProgram, parameters: ShaderParameters) {
     const {gl} = this;
     this.hashTableManager.disable(gl, shader);
-    if (parameters.hasHighlightedSegments) {
-      this.hashTableManagerHighlighted.disable(gl, shader);
-    }
     if (parameters.hasEquivalences) {
       this.equivalencesShaderManager.disable(gl, shader);
     }

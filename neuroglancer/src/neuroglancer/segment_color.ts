@@ -58,8 +58,8 @@ vec3 ${this.prefix}(uint64_t x) {
     builder.addFragmentCode(s);
   }
 
-  enable(gl: GL, shader: ShaderProgram, segmentColorHash: SegmentColorHash) {
-    gl.uniform1ui(shader.uniform(this.seedName), segmentColorHash.hashSeed);
+  enable(gl: GL, shader: ShaderProgram, segmentColorHash: number) {
+    gl.uniform1ui(shader.uniform(this.seedName), segmentColorHash);
   }
 }
 
@@ -76,6 +76,17 @@ export class SegmentColorHash implements Trackable {
 
   static getDefault() {
     return new SegmentColorHash(0);
+  }
+
+  get value() {
+    return this.hashSeed;
+  }
+
+  set value(value: number) {
+    if (value !== this.hashSeed) {
+      this.hashSeed = value;
+      this.changed.dispatch();
+    }
   }
 
   compute(out: Float32Array, x: Uint64) {

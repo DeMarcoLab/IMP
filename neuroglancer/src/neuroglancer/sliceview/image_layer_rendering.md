@@ -74,6 +74,19 @@ The `<type>` must be `vec3`, which is set to the RGB `[0, 1]` representation of 
 `default` parameter indicates the initial value as a CSS color string (must be quoted), and defaults
 to `"white"` if not specified.
 
+### `checkbox` controls
+
+The `checkbox` control type specifies a checkbox.  Directive syntax:
+
+```glsl
+#uicontrol bool <name> checkbox
+#uicontrol bool <name> checkbox(default=false)
+#uicontrol bool <name> checkbox(default=true)
+```
+
+The default is `false` if not specified.  The variable `<name>` is defined at *compile time* as
+either `false` or `true` according to the state of the checkbox.
+
 ### `invlerp` controls
 
 The `invlerp` control type allows the user to specify an interval of the layer's data type that is
@@ -214,7 +227,7 @@ data-dependent alpha.
 ### Color maps
 
 You can map values in the range [0,1] to an RGB color using one of the color maps defined in
-[colormaps.glsl](../webgl/colormaps.glsl).
+[colormaps.ts](../webgl/colormaps.ts).
 
 ### Avoiding artifacts due to lossy compression
 

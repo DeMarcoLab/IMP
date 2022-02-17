@@ -26,7 +26,7 @@ export function getDefaultGlobalBindings() {
     map.set('keyx', 'clear-segments');
     map.set('keys', 'toggle-show-slices');
     map.set('keyb', 'toggle-scale-bar');
-    map.set('shift+keyb', 'toggle-default-annotations');
+    map.set('keyv', 'toggle-default-annotations');
     map.set('keya', 'toggle-axis-lines');
     map.set('keyo', 'toggle-orthographic-projection');
 
@@ -36,12 +36,20 @@ export function getDefaultGlobalBindings() {
       map.set('alt+digit' + i, 'toggle-pick-layer-' + i);
     }
 
+    for (let i = 0; i < 26; ++i) {
+      const lowercase = String.fromCharCode(97 + i);
+      const uppercase = String.fromCharCode(65 + i);
+      map.set(`alt?+control?+shift+key${lowercase}`, `tool-${uppercase}`);
+    }
+
     map.set('keyn', 'add-layer');
     map.set('keyh', 'help');
 
     map.set('space', 'toggle-layout');
     map.set('shift+space', 'toggle-layout-alternative');
     map.set('backslash', 'toggle-show-statistics');
+
+    map.set('shift+keym','toggle-mesh-at-position')
     defaultGlobalBindings = map;
   }
   return defaultGlobalBindings;
@@ -53,6 +61,19 @@ export function getDefaultSelectBindings() {
     defaultSelectBindings = EventActionMap.fromObject({'control+mousedown2': 'select-position'});
   }
   return defaultSelectBindings;
+}
+
+let defaultAnnotationListBindings: EventActionMap|undefined;
+export function getDefaultAnnotationListBindings() {
+  if (defaultAnnotationListBindings === undefined) {
+    defaultAnnotationListBindings = EventActionMap.fromObject(
+        {
+          'click0': 'pin-annotation',
+          'mousedown2': 'move-to-annotation',
+        },
+        {parents: [[getDefaultSelectBindings(), 0]]});
+  }
+  return defaultAnnotationListBindings;
 }
 
 let defaultRenderedDataPanelBindings: EventActionMap|undefined;

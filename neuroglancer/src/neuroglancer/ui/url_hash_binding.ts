@@ -15,11 +15,13 @@
  */
 
 import debounce from 'lodash/debounce';
+import {CredentialsManager} from 'neuroglancer/credentials_provider';
 import {StatusMessage} from 'neuroglancer/status';
 import {WatchableValue} from 'neuroglancer/trackable_value';
 import {RefCounted} from 'neuroglancer/util/disposable';
-import {fetchSpecialOk} from 'neuroglancer/util/http_request';
+import {responseJson} from 'neuroglancer/util/http_request';
 import {urlSafeParse, verifyObject} from 'neuroglancer/util/json';
+import {cancellableFetchSpecialOk, parseSpecialUrl} from 'neuroglancer/util/special_protocol_request';
 import {getCachedJson, Trackable} from 'neuroglancer/util/trackable';
 
 /**
@@ -35,10 +37,11 @@ function encodeFragment(fragment: string) {
   });
 }
 
-export function removeParameterFromUrl(url: string, parameter: string) {
-  return url.replace(new RegExp('[?&]' + parameter + '=[^&#]*(#.*)?$'), '$1')
-      .replace(new RegExp('([?&])' + parameter + '=[^&]*&'), '$1');
+export interface UrlHashBindingOptions {
+  defaultFragment?: string;
+  updateDelayMilliseconds?: number;
 }
+
 /**
  * An instance of this class manages a binding between a Trackable value and the URL hash state.
  * The binding is initialized in the constructor, and is removed when dispose is called.
@@ -59,12 +62,18 @@ export class UrlHashBinding extends RefCounted {
    */
   parseError = new WatchableValue<Error|undefined>(undefined);
 
-  constructor(public root: Trackable, updateDelayMilliseconds = 200) {
+  private defaultFragment: string;
+
+  constructor(
+      public root: Trackable, public credentialsManager: CredentialsManager,
+      options: UrlHashBindingOptions = {}) {
     super();
+    const {updateDelayMilliseconds = 200, defaultFragment = '{}'} = options;
     this.registerEventListener(window, 'hashchange', () => this.updateFromUrlHash());
     const throttledSetUrlHash = debounce(() => this.setUrlHash(), updateDelayMilliseconds);
     this.registerDisposer(root.changed.add(throttledSetUrlHash));
     this.registerDisposer(() => throttledSetUrlHash.cancel());
+    this.defaultFragment = defaultFragment;
   }
 
   /**
@@ -73,8 +82,6 @@ export class UrlHashBinding extends RefCounted {
   setUrlHash() {
     const cacheState = getCachedJson(this.root);
     const {generation} = cacheState;
-    history.replaceState(null, '', removeParameterFromUrl(window.location.href, 'json_url'));
-
     if (generation !== this.prevStateGeneration) {
       this.prevStateGeneration = cacheState.generation;
       let stateString = encodeFragment(JSON.stringify(cacheState.value));
@@ -97,17 +104,19 @@ export class UrlHashBinding extends RefCounted {
     try {
       let s = location.href.replace(/^[^#]+/, '');
       if (s === '' || s === '#' || s === '#!') {
-        s = '#!{}';
+        s = '#!' + this.defaultFragment;
       }
       // Handle remote JSON state
-      if (s.match(/^#!(http|https|gs):\/\//)) {
+      if (s.match(/^#!([a-z][a-z\d+-.]*):\/\//)) {
         const url = s.substring(2);
+        const {url: parsedUrl, credentialsProvider} = parseSpecialUrl(url, this.credentialsManager);
         StatusMessage.forPromise(
-            fetchSpecialOk(url).then(response => response.json()).then(json => {
-              verifyObject(json);
-              this.root.reset();
-              this.root.restoreState(json);
-            }),
+            cancellableFetchSpecialOk(credentialsProvider, parsedUrl, {}, responseJson)
+                .then(json => {
+                  verifyObject(json);
+                  this.root.reset();
+                  this.root.restoreState(json);
+                }),
             {initialMessage: `Loading state from ${url}`, errorPrefix: `Error loading state:`});
       } else if (s.startsWith('#!+')) {
         s = s.slice(3);

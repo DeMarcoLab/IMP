@@ -16,16 +16,18 @@
 
 import {ChunkState} from 'neuroglancer/chunk_manager/base';
 import {Chunk, ChunkManager, ChunkSource, WithParameters} from 'neuroglancer/chunk_manager/frontend';
-import {VisibleLayerInfo} from 'neuroglancer/layer';
+import {CredentialsManager} from 'neuroglancer/credentials_provider';
+import {getCredentialsProviderCounterpart, WithCredentialsProvider} from 'neuroglancer/credentials_provider/chunk_source_frontend';
+import {PickState, VisibleLayerInfo} from 'neuroglancer/layer';
 import {PerspectivePanel} from 'neuroglancer/perspective_view/panel';
 import {PerspectiveViewRenderContext, PerspectiveViewRenderLayer} from 'neuroglancer/perspective_view/render_layer';
 import {WatchableRenderLayerTransform} from 'neuroglancer/render_coordinate_transform';
 import {ThreeDimensionalRenderLayerAttachmentState, update3dRenderLayerAttachment} from 'neuroglancer/renderlayer';
-import {GET_SINGLE_MESH_INFO_RPC_ID, SINGLE_MESH_CHUNK_KEY, SINGLE_MESH_LAYER_RPC_ID, SingleMeshInfo, SingleMeshSourceParameters, SingleMeshSourceParametersWithInfo, VertexAttributeInfo} from 'neuroglancer/single_mesh/base';
+import {GET_SINGLE_MESH_INFO_RPC_ID, SINGLE_MESH_CHUNK_KEY, SINGLE_MESH_LAYER_RPC_ID, SingleMeshInfo, SingleMeshSourceParametersWithInfo, VertexAttributeInfo} from 'neuroglancer/single_mesh/base';
 import {WatchableValue} from 'neuroglancer/trackable_value';
 import {DataType} from 'neuroglancer/util/data_type';
 import {mat4, vec3} from 'neuroglancer/util/geom';
-import {Uint64} from 'neuroglancer/util/uint64';
+import {parseSpecialUrl, SpecialProtocolCredentials} from 'neuroglancer/util/special_protocol_request';
 import {withSharedVisibility} from 'neuroglancer/visibility_priority/frontend';
 import {Buffer} from 'neuroglancer/webgl/buffer';
 import {glsl_COLORMAPS} from 'neuroglancer/webgl/colormaps';
@@ -311,7 +313,7 @@ export function getAttributeTextureFormats(vertexAttributes: VertexAttributeInfo
 }
 
 export class SingleMeshSource extends
-(WithParameters(ChunkSource, SingleMeshSourceParametersWithInfo)) {
+(WithParameters(WithCredentialsProvider<SpecialProtocolCredentials>()(ChunkSource), SingleMeshSourceParametersWithInfo)) {
   attributeTextureFormats = getAttributeTextureFormats(this.info.vertexAttributes);
 
   get info() {
@@ -393,6 +395,14 @@ export class SingleMeshLayer extends
     return this.source.gl;
   }
 
+  isReady() {
+    let chunk = <SingleMeshChunk|undefined>this.source.chunks.get(SINGLE_MESH_CHUNK_KEY);
+    if (chunk === undefined || chunk.state !== ChunkState.GPU_MEMORY) {
+      return false;
+    }
+    return true;
+  }
+
   draw(
       renderContext: PerspectiveViewRenderContext,
       attachment: VisibleLayerInfo<PerspectivePanel, ThreeDimensionalRenderLayerAttachmentState>) {
@@ -430,7 +440,8 @@ export class SingleMeshLayer extends
     shaderManager.endLayer(gl, shader);
   }
 
-  transformPickedValue(_pickedValue: Uint64, pickedOffset: number) {
+  transformPickedValue(pickState: PickState) {
+    const {pickedOffset} = pickState;
     let chunk = <SingleMeshChunk|undefined>this.source.chunks.get(SINGLE_MESH_CHUNK_KEY);
     if (chunk === undefined) {
       return undefined;
@@ -458,18 +469,25 @@ export class SingleMeshLayer extends
   }
 }
 
-function getSingleMeshInfo(chunkManager: ChunkManager, parameters: SingleMeshSourceParameters) {
-  return chunkManager.memoize.getUncounted(
-      {type: 'single_mesh:getMeshInfo', parameters},
-      () => chunkManager.rpc!.promiseInvoke<SingleMeshInfo>(
-          GET_SINGLE_MESH_INFO_RPC_ID,
-          {'chunkManager': chunkManager.addCounterpartRef(), 'parameters': parameters}));
+function getSingleMeshInfo(
+    chunkManager: ChunkManager, credentialsManager: CredentialsManager, url: string) {
+  return chunkManager.memoize.getUncounted({type: 'single_mesh:getMeshInfo', url}, async () => {
+    const {url: parsedUrl, credentialsProvider} = parseSpecialUrl(url, credentialsManager);
+    const info =
+        await chunkManager.rpc!.promiseInvoke<SingleMeshInfo>(GET_SINGLE_MESH_INFO_RPC_ID, {
+          'chunkManager': chunkManager.addCounterpartRef(),
+          credentialsProvider: getCredentialsProviderCounterpart<SpecialProtocolCredentials>(
+              chunkManager, credentialsProvider),
+          'parameters': {meshSourceUrl: parsedUrl}
+        });
+    return {info, url: parsedUrl, credentialsProvider};
+  });
 }
 
-export function getSingleMeshSource(
-    chunkManager: ChunkManager, parameters: SingleMeshSourceParameters) {
-  return getSingleMeshInfo(chunkManager, parameters)
-      .then(
-          info =>
-              chunkManager.getChunkSource(SingleMeshSource, {parameters: {...parameters, info}}));
+export async function getSingleMeshSource(
+    chunkManager: ChunkManager, credentialsManager: CredentialsManager, url: string) {
+  const {info, url: parsedUrl, credentialsProvider} =
+      await getSingleMeshInfo(chunkManager, credentialsManager, url);
+  return chunkManager.getChunkSource(
+      SingleMeshSource, {credentialsProvider, parameters: {meshSourceUrl: parsedUrl, info}});
 }

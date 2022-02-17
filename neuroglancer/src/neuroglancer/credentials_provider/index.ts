@@ -98,13 +98,20 @@ export interface CredentialsManager {
       Owned<CredentialsProvider<Credentials>>;
 }
 
+export type ProviderGetter<Credentials> =
+    (parameters: any, credentialsManager: CredentialsManager) =>
+        Owned<CredentialsProvider<Credentials>>;
+
 /**
  * CredentialsManager that supports registration.
  */
 export class MapBasedCredentialsManager implements CredentialsManager {
-  providers = new Map<string, (parameters: any) => Owned<CredentialsProvider<any>>>();
-  register<Credentials>(
-      key: string, providerGetter: (parameters: any) => Owned<CredentialsProvider<Credentials>>) {
+  providers = new Map<
+      string,
+      (parameters: any, credentialsManager: CredentialsManager) =>
+          Owned<CredentialsProvider<any>>>();
+  topLevelManager: CredentialsManager = this;
+  register<Credentials>(key: string, providerGetter: ProviderGetter<Credentials>) {
     this.providers.set(key, providerGetter);
   }
 
@@ -114,7 +121,7 @@ export class MapBasedCredentialsManager implements CredentialsManager {
     if (getter === undefined) {
       throw new Error(`No registered credentials provider: ${JSON.stringify(key)}`);
     }
-    return getter(parameters);
+    return getter(parameters, this.topLevelManager);
   }
 }
 
@@ -142,10 +149,28 @@ export class CachingMapBasedCredentialsManager extends
     CachingCredentialsManager<MapBasedCredentialsManager> {
   constructor() {
     super(new MapBasedCredentialsManager());
+    this.base.topLevelManager = this;
   }
 
-  register<Credentials>(
-      key: string, providerGetter: (parameters: any) => Owned<CredentialsProvider<Credentials>>) {
+  register<Credentials>(key: string, providerGetter: ProviderGetter<Credentials>) {
     this.base.register(key, providerGetter);
   }
+}
+
+export type MaybeOptionalCredentialsProvider<T> =
+    T extends undefined ? undefined : CredentialsProvider<Exclude<T, undefined>>;
+
+export class AnonymousFirstCredentialsProvider<T> extends CredentialsProvider<T> {
+  private anonymous = true;
+  constructor(private baseProvider: CredentialsProvider<T>, private anonymousCredentials: T) {
+    super();
+  }
+
+  get = makeCachedCredentialsGetter((invalidCredentials?: CredentialsWithGeneration<T>) => {
+    if (this.anonymous && invalidCredentials === undefined) {
+      return Promise.resolve({generation: -10, credentials: this.anonymousCredentials});
+    }
+    this.anonymous = false;
+    return this.baseProvider.get(invalidCredentials);
+  });
 }

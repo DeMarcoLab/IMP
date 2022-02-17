@@ -18,9 +18,11 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  height: 0px;
 }
 
 .neuroglancer-image-dropdown .neuroglancer-shader-code-widget {
+  flex-shrink: 0;
   height: 8em;
   border: 1px solid transparent;
 }
@@ -39,7 +41,7 @@
 .neuroglancer-selection-details-value-grid {
   display: grid;
   grid-auto-rows: auto;
-  font-family: monospace;
+  font-family: 'Roboto', sans-serif;
   font-size: medium;
   align-items: center;
 }

@@ -20,7 +20,7 @@ import {WithParameters} from 'neuroglancer/chunk_manager/backend';
 import {ChunkSourceParametersConstructor} from 'neuroglancer/chunk_manager/base';
 import {CredentialsProvider} from 'neuroglancer/credentials_provider';
 import {WithSharedCredentialsProviderCounterpart} from 'neuroglancer/credentials_provider/shared_counterpart';
-import {BatchMeshFragment, BatchMeshFragmentPayload, BrainmapsInstance, ChangeStackAwarePayload, Credentials, makeRequest, SkeletonPayload, SubvolumePayload} from 'neuroglancer/datasource/brainmaps/api';
+import {BatchMeshFragment, BatchMeshFragmentPayload, BrainmapsInstance, ChangeStackAwarePayload, OAuth2Credentials, makeRequest, SkeletonPayload, SubvolumePayload} from 'neuroglancer/datasource/brainmaps/api';
 import {AnnotationSourceParameters, AnnotationSpatialIndexSourceParameters, ChangeSpec, MeshSourceParameters, MultiscaleMeshSourceParameters, SkeletonSourceParameters, VolumeChunkEncoding, VolumeSourceParameters} from 'neuroglancer/datasource/brainmaps/base';
 import {assignMeshFragmentData, assignMultiscaleMeshFragmentData, FragmentChunk, generateHigherOctreeLevel, ManifestChunk, MeshSource, MultiscaleFragmentChunk, MultiscaleManifestChunk, MultiscaleMeshSource} from 'neuroglancer/mesh/backend';
 import {VertexPositionFormat} from 'neuroglancer/mesh/base';
@@ -37,7 +37,7 @@ import {parseArray, parseFixedLengthArray, verifyObject, verifyObjectProperty, v
 import {defaultStringCompare} from 'neuroglancer/util/string';
 import {Uint64} from 'neuroglancer/util/uint64';
 import * as vector from 'neuroglancer/util/vector';
-import {decodeZIndexCompressed, encodeZIndexCompressed, getOctreeChildIndex, zorder3LessThan} from 'neuroglancer/util/zorder';
+import {decodeZIndexCompressed, encodeZIndexCompressed3d, getOctreeChildIndex, zorder3LessThan} from 'neuroglancer/util/zorder';
 import {registerSharedObject, SharedObject} from 'neuroglancer/worker_rpc';
 
 const CHUNK_DECODERS = new Map([
@@ -70,7 +70,7 @@ function applyChangeStack(changeStack: ChangeSpec|undefined, payload: ChangeStac
 function BrainmapsSource<Parameters, TBase extends {new (...args: any[]): SharedObject}>(
     Base: TBase, parametersConstructor: ChunkSourceParametersConstructor<Parameters>) {
   return WithParameters(
-      WithSharedCredentialsProviderCounterpart<Credentials>()(Base), parametersConstructor);
+      WithSharedCredentialsProviderCounterpart<OAuth2Credentials>()(Base), parametersConstructor);
 }
 
 const tempUint64 = new Uint64();
@@ -90,7 +90,7 @@ export class BrainmapsVolumeChunkSource extends
         payload.subvolume_format = 'SINGLE_IMAGE';
         payload.image_format_options = {
           image_format: 'JPEG',
-          jpeg_quality: 70,
+          jpeg_quality: this.parameters.jpegQuality!,
         };
         return;
       case VolumeChunkEncoding.COMPRESSED_SEGMENTATION:
@@ -336,16 +336,18 @@ function combineBatchMeshFragments(fragments: BatchMeshResponseFragment[]) {
   return {vertexPositions: vertexBuffer, indices: indexBuffer};
 }
 
-function makeBatchMeshRequest(
-    credentialsProvider: CredentialsProvider<Credentials>,
+async function makeBatchMeshRequest<T>(
+    credentialsProvider: CredentialsProvider<OAuth2Credentials>,
     parameters: {instance: BrainmapsInstance, volumeId: string, meshName: string},
-    ids: Iterable<string>, cancellationToken: CancellationToken): Promise<ArrayBuffer> {
+    ids: Map<string, T>, cancellationToken: CancellationToken): Promise<ArrayBuffer> {
   const path = `/v1/objects/meshes:batch`;
-
   const batches: BatchMeshFragment[] = [];
   let prevObjectId: string|undefined;
   let batchSize = 0;
-  for (const id of ids) {
+  const pendingIds = new Map<string, T>();
+  for (const [id, idData] of ids) {
+    pendingIds.set(id, idData);
+    ids.delete(id);
     const splitIndex = id.indexOf('\0');
     const objectId = id.substring(0, splitIndex);
     const fragmentId = id.substring(splitIndex + 1);
@@ -360,14 +362,20 @@ function makeBatchMeshRequest(
     mesh_name: parameters.meshName,
     batches: batches,
   };
-  return makeRequest(
-      parameters['instance'], credentialsProvider, {
-        method: 'POST',
-        path,
-        payload: JSON.stringify(payload),
-        responseType: 'arraybuffer',
-      },
-      cancellationToken);
+  try {
+    return await makeRequest(
+        parameters['instance'], credentialsProvider, {
+          method: 'POST',
+          path,
+          payload: JSON.stringify(payload),
+          responseType: 'arraybuffer',
+        },
+        cancellationToken);
+  } finally {
+    for (const [id, idData] of pendingIds) {
+      ids.set(id, idData);
+    }
+  }
 }
 
 @registerSharedObject() export class BrainmapsMultiscaleMeshSource extends
@@ -396,7 +404,7 @@ function makeBatchMeshRequest(
         .then(response => decodeMultiscaleManifestChunk(chunk, response));
   }
 
-  downloadFragment(chunk: MultiscaleFragmentChunk, cancellationToken: CancellationToken) {
+  async downloadFragment(chunk: MultiscaleFragmentChunk, cancellationToken: CancellationToken) {
     const {parameters} = this;
 
     const manifestChunk = chunk.manifestChunk! as BrainmapsMultiscaleManifestChunk;
@@ -425,7 +433,7 @@ function makeBatchMeshRequest(
             gridY = Math.floor(octree[chunkIndex * 5 + 1] / relativeBlockShape[1]),
             gridZ = Math.floor(octree[chunkIndex * 5 + 2] / relativeBlockShape[2]);
       const fragmentKey =
-          encodeZIndexCompressed(tempUint64, xBits, yBits, zBits, gridX, gridY, gridZ)
+          encodeZIndexCompressed3d(tempUint64, xBits, yBits, zBits, gridX, gridY, gridZ)
               .toString(16)
               .padStart(16, '0');
       const entry = fragmentSupervoxelIds[chunkIndex];
@@ -442,58 +450,79 @@ function makeBatchMeshRequest(
     idArray.sort((a, b) => defaultStringCompare(a[0], b[0]));
     ids = new Map(idArray);
 
-    function copyMeshData() {
-      fragments.sort((a, b) => a.chunkIndex - b.chunkIndex);
-      let indexOffset = 0;
-      const numSubChunks = 1 << (3 * (lod - prevLod));
-      const subChunkOffsets = new Uint32Array(numSubChunks + 1);
-      let prevSubChunkIndex = 0;
-      for (const fragment of fragments) {
-        const row = fragment.chunkIndex;
-        const subChunkIndex = getOctreeChildIndex(
-                                  octree[row * 5] >>> prevLod, octree[row * 5 + 1] >>> prevLod,
-                                  octree[row * 5 + 2] >>> prevLod) &
-            (numSubChunks - 1);
-        subChunkOffsets.fill(indexOffset, prevSubChunkIndex + 1, subChunkIndex + 1);
-        prevSubChunkIndex = subChunkIndex;
-        indexOffset += fragment.numIndices;
-      }
-      subChunkOffsets.fill(indexOffset, prevSubChunkIndex + 1, numSubChunks + 1);
-      assignMultiscaleMeshFragmentData(
-          chunk, {...combineBatchMeshFragments(fragments), subChunkOffsets},
-          VertexPositionFormat.float32);
-    }
-    function decodeResponse(response: ArrayBuffer): Promise<void>|void {
-      decodeBatchMeshResponse(
-          response, (fragment: BatchMeshResponseFragment&{chunkIndex: number}) => {
-            const chunkIndex = ids.get(fragment.fullKey)!;
-            if (!ids.delete(fragment.fullKey)) {
-              throw new Error(
-                  `Received unexpected fragment key: ${JSON.stringify(fragment.fullKey)}.`);
-            }
-            fragment.chunkIndex = chunkIndex;
-            fragments.push(fragment);
-          });
-
-      if (ids.size !== 0) {
-        // Partial response received.
-        return makeBatchRequest();
-      }
-      copyMeshData();
-    }
-
-    const {credentialsProvider} = this;
-
     const meshName = parameters.info.lods[lod].info.name;
 
-    function makeBatchRequest(): Promise<void> {
-      return makeBatchMeshRequest(
-                 credentialsProvider,
-                 {instance: parameters.instance, volumeId: parameters.volumeId, meshName},
-                 ids.keys(), cancellationToken)
-          .then(decodeResponse);
+    const parallelRequests = true;
+
+    await new Promise((resolve, reject) => {
+      let requestsInProgress = 0;
+      let error = false;
+      const maybeIssueMoreRequests = () => {
+        if (error) return;
+        while (ids.size !== 0) {
+          ++requestsInProgress;
+          makeBatchMeshRequest(
+              this.credentialsProvider,
+              {instance: parameters.instance, volumeId: parameters.volumeId, meshName}, ids,
+              cancellationToken)
+              .then(response => {
+                --requestsInProgress;
+                decodeBatchMeshResponse(
+                    response, (fragment: BatchMeshResponseFragment&{chunkIndex: number}) => {
+                      const chunkIndex = ids.get(fragment.fullKey)!;
+                      if (!ids.delete(fragment.fullKey)) {
+                        throw new Error(`Received unexpected fragment key: ${
+                            JSON.stringify(fragment.fullKey)}.`);
+                      }
+                      fragment.chunkIndex = chunkIndex;
+                      fragments.push(fragment);
+                    });
+                maybeIssueMoreRequests();
+              })
+            .catch(e => {
+              error = true;
+              reject(e);
+            });
+          if (!parallelRequests) break;
+        }
+        // Notify the chunk queue of the number of download slots being used.  This partially limits
+        // parallelism by maximum number of concurrent downloads, and avoids fetch errors due to an
+        // excessive number of concurrent requests.
+        //
+        // Note that the limit on the number of concurrent downloads is not enforced perfectly.  If
+        // the new value of `downloadSlots` results in the total number of concurrent downloads
+        // exceeding the maximum allowed, the concurrent requests are still issued.  However, no
+        // additional lower-priority chunks will be promoted to `ChunkState.DOWNLOADING` until a
+        // download slot is available.
+        chunk.downloadSlots = Math.max(1, requestsInProgress);
+        if (requestsInProgress === 0) {
+          resolve(undefined);
+          return;
+        }
+      };
+      maybeIssueMoreRequests();
+    });
+
+    // Combine fragments
+    fragments.sort((a, b) => a.chunkIndex - b.chunkIndex);
+    let indexOffset = 0;
+    const numSubChunks = 1 << (3 * (lod - prevLod));
+    const subChunkOffsets = new Uint32Array(numSubChunks + 1);
+    let prevSubChunkIndex = 0;
+    for (const fragment of fragments) {
+      const row = fragment.chunkIndex;
+      const subChunkIndex = getOctreeChildIndex(
+                                octree[row * 5] >>> prevLod, octree[row * 5 + 1] >>> prevLod,
+                                octree[row * 5 + 2] >>> prevLod) &
+          (numSubChunks - 1);
+      subChunkOffsets.fill(indexOffset, prevSubChunkIndex + 1, subChunkIndex + 1);
+      prevSubChunkIndex = subChunkIndex;
+      indexOffset += fragment.numIndices;
     }
-    return makeBatchRequest();
+    subChunkOffsets.fill(indexOffset, prevSubChunkIndex + 1, numSubChunks + 1);
+    assignMultiscaleMeshFragmentData(
+        chunk, {...combineBatchMeshFragments(fragments), subChunkOffsets},
+        VertexPositionFormat.float32);
   }
 }
 
@@ -547,39 +576,29 @@ function decodeManifestChunkWithSupervoxelIds(chunk: ManifestChunk, response: an
         .then(response => decodeManifestChunkWithSupervoxelIds(chunk, response));
   }
 
-  downloadFragment(chunk: FragmentChunk, cancellationToken: CancellationToken) {
+  async downloadFragment(chunk: FragmentChunk, cancellationToken: CancellationToken) {
     let {parameters} = this;
 
-    const ids = new Set<string>(JSON.parse(chunk.fragmentId!));
+    const ids = new Map<string, null>();
+    for (const id of JSON.parse(chunk.fragmentId!)) {
+      ids.set(id, null);
+    }
 
     let fragments: BatchMeshResponseFragment[] = [];
 
-    function copyMeshData() {
-      assignMeshFragmentData(chunk, combineBatchMeshFragments(fragments));
-    }
+    const {credentialsProvider} = this;
 
-    function decodeResponse(response: ArrayBuffer): Promise<void>|void {
+    while (ids.size !== 0) {
+      const response =
+          await makeBatchMeshRequest(credentialsProvider, parameters, ids, cancellationToken);
       decodeBatchMeshResponse(response, fragment => {
         if (!ids.delete(fragment.fullKey)) {
           throw new Error(`Received unexpected fragment key: ${JSON.stringify(fragment.fullKey)}.`);
         }
         fragments.push(fragment);
       });
-
-      if (ids.size !== 0) {
-        // Partial response received.
-        return makeBatchRequest();
-      }
-      copyMeshData();
     }
-
-    const {credentialsProvider} = this;
-
-    function makeBatchRequest(): Promise<void> {
-      return makeBatchMeshRequest(credentialsProvider, parameters, ids, cancellationToken)
-          .then(decodeResponse);
-    }
-    return makeBatchRequest();
+    assignMeshFragmentData(chunk, combineBatchMeshFragments(fragments));
   }
 }
 

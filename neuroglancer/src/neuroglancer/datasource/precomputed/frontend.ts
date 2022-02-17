@@ -14,43 +14,46 @@
  * limitations under the License.
  */
 
-import {AnnotationPropertySpec, AnnotationType, ensureUniqueAnnotationPropertyIds, makeDataBoundsBoundingBoxAnnotationSet, parseAnnotationPropertyId, parseAnnotationPropertyType} from 'neuroglancer/annotation';
+import {AnnotationType, makeDataBoundsBoundingBoxAnnotationSet, parseAnnotationPropertySpecs} from 'neuroglancer/annotation';
 import {AnnotationGeometryChunkSpecification} from 'neuroglancer/annotation/base';
-import {MultiscaleAnnotationSource} from 'neuroglancer/annotation/frontend_source';
-import {AnnotationGeometryChunkSource} from 'neuroglancer/annotation/frontend_source';
+import {AnnotationGeometryChunkSource, MultiscaleAnnotationSource} from 'neuroglancer/annotation/frontend_source';
 import {ChunkManager, WithParameters} from 'neuroglancer/chunk_manager/frontend';
 import {BoundingBox, CoordinateSpace, coordinateSpaceFromJson, emptyValidCoordinateSpace, makeCoordinateSpace, makeIdentityTransform, makeIdentityTransformedBoundingBox} from 'neuroglancer/coordinate_transform';
+import {WithCredentialsProvider} from 'neuroglancer/credentials_provider/chunk_source_frontend';
 import {CompleteUrlOptions, ConvertLegacyUrlOptions, DataSource, DataSourceProvider, DataSubsourceEntry, GetDataSourceOptions, NormalizeUrlOptions, RedirectError} from 'neuroglancer/datasource';
 import {AnnotationSourceParameters, AnnotationSpatialIndexSourceParameters, DataEncoding, IndexedSegmentPropertySourceParameters, MeshSourceParameters, MultiscaleMeshMetadata, MultiscaleMeshSourceParameters, ShardingHashFunction, ShardingParameters, SkeletonMetadata, SkeletonSourceParameters, VolumeChunkEncoding, VolumeChunkSourceParameters} from 'neuroglancer/datasource/precomputed/base';
 import {VertexPositionFormat} from 'neuroglancer/mesh/base';
 import {MeshSource, MultiscaleMeshSource} from 'neuroglancer/mesh/frontend';
-import {IndexedSegmentProperty} from 'neuroglancer/segmentation_display_state/base';
-import {IndexedSegmentPropertySource, InlineSegmentProperty, InlineSegmentPropertyMap, SegmentPropertyMap} from 'neuroglancer/segmentation_display_state/property_map';
+import {IndexedSegmentPropertySource, InlineSegmentProperty, InlineSegmentPropertyMap, normalizeInlineSegmentPropertyMap, SegmentPropertyMap} from 'neuroglancer/segmentation_display_state/property_map';
 import {VertexAttributeInfo} from 'neuroglancer/skeleton/base';
 import {SkeletonSource} from 'neuroglancer/skeleton/frontend';
 import {makeSliceViewChunkSpecification} from 'neuroglancer/sliceview/base';
 import {SliceViewSingleResolutionSource} from 'neuroglancer/sliceview/frontend';
-import {DataType, makeDefaultVolumeChunkSpecifications, VolumeSourceOptions, VolumeType} from 'neuroglancer/sliceview/volume/base';
+import {makeDefaultVolumeChunkSpecifications, VolumeSourceOptions, VolumeType} from 'neuroglancer/sliceview/volume/base';
 import {MultiscaleVolumeChunkSource, VolumeChunkSource} from 'neuroglancer/sliceview/volume/frontend';
 import {transposeNestedArrays} from 'neuroglancer/util/array';
+import {DATA_TYPE_ARRAY_CONSTRUCTOR, DataType} from 'neuroglancer/util/data_type';
 import {Borrowed} from 'neuroglancer/util/disposable';
 import {mat4, vec3} from 'neuroglancer/util/geom';
 import {completeHttpPath} from 'neuroglancer/util/http_path_completion';
-import {fetchSpecialOk, isNotFoundError} from 'neuroglancer/util/http_request';
+import {isNotFoundError, responseJson} from 'neuroglancer/util/http_request';
 import {parseArray, parseFixedLengthArray, parseQueryStringParameters, unparseQueryStringParameters, verifyEnumString, verifyFiniteFloat, verifyFinitePositiveFloat, verifyInt, verifyObject, verifyObjectProperty, verifyOptionalObjectProperty, verifyOptionalString, verifyPositiveInt, verifyString, verifyStringArray} from 'neuroglancer/util/json';
 import * as matrix from 'neuroglancer/util/matrix';
+import {getObjectId} from 'neuroglancer/util/object_id';
+import {cancellableFetchSpecialOk, parseSpecialUrl, SpecialProtocolCredentials, SpecialProtocolCredentialsProvider} from 'neuroglancer/util/special_protocol_request';
+import {Uint64} from 'neuroglancer/util/uint64';
 
 class PrecomputedVolumeChunkSource extends
-(WithParameters(VolumeChunkSource, VolumeChunkSourceParameters)) {}
+(WithParameters(WithCredentialsProvider<SpecialProtocolCredentials>()(VolumeChunkSource), VolumeChunkSourceParameters)) {}
 
 class PrecomputedMeshSource extends
-(WithParameters(MeshSource, MeshSourceParameters)) {}
+(WithParameters(WithCredentialsProvider<SpecialProtocolCredentials>()(MeshSource), MeshSourceParameters)) {}
 
 class PrecomputedMultiscaleMeshSource extends
-(WithParameters(MultiscaleMeshSource, MultiscaleMeshSourceParameters)) {}
+(WithParameters(WithCredentialsProvider<SpecialProtocolCredentials>()(MultiscaleMeshSource), MultiscaleMeshSourceParameters)) {}
 
 class PrecomputedSkeletonSource extends
-(WithParameters(SkeletonSource, SkeletonSourceParameters)) {
+(WithParameters(WithCredentialsProvider<SpecialProtocolCredentials>()(SkeletonSource), SkeletonSourceParameters)) {
   get skeletonVertexCoordinatesInVoxels() {
     return false;
   }
@@ -196,7 +199,9 @@ class PrecomputedMultiscaleVolumeChunkSource extends MultiscaleVolumeChunkSource
     return this.info.modelSpace.rank;
   }
 
-  constructor(chunkManager: ChunkManager, public url: string, public info: MultiscaleVolumeInfo) {
+  constructor(
+      chunkManager: ChunkManager, public credentialsProvider: SpecialProtocolCredentialsProvider,
+      public url: string, public info: MultiscaleVolumeInfo) {
     super(chunkManager);
   }
 
@@ -208,13 +213,22 @@ class PrecomputedMultiscaleVolumeChunkSource extends MultiscaleVolumeChunkSource
       const stride = rank + 1;
       const chunkToMultiscaleTransform = new Float32Array(stride * stride);
       chunkToMultiscaleTransform[chunkToMultiscaleTransform.length - 1] = 1;
+      const {lowerBounds: baseLowerBound, upperBounds: baseUpperBound} =
+          this.info.modelSpace.boundingBoxes[0].box;
+      const lowerClipBound = new Float32Array(rank);
+      const upperClipBound = new Float32Array(rank);
       for (let i = 0; i < 3; ++i) {
         const relativeScale = resolution[i] / modelResolution[i];
         chunkToMultiscaleTransform[stride * i + i] = relativeScale;
-        chunkToMultiscaleTransform[stride * rank + i] = scaleInfo.voxelOffset[i] * relativeScale;
+        const voxelOffsetValue = scaleInfo.voxelOffset[i];
+        chunkToMultiscaleTransform[stride * rank + i] = voxelOffsetValue * relativeScale;
+        lowerClipBound[i] = baseLowerBound[i] / relativeScale - voxelOffsetValue;
+        upperClipBound[i] = baseUpperBound[i] / relativeScale - voxelOffsetValue;
       }
       if (rank === 4) {
         chunkToMultiscaleTransform[stride * 3 + 3] = 1;
+        lowerClipBound[3] = baseLowerBound[3];
+        upperClipBound[3] = baseUpperBound[3];
       }
       return makeDefaultVolumeChunkSpecifications({
                rank,
@@ -229,6 +243,7 @@ class PrecomputedMultiscaleVolumeChunkSource extends MultiscaleVolumeChunkSource
              })
           .map((spec): SliceViewSingleResolutionSource<VolumeChunkSource> => ({
                  chunkSource: this.chunkManager.getChunkSource(PrecomputedVolumeChunkSource, {
+                   credentialsProvider: this.credentialsProvider,
                    spec,
                    parameters: {
                      url: resolvePath(this.url, scaleInfo.key),
@@ -237,25 +252,30 @@ class PrecomputedMultiscaleVolumeChunkSource extends MultiscaleVolumeChunkSource
                    }
                  }),
                  chunkToMultiscaleTransform,
+                 lowerClipBound,
+                 upperClipBound,
                }));
     }));
   }
 }
 
-const MultiscaleAnnotationSourceBase =
-    (WithParameters(MultiscaleAnnotationSource, AnnotationSourceParameters));
+const MultiscaleAnnotationSourceBase = (WithParameters(
+    WithCredentialsProvider<SpecialProtocolCredentials>()(MultiscaleAnnotationSource),
+    AnnotationSourceParameters));
 
 class PrecomputedAnnotationSpatialIndexSource extends
-(WithParameters(AnnotationGeometryChunkSource, AnnotationSpatialIndexSourceParameters)) {}
+(WithParameters(WithCredentialsProvider<SpecialProtocolCredentials>()(AnnotationGeometryChunkSource), AnnotationSpatialIndexSourceParameters)) {}
 
 interface PrecomputedAnnotationSourceOptions {
   metadata: AnnotationMetadata;
   parameters: AnnotationSourceParameters;
+  credentialsProvider: SpecialProtocolCredentialsProvider;
 }
 
 export class PrecomputedAnnotationSource extends MultiscaleAnnotationSourceBase {
   key: any;
   metadata: AnnotationMetadata;
+  credentialsProvider: SpecialProtocolCredentialsProvider;
   OPTIONS: PrecomputedAnnotationSourceOptions;
   constructor(chunkManager: ChunkManager, options: PrecomputedAnnotationSourceOptions) {
     const {parameters} = options;
@@ -267,6 +287,7 @@ export class PrecomputedAnnotationSource extends MultiscaleAnnotationSourceBase 
     } as any);
     this.readonly = true;
     this.metadata = options.metadata;
+    this.credentialsProvider = options.credentialsProvider;
   }
 
   getSources(): SliceViewSingleResolutionSource<AnnotationGeometryChunkSource>[][] {
@@ -274,6 +295,7 @@ export class PrecomputedAnnotationSource extends MultiscaleAnnotationSourceBase 
       const {spec} = spatialIndexLevel;
       return {
         chunkSource: this.chunkManager.getChunkSource(PrecomputedAnnotationSpatialIndexSource, {
+          credentialsProvider: this.credentialsProvider,
           parent: this,
           spec,
           parameters: spatialIndexLevel.parameters,
@@ -284,8 +306,10 @@ export class PrecomputedAnnotationSource extends MultiscaleAnnotationSourceBase 
   }
 }
 
-function getLegacyMeshSource(chunkManager: ChunkManager, parameters: MeshSourceParameters) {
-  return chunkManager.getChunkSource(PrecomputedMeshSource, {parameters});
+function getLegacyMeshSource(
+    chunkManager: ChunkManager, credentialsProvider: SpecialProtocolCredentialsProvider,
+    parameters: MeshSourceParameters) {
+  return chunkManager.getChunkSource(PrecomputedMeshSource, {parameters, credentialsProvider});
 }
 
 function parseTransform(data: any): mat4 {
@@ -326,10 +350,11 @@ function parseMeshMetadata(data: any): ParsedMeshMetadata {
 }
 
 async function getMeshMetadata(
-    chunkManager: ChunkManager, url: string): Promise<ParsedMeshMetadata> {
+    chunkManager: ChunkManager, credentialsProvider: SpecialProtocolCredentialsProvider,
+    url: string): Promise<ParsedMeshMetadata> {
   let metadata: any;
   try {
-    metadata = await getJsonMetadata(chunkManager, url);
+    metadata = await getJsonMetadata(chunkManager, credentialsProvider, url);
   } catch (e) {
     if (isNotFoundError(e)) {
       // If we fail to fetch the info file, assume it is the legacy
@@ -402,8 +427,9 @@ function parseSkeletonMetadata(data: any): ParsedSkeletonMetadata {
 }
 
 async function getSkeletonMetadata(
-    chunkManager: ChunkManager, url: string): Promise<ParsedSkeletonMetadata> {
-  const metadata = await getJsonMetadata(chunkManager, url);
+    chunkManager: ChunkManager, credentialsProvider: SpecialProtocolCredentialsProvider,
+    url: string): Promise<ParsedSkeletonMetadata> {
+  const metadata = await getJsonMetadata(chunkManager, credentialsProvider, url);
   return parseSkeletonMetadata(metadata);
 }
 
@@ -412,11 +438,14 @@ function getDefaultCoordinateSpace() {
       {names: ['x', 'y', 'z'], units: ['m', 'm', 'm'], scales: Float64Array.of(1e-9, 1e-9, 1e-9)});
 }
 
-async function getMeshSource(chunkManager: ChunkManager, url: string) {
-  const {metadata, segmentPropertyMap} = await getMeshMetadata(chunkManager, url);
+async function getMeshSource(
+    chunkManager: ChunkManager, credentialsProvider: SpecialProtocolCredentialsProvider,
+    url: string) {
+  const {metadata, segmentPropertyMap} =
+      await getMeshMetadata(chunkManager, credentialsProvider, url);
   if (metadata === undefined) {
     return {
-      source: getLegacyMeshSource(chunkManager, {url, lod: 0}),
+      source: getLegacyMeshSource(chunkManager, credentialsProvider, {url, lod: 0}),
       transform: mat4.create(),
       segmentPropertyMap
     };
@@ -432,6 +461,7 @@ async function getMeshSource(chunkManager: ChunkManager, url: string) {
   }
   return {
     source: chunkManager.getChunkSource(PrecomputedMultiscaleMeshSource, {
+      credentialsProvider,
       parameters: {url, metadata},
       format: {
         fragmentRelativeVertices: true,
@@ -443,10 +473,14 @@ async function getMeshSource(chunkManager: ChunkManager, url: string) {
   };
 }
 
-async function getSkeletonSource(chunkManager: ChunkManager, url: string) {
-  const {metadata, segmentPropertyMap} = await getSkeletonMetadata(chunkManager, url);
+async function getSkeletonSource(
+    chunkManager: ChunkManager, credentialsProvider: SpecialProtocolCredentialsProvider,
+    url: string) {
+  const {metadata, segmentPropertyMap} =
+      await getSkeletonMetadata(chunkManager, credentialsProvider, url);
   return {
     source: chunkManager.getChunkSource(PrecomputedSkeletonSource, {
+      credentialsProvider,
       parameters: {
         url,
         metadata,
@@ -457,11 +491,15 @@ async function getSkeletonSource(chunkManager: ChunkManager, url: string) {
   };
 }
 
-function getJsonMetadata(chunkManager: ChunkManager, url: string): Promise<any> {
-  return chunkManager.memoize.getUncounted({'type': 'precomputed:metadata', url}, async () => {
-    const response = await fetchSpecialOk(`${url}/info`);
-    return response.json();
-  });
+function getJsonMetadata(
+    chunkManager: ChunkManager, credentialsProvider: SpecialProtocolCredentialsProvider,
+    url: string): Promise<any> {
+  return chunkManager.memoize.getUncounted(
+      {'type': 'precomputed:metadata', url, credentialsProvider: getObjectId(credentialsProvider)},
+      async () => {
+        return await cancellableFetchSpecialOk(
+            credentialsProvider, `${url}/info`, {}, responseJson);
+      });
 }
 
 function getSubsourceToModelSubspaceTransform(info: MultiscaleVolumeInfo) {
@@ -474,9 +512,11 @@ function getSubsourceToModelSubspaceTransform(info: MultiscaleVolumeInfo) {
 }
 
 async function getVolumeDataSource(
-    options: GetDataSourceOptions, url: string, metadata: any): Promise<DataSource> {
+    options: GetDataSourceOptions, credentialsProvider: SpecialProtocolCredentialsProvider,
+    url: string, metadata: any): Promise<DataSource> {
   const info = parseMultiscaleVolumeInfo(metadata);
-  const volume = new PrecomputedMultiscaleVolumeChunkSource(options.chunkManager, url, info);
+  const volume = new PrecomputedMultiscaleVolumeChunkSource(
+      options.chunkManager, credentialsProvider, url, info);
   const {modelSpace} = info;
   const subsources: DataSubsourceEntry[] = [
     {
@@ -494,8 +534,9 @@ async function getVolumeDataSource(
   ];
   if (info.segmentPropertyMap !== undefined) {
     const mapUrl = resolvePath(url, info.segmentPropertyMap);
-    const metadata = await getJsonMetadata(options.chunkManager, mapUrl);
-    const segmentPropertyMap = getSegmentPropertyMap(options.chunkManager, metadata, mapUrl);
+    const metadata = await getJsonMetadata(options.chunkManager, credentialsProvider, mapUrl);
+    const segmentPropertyMap =
+        getSegmentPropertyMap(options.chunkManager, credentialsProvider, metadata, mapUrl);
     subsources.push({
       id: 'properties',
       default: true,
@@ -504,7 +545,8 @@ async function getVolumeDataSource(
   }
   if (info.mesh !== undefined) {
     const meshUrl = resolvePath(url, info.mesh);
-    const {source: meshSource, transform} = await getMeshSource(options.chunkManager, meshUrl);
+    const {source: meshSource, transform} =
+        await getMeshSource(options.chunkManager, credentialsProvider, meshUrl);
     const subsourceToModelSubspaceTransform = getSubsourceToModelSubspaceTransform(info);
     mat4.multiply(subsourceToModelSubspaceTransform, subsourceToModelSubspaceTransform, transform);
     subsources.push({
@@ -517,7 +559,7 @@ async function getVolumeDataSource(
   if (info.skeletons !== undefined) {
     const skeletonsUrl = resolvePath(url, info.skeletons);
     const {source: skeletonSource, transform} =
-        await getSkeletonSource(options.chunkManager, skeletonsUrl);
+        await getSkeletonSource(options.chunkManager, credentialsProvider, skeletonsUrl);
     const subsourceToModelSubspaceTransform = getSubsourceToModelSubspaceTransform(info);
     mat4.multiply(subsourceToModelSubspaceTransform, subsourceToModelSubspaceTransform, transform);
     subsources.push({
@@ -531,9 +573,10 @@ async function getVolumeDataSource(
 }
 
 async function getSkeletonsDataSource(
-    options: GetDataSourceOptions, url: string): Promise<DataSource> {
+    options: GetDataSourceOptions, credentialsProvider: SpecialProtocolCredentialsProvider,
+    url: string): Promise<DataSource> {
   const {source: skeletons, transform, segmentPropertyMap} =
-      await getSkeletonSource(options.chunkManager, url);
+      await getSkeletonSource(options.chunkManager, credentialsProvider, url);
   const subsources: DataSubsourceEntry[] = [
     {
       id: 'default',
@@ -544,8 +587,9 @@ async function getSkeletonsDataSource(
   ];
   if (segmentPropertyMap !== undefined) {
     const mapUrl = resolvePath(url, segmentPropertyMap);
-    const metadata = await getJsonMetadata(options.chunkManager, mapUrl);
-    const segmentPropertyMapData = getSegmentPropertyMap(options.chunkManager, metadata, mapUrl);
+    const metadata = await getJsonMetadata(options.chunkManager, credentialsProvider, mapUrl);
+    const segmentPropertyMapData =
+        getSegmentPropertyMap(options.chunkManager, credentialsProvider, metadata, mapUrl);
     subsources.push({
       id: 'properties',
       default: true,
@@ -564,21 +608,6 @@ function parseKeyAndShardingSpec(url: string, obj: any) {
     url: resolvePath(url, verifyObjectProperty(obj, 'key', verifyString)),
     sharding: verifyObjectProperty(obj, 'sharding', parseShardingParameters),
   };
-}
-
-function parseAnnotationPropertySpec(obj: unknown): AnnotationPropertySpec {
-  verifyObject(obj);
-  const identifier = verifyObjectProperty(obj, 'id', parseAnnotationPropertyId);
-  const type = verifyObjectProperty(obj, 'type', parseAnnotationPropertyType);
-  const description = verifyOptionalObjectProperty(obj, 'description', verifyString);
-  let defaultValue = 0;
-  return {type, identifier, description, default: defaultValue} as AnnotationPropertySpec;
-}
-
-function parseAnnotationPropertySpecs(obj: unknown) {
-  const properties = parseArray(obj, parseAnnotationPropertySpec);
-  ensureUniqueAnnotationPropertyIds(properties);
-  return properties;
 }
 
 interface AnnotationSpatialIndexLevelMetadata {
@@ -666,7 +695,8 @@ class AnnotationMetadata {
 }
 
 async function getAnnotationDataSource(
-    options: GetDataSourceOptions, url: string, metadata: any): Promise<DataSource> {
+    options: GetDataSourceOptions, credentialsProvider: SpecialProtocolCredentialsProvider,
+    url: string, metadata: any): Promise<DataSource> {
   const info = new AnnotationMetadata(url, metadata);
   const dataSource: DataSource = {
     modelTransform: makeIdentityTransform(info.coordinateSpace),
@@ -676,6 +706,7 @@ async function getAnnotationDataSource(
         default: true,
         subsource: {
           annotation: options.chunkManager.getChunkSource(PrecomputedAnnotationSource, {
+            credentialsProvider,
             metadata: info,
             parameters: info.parameters,
           }),
@@ -686,9 +717,11 @@ async function getAnnotationDataSource(
   return dataSource;
 }
 
-async function getMeshDataSource(options: GetDataSourceOptions, url: string): Promise<DataSource> {
+async function getMeshDataSource(
+    options: GetDataSourceOptions, credentialsProvider: SpecialProtocolCredentialsProvider,
+    url: string): Promise<DataSource> {
   const {source: mesh, transform, segmentPropertyMap} =
-      await getMeshSource(options.chunkManager, url);
+      await getMeshSource(options.chunkManager, credentialsProvider, url);
   const subsources: DataSubsourceEntry[] = [
     {
       id: 'default',
@@ -699,8 +732,9 @@ async function getMeshDataSource(options: GetDataSourceOptions, url: string): Pr
   ];
   if (segmentPropertyMap !== undefined) {
     const mapUrl = resolvePath(url, segmentPropertyMap);
-    const metadata = await getJsonMetadata(options.chunkManager, mapUrl);
-    const segmentPropertyMapData = getSegmentPropertyMap(options.chunkManager, metadata, mapUrl);
+    const metadata = await getJsonMetadata(options.chunkManager, credentialsProvider, mapUrl);
+    const segmentPropertyMapData =
+        getSegmentPropertyMap(options.chunkManager, credentialsProvider, metadata, mapUrl);
     subsources.push({
       id: 'properties',
       default: true,
@@ -716,7 +750,21 @@ async function getMeshDataSource(options: GetDataSourceOptions, url: string): Pr
 
 function parseInlinePropertyMap(data: unknown): InlineSegmentPropertyMap {
   verifyObject(data);
-  const ids = verifyObjectProperty(data, 'ids', verifyStringArray);
+  const tempUint64 = new Uint64();
+  const ids = verifyObjectProperty(data, 'ids', idsObj => {
+    idsObj = verifyStringArray(idsObj);
+    const numIds = idsObj.length;
+    const ids = new Uint32Array(numIds * 2);
+    for (let i = 0; i < numIds; ++i) {
+      if (!tempUint64.tryParseString(idsObj[i])) {
+        throw new Error(`Invalid uint64 id: ${JSON.stringify(idsObj[i])}`);
+      }
+      ids[2 * i] = tempUint64.low;
+      ids[2 * i + 1] = tempUint64.high;
+    }
+    return ids;
+  });
+  const numIds = ids.length / 2;
   const properties = verifyObjectProperty(
       data, 'properties',
       propertiesObj => parseArray(propertiesObj, (propertyObj): InlineSegmentProperty => {
@@ -724,68 +772,117 @@ function parseInlinePropertyMap(data: unknown): InlineSegmentPropertyMap {
         const id = verifyObjectProperty(propertyObj, 'id', verifyString);
         const description = verifyOptionalObjectProperty(propertyObj, 'description', verifyString);
         const type = verifyObjectProperty(propertyObj, 'type', type => {
-          if (type !== 'label' && type !== 'description' && type !== 'string') {
+          if (type !== 'label' && type !== 'description' && type !== 'string' && type !== 'tags' &&
+              type !== 'number') {
             throw new Error(`Invalid property type: ${JSON.stringify(type)}`);
           }
           return type;
         });
+        if (type === 'tags') {
+          const tags = verifyObjectProperty(propertyObj, 'tags', verifyStringArray);
+          let tagDescriptions = verifyOptionalObjectProperty(propertyObj, 'tag_descriptions', verifyStringArray);
+          if (tagDescriptions === undefined) {
+            tagDescriptions = new Array(tags.length);
+            tagDescriptions.fill('');
+          } else {
+            if (tagDescriptions.length !== tags.length) {
+              throw new Error(`Expected tag_descriptions to have length: ${tags.length}`);
+            }
+          }
+          const values = verifyObjectProperty(propertyObj, 'values', valuesObj => {
+            if (!Array.isArray(valuesObj) || valuesObj.length !== numIds) {
+              throw new Error(`Expected ${numIds} values, but received: ${valuesObj.length}`);
+            }
+            return valuesObj.map(tagIndices => {
+              return String.fromCharCode(...tagIndices);
+            });
+          });
+          return {id, description, type, tags, tagDescriptions, values};
+        }
+        if (type === 'number') {
+          const dataType = verifyObjectProperty(propertyObj, 'data_type', x => verifyEnumString(x, DataType));
+          if (dataType === DataType.UINT64) {
+            throw new Error('uint64 properties not supported');
+          }
+          const values = verifyObjectProperty(propertyObj, 'values', valuesObj => {
+            if (!Array.isArray(valuesObj) || valuesObj.length !== numIds) {
+              throw new Error(`Expected ${numIds} values, but received: ${valuesObj.length}`);
+            }
+            return DATA_TYPE_ARRAY_CONSTRUCTOR[dataType].from(valuesObj);
+          });
+          let min = Infinity, max = -Infinity;
+          for (let i = values.length - 1; i >= 0; --i) {
+            const v = values[i];
+            if (v < min) min = v;
+            if (v > max) max = v;
+          }
+          return {id, description, type, dataType, values, bounds: [min, max]};
+        }
         const values = verifyObjectProperty(propertyObj, 'values', valuesObj => {
           verifyStringArray(valuesObj);
-          if (valuesObj.length !== ids.length)
-            throw new Error(`Expected ${ids.length} values, but received: ${valuesObj.length}`);
+          if (valuesObj.length !== numIds) {
+            throw new Error(`Expected ${numIds} values, but received: ${valuesObj.length}`);
+          }
           return valuesObj;
         });
         return {id, description, type, values};
       }));
-  return {ids, properties};
+  return normalizeInlineSegmentPropertyMap({ids, properties});
 }
 
-export const PrecomputedIndexedSegmentPropertySource =
-    WithParameters(IndexedSegmentPropertySource, IndexedSegmentPropertySourceParameters);
+export const PrecomputedIndexedSegmentPropertySource = WithParameters(
+    WithCredentialsProvider<SpecialProtocolCredentials>()(IndexedSegmentPropertySource),
+    IndexedSegmentPropertySourceParameters);
 
-function parseIndexedPropertyMap(data: unknown): {
-  sharding: ShardingParameters|undefined,
-  properties: readonly Readonly<IndexedSegmentProperty>[]
-} {
-  verifyObject(data);
-  const sharding = verifyObjectProperty(data, 'sharding', parseShardingParameters);
-  const properties = verifyObjectProperty(
-      data, 'properties',
-      propertiesObj => parseArray(propertiesObj, (propertyObj): IndexedSegmentProperty => {
-        const id = verifyObjectProperty(propertyObj, 'id', verifyString);
-        const description = verifyOptionalObjectProperty(propertyObj, 'description', verifyString);
-        const type = verifyObjectProperty(propertyObj, 'type', type => {
-          if (type !== 'string') {
-            throw new Error(`Invalid property type: ${JSON.stringify(type)}`);
-          }
-          return type;
-        });
-        return {id, description, type};
-      }));
-  return {sharding, properties};
-}
+// function parseIndexedPropertyMap(data: unknown): {
+//   sharding: ShardingParameters|undefined,
+//   properties: readonly Readonly<IndexedSegmentProperty>[]
+// } {
+//   verifyObject(data);
+//   const sharding = verifyObjectProperty(data, 'sharding', parseShardingParameters);
+//   const properties = verifyObjectProperty(
+//       data, 'properties',
+//       propertiesObj => parseArray(propertiesObj, (propertyObj): IndexedSegmentProperty => {
+//         const id = verifyObjectProperty(propertyObj, 'id', verifyString);
+//         const description = verifyOptionalObjectProperty(propertyObj, 'description', verifyString);
+//         const type = verifyObjectProperty(propertyObj, 'type', type => {
+//           if (type !== 'string') {
+//             throw new Error(`Invalid property type: ${JSON.stringify(type)}`);
+//           }
+//           return type;
+//         });
+//         return {id, description, type};
+//       }));
+//   return {sharding, properties};
+// }
 
 function getSegmentPropertyMap(
-    chunkManager: Borrowed<ChunkManager>, data: unknown, url: string): SegmentPropertyMap {
+    chunkManager: Borrowed<ChunkManager>, credentialsProvider: SpecialProtocolCredentialsProvider,
+    data: unknown, url: string): SegmentPropertyMap {
+  chunkManager;
+  credentialsProvider;
+  url;
   try {
     const t = verifyObjectProperty(data, '@type', verifyString);
     if (t !== 'neuroglancer_segment_properties') {
       throw new Error(`Unsupported segment property map type: ${JSON.stringify(t)}`);
     }
     const inlineProperties = verifyOptionalObjectProperty(data, 'inline', parseInlinePropertyMap);
-    const indexedProperties = verifyOptionalObjectProperty(data, 'indexed', indexedObj => {
-      const {sharding, properties} = parseIndexedPropertyMap(indexedObj);
-      return chunkManager.getChunkSource(
-          PrecomputedIndexedSegmentPropertySource, {properties, parameters: {sharding, url}});
-    });
-    return new SegmentPropertyMap({inlineProperties, indexedProperties});
+    // const indexedProperties = verifyOptionalObjectProperty(data, 'indexed', indexedObj => {
+    //   const {sharding, properties} = parseIndexedPropertyMap(indexedObj);
+    //   return chunkManager.getChunkSource(
+    //       PrecomputedIndexedSegmentPropertySource,
+    //       {credentialsProvider, properties, parameters: {sharding, url}});
+    // });
+    return new SegmentPropertyMap({inlineProperties});
   } catch (e) {
     throw new Error(`Error parsing segment property map: ${e.message}`);
   }
 }
 
 async function getSegmentPropertyMapDataSource(
-    options: GetDataSourceOptions, url: string, metadata: unknown): Promise<DataSource> {
+    options: GetDataSourceOptions, credentialsProvider: SpecialProtocolCredentialsProvider,
+    url: string, metadata: unknown): Promise<DataSource> {
   options;
   return {
     modelTransform: makeIdentityTransform(emptyValidCoordinateSpace),
@@ -793,7 +890,10 @@ async function getSegmentPropertyMapDataSource(
       {
         id: 'default',
         default: true,
-        subsource: {segmentPropertyMap: getSegmentPropertyMap(options.chunkManager, metadata, url)},
+        subsource: {
+          segmentPropertyMap:
+              getSegmentPropertyMap(options.chunkManager, credentialsProvider, metadata, url)
+        },
       },
     ],
   };
@@ -837,16 +937,18 @@ export class PrecomputedDataSource extends DataSourceProvider {
   }
 
   get(options: GetDataSourceOptions): Promise<DataSource> {
-    const {url, parameters} = parseProviderUrl(options.providerUrl);
+    const {url: providerUrl, parameters} = parseProviderUrl(options.providerUrl);
     return options.chunkManager.memoize.getUncounted(
-        {'type': 'precomputed:get', url}, async(): Promise<DataSource> => {
+        {'type': 'precomputed:get', providerUrl, parameters}, async(): Promise<DataSource> => {
+          const {url, credentialsProvider} =
+              parseSpecialUrl(providerUrl, options.credentialsManager);
           let metadata: any;
           try {
-            metadata = await getJsonMetadata(options.chunkManager, url);
+            metadata = await getJsonMetadata(options.chunkManager, credentialsProvider, url);
           } catch (e) {
             if (isNotFoundError(e)) {
               if (parameters['type'] === 'mesh') {
-                return await getMeshDataSource(options, url);
+                return await getMeshDataSource(options, credentialsProvider, url);
               }
             }
             throw e;
@@ -859,23 +961,25 @@ export class PrecomputedDataSource extends DataSourceProvider {
           const t = verifyOptionalObjectProperty(metadata, '@type', verifyString);
           switch (t) {
             case 'neuroglancer_skeletons':
-              return await getSkeletonsDataSource(options, url);
+              return await getSkeletonsDataSource(options, credentialsProvider, url);
             case 'neuroglancer_multilod_draco':
             case 'neuroglancer_legacy_mesh':
-              return await getMeshDataSource(options, url);
+              return await getMeshDataSource(options, credentialsProvider, url);
             case 'neuroglancer_annotations_v1':
-              return await getAnnotationDataSource(options, url, metadata);
+              return await getAnnotationDataSource(options, credentialsProvider, url, metadata);
             case 'neuroglancer_segment_properties':
-              return await getSegmentPropertyMapDataSource(options, url, metadata);
+              return await getSegmentPropertyMapDataSource(
+                  options, credentialsProvider, url, metadata);
             case 'neuroglancer_multiscale_volume':
             case undefined:
-              return await getVolumeDataSource(options, url, metadata);
+              return await getVolumeDataSource(options, credentialsProvider, url, metadata);
             default:
               throw new Error(`Invalid type: ${JSON.stringify(t)}`);
           }
         });
   }
   completeUrl(options: CompleteUrlOptions) {
-    return completeHttpPath(options.providerUrl, options.cancellationToken);
+    return completeHttpPath(
+        options.credentialsManager, options.providerUrl, options.cancellationToken);
   }
 }
