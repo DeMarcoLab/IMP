@@ -78,7 +78,7 @@
     margin: 5px;
     border: 1px solid #aaa;
     border-radius: 8px;
-    width: 80%;
+    width: 50px;
 
     cursor: pointer;
     
@@ -130,6 +130,7 @@
   #db_panel {
     background:#ccc;
     border: 1px solid lightgrey;
+    width: 200px;
   }
   
   .imp-menu {
@@ -192,14 +193,21 @@ font-size: small;
   color: #222;
 }
 
-#imp-color-by-div {
-  border-radius:2pt;
+.neuroglancer-layer-item {
+  font-size:small !important;
+}
+
+.neuroglancer-layer-item-value-container {
+  font-size:smaller !important;
+}
+
+
+element.style {
+  width: 10ch;
+}
+.neuroglancer-layer-panel[data-show-hover-values=true] .neuroglancer-layer-item-value{
  
-  color: #222 !important;
-  background: #ccc !important;
-  margin-left:25px;
-  font-size:small;
-  padding-top:4px;
+  font-size:smaller !important;
 }
 
 .imp-option-label {

@@ -1,11 +1,13 @@
 
+import { cmapData, evaluate_cmap } from "./util/js-colormaps.js";
 
 interface AvailableLayers {
     [key: string]: any
 }
 export class ObjectTracker_IMP {
 
-    private currColourBy: number;
+    private currColorBy: number;
+    private colorByStrings: string[]
     private static instance: ObjectTracker_IMP;
     private visibleSegments: string[];
     //private annotArray: string[]
@@ -22,18 +24,25 @@ export class ObjectTracker_IMP {
     private showsLicense: boolean;
 
     private nameColorMap: Map<string, string>;
-    private idNameMap: Map<string,string>;
+    private idNameMap: Map<string, string>;
+    private normalisedFields: Map<string, any>;
+    private currColorMap = "";
+
     private constructor() {
         this.availableLayers = {};
         this.colorStorage = {};
-        this.currColourBy = 0;
+        this.currColorBy = 0;
+        this.colorByStrings = [];
+        this.colorByStrings.push('type');
         this.firstRun = true;
         this.showsLicense = false;
         this.nameColorMap = new Map<string, string>();
-        this.idNameMap = new Map<string,string>();
+        this.idNameMap = new Map<string, string>();
+        this.normalisedFields = new Map<string, any>();
+        this.currColorMap = "jet";
     }
 
-  
+
     public static getInstance(): ObjectTracker_IMP {
         if (!ObjectTracker_IMP.instance) {
             ObjectTracker_IMP.instance = new ObjectTracker_IMP();
@@ -42,8 +51,8 @@ export class ObjectTracker_IMP {
         return ObjectTracker_IMP.instance;
     }
 
-    public addIdName(id:string,name:string){
-        this.idNameMap.set(id,name);
+    public addIdName(id: string, name: string) {
+        this.idNameMap.set(id, name);
     }
     public addNameColour(name: string, colour: string) {
 
@@ -59,10 +68,13 @@ export class ObjectTracker_IMP {
             for (const annotation of layer.annotations) { //save the colours of this layer 
                 //         console.log(annotation["props"])
                 this.colorStorage[annotation["id"]] = annotation["props"];
+                this.normalisedFields.set(annotation["id"], annotation["fields"])
+
             }
-            if(!this.nameColorMap.has(layer['name'])){
-                this.nameColorMap.set(layer['name'],layer.annotations[0].props[0])
+            if (!this.nameColorMap.has(layer['name'])) {
+                this.nameColorMap.set(layer['name'], layer.annotations[0].props[0])
             }
+
         }
         //colour the segmentation the same as annotation.
         if (layer.type == "segmentation") {
@@ -72,16 +84,23 @@ export class ObjectTracker_IMP {
                 layer["segmentColors"] = {}
                 for (const annotation of annotLayer.layer.annotations) {
                     layer["segments"].push(annotation["id"]) //display all segments per default.
-                    layer["segmentColors"][annotation["id"]] = this.colorStorage[annotation["id"]][this.currColourBy];
+                    layer["segmentColors"][annotation["id"]] = this.colorStorage[annotation["id"]][this.currColorBy];
                 }
             }
-   //         console.log(layer)
+            //         console.log(layer)
         }
         this.availableLayers[layer.name] = { "layer": layer, "archived": archived }
         //  console.log(this.colorStorage)
     }
 
+    private ColorToHex(color: number) {
+        var hexadecimal = color.toString(16);
+        return hexadecimal.length == 1 ? "0" + hexadecimal : hexadecimal;
+    }
 
+    private ConvertRGBtoHex(rgb: number[]) {
+        return "#" + this.ColorToHex(rgb[0]) + this.ColorToHex(rgb[1]) + this.ColorToHex(rgb[2]);
+    }
 
     public getLayers() {
         return this.availableLayers;
@@ -91,8 +110,8 @@ export class ObjectTracker_IMP {
         this.position = position;
         this.dimensions = dimensions;
     }
-    public makeStateJSON(colourByChanged: boolean = false, togglingSegment: string = "") {
-        console.log(this.availableLayers)
+    public makeStateJSON(colorByChanged: boolean = false, togglingSegment: string = "", highlightSegment: any = null, colorMapChanged: boolean = false) {
+        //console.log(this.availableLayers)
         //create layers array:
         let result = this.state.toJSON() //copy current state
         let layer_res = []
@@ -107,48 +126,112 @@ export class ObjectTracker_IMP {
                 archivedLayer["archived"] = true
                 layer_res.push(archivedLayer)
             }
+            let tempEntry = this.normalisedFields.entries().next().value;
+            //console.log(tempEntry[1])
+            for (let i = 0; i < Object.keys(tempEntry[1]).length; i++) {
+                //console.log(Object.keys(tempEntry[1])[i])
+                this.colorByStrings.push(Object.keys(tempEntry[1])[i]);
+            }
         } else {
             layer_res = result.layers;
         }
         //match segment colours with annotation colours
         for (let layer of layer_res) {
 
-            if (layer.type =="annotation") {
+            if (layer.type == "annotation") {
                 layer["shaderControls"] = {
-                    "colour_by": this.currColourBy
+                    "colour_by": this.currColorBy
                 }
             }
-            if(colourByChanged){
+            if (colorByChanged || colorMapChanged) {
+
                 if (layer.type == "segmentation") {
                     let annotLayer = this.availableLayers[layer.name.split("_")[0]]
                     if (annotLayer) {
-        
+
                         layer["segmentColors"] = {}
+
                         for (const annotation of annotLayer.layer.annotations) {
                             //  layer["segments"].push(annotation["id"])
-        
-                            layer["segmentColors"][annotation["id"]] = this.colorStorage[annotation["id"]][this.currColourBy];
+                            if (this.currColorBy !== 0) {
+                                //layer["segmentColors"][annotation["id"]] = this.colorStorage[annotation["id"]][this.currColorBy];
+                                let val = this.normalisedFields.get(annotation["id"])[this.colorByStrings[this.currColorBy]]
+                                //function evaluate_cmap(x, name, reverse) {
+                                //update annotation colour ball
+
+                                //update segment colours
+                                layer["segmentColors"][annotation["id"]] = this.ConvertRGBtoHex(evaluate_cmap(val, this.currColorMap, false));
+                            } else {
+                                layer["segmentColors"][annotation["id"]] = annotation["props"][0]
+                            }
                         }
+
                     }
                     //console.log(layer)
                 }
+
+                if (layer.type == "annotation") {
+
+                    //  layer["segments"].push(annotation["id"])
+                    if (this.currColorBy !== 0) {
+
+                        for (const annotation of layer.annotations) {
+                            //layer["segmentColors"][annotation["id"]] = this.colorStorage[annotation["id"]][this.currColorBy];
+                            let val = this.normalisedFields.get(annotation["id"])[this.colorByStrings[this.currColorBy]]
+                            //function evaluate_cmap(x, name, reverse) {
+                            //update annotation colour ball
+
+                            annotation["props"][this.currColorBy] = this.ConvertRGBtoHex(evaluate_cmap(val, this.currColorMap, false));
+                        }
+                    }
+
+                }
+
             }
-            if(togglingSegment!==""){
+            if (togglingSegment !== "") {
                 let layerName = this.idNameMap.get(togglingSegment);
-                if(layer.type =="segmentation" && layer.name.split("_")[0] == layerName){
-                    if(layer["segments"]){
-                        if(layer["segments"].indexOf(togglingSegment)>=0){
-                            layer["segments"].splice(layer["segments"].indexOf(togglingSegment),1)
+                if (layer.type == "segmentation" && layer.name.split("_")[0] == layerName) {
+                    if(layer["archived"]){
+                        layer["segments"]=[togglingSegment];
+                        layer["archived"]=false;
+                    } else {
+                    if (layer["segments"]) {
+                        if (layer["segments"].indexOf(togglingSegment) >= 0) {
+                            layer["segments"].splice(layer["segments"].indexOf(togglingSegment), 1)
                         } else {
                             layer["segments"].push(togglingSegment);
                         }
                     } else {
-                        layer["segments"]=[togglingSegment]
+                        layer["segments"] = [togglingSegment]
                     }
                     break;
-                } 
+                    }
+                }
+            }
+
+            if (highlightSegment !== null) {
+                let layerName = this.idNameMap.get(highlightSegment.id);
+                if (layer.type == "segmentation" && layer.name.split("_")[0] == layerName) {
+                    layer["segmentColors"][highlightSegment.id] = highlightSegment.color == layer["segmentColors"][highlightSegment.id] ? layer["segmentDefaultColor"] : highlightSegment.color;
+
+                }
+                if(layer.type == "annotation" && layer.name == layerName){
+                    
+                    for (const annotation of layer.annotations) {
+                        //layer["segmentColors"][annotation["id"]] = this.colorStorage[annotation["id"]][this.currColorBy];
+                        if(annotation.id===highlightSegment.id){
+                            annotation["props"][this.currColorBy] = highlightSegment.color;
+                        }
+                        
+                        //function evaluate_cmap(x, name, reverse) {
+                        //update annotation colour ball
+
+                        
+                    }
+                }
             }
         }
+        console.log(this.normalisedFields);
         //console.log(layer_res)
         //add new active layers to the state, remove others
         let result2 = {
@@ -161,36 +244,51 @@ export class ObjectTracker_IMP {
             "selectedLayer": result["selectedLayer"],
             "layout": result["layout"],
             "partialViewport": result["partialViewport"],
-            "layerListPanel":  this.firstRun ?  {
+            "layerListPanel": this.firstRun ? {
                 "visible": true
-              }
-             : result["layerListPanel"]
-            
+            }
+                : result["layerListPanel"],
+            "showSlices": result["showSlices"]
+
 
         }
         this.firstRun = false;
         this.state.reset()
         this.state.restoreState(result2)
 
-        
 
+
+    }
+
+    public getColormapKeys() {
+        return Object.keys(cmapData);
     }
     public isSegmentVisible(id: string) {
         return this.visibleSegments.indexOf(id) > -1;
     }
 
-    public makeColourBoxes(){
-     
+    public updateColormap(cmap_id: string) {
+        console.log(cmap_id);
+        this.currColorMap = cmap_id;
+        this.makeStateJSON(false, "", false, true);
+    }
+    public makeColourBoxes() {
+
         let elements = document.getElementsByClassName("neuroglancer-layer-item-label") as HTMLCollection;
         //console.log(elements)
         //console.log(this.nameColorMap)
-        for(var i = 0; i < elements.length; i++){
+        for (var i = 0; i < elements.length; i++) {
             var div = elements[i]
             let name = div.innerHTML
-            if(div.innerHTML.indexOf("mesh")>0){
+            if (div.innerHTML.indexOf("mesh") > 0) {
                 name = div.innerHTML.split("_")[0]
             }
-            div.setAttribute("style","background:" + this.nameColorMap.get(name))
+            if(this.nameColorMap.get(name)!==undefined){
+            div.setAttribute("style", "background:" + this.nameColorMap.get(name))
+            } else {
+                div.setAttribute("style","color:#aaa");
+                
+            }
             //element.style.background = // element.innerHTML + "<div className='colorSquare' style='background:"+ this.nameColorMap.get(element.innerHTML)+";' />";
         }
     }
@@ -203,18 +301,20 @@ export class ObjectTracker_IMP {
         // console.log(this.visibleSegments)
     }
     public toggleSegment(id: string) {
-   
+
         //console.log(this.visibleSegments)
-        this.makeStateJSON(false,id)
+        this.makeStateJSON(false, id)
     }
 
-    public updateAttribute(name:string,value:number, ev:any) {
+    public changeSegmentColor(color: string, id: string) {
+        // console.log(color + " - " + id)
+        this.makeStateJSON(false, "", { "color": color, "id": id })
+    }
+    public updateAttribute(value: number) {
         //finds the current colour of the annotation
         //0: by colour 1: by cc, 2: by test
-        console.log(value)
-        console.log(ev)
-        console.log(name)
-        this.currColourBy = value;
+
+        this.currColorBy = value;
         this.makeStateJSON(true);
     }
     public reset() {
@@ -223,7 +323,7 @@ export class ObjectTracker_IMP {
             this.state.reset();
         }
     }
- 
+
     public setState(state: any) {
         this.state = state;
     }

@@ -515,7 +515,10 @@ export abstract class RenderedDataPanel extends RenderedPanel {
       if (mouseState.updateUnconditionally()) {
         /* SEARCH: NH */
         console.log(mouseState.pickedAnnotationId)
-         ObjectTracker_IMP.getInstance().toggleSegment(mouseState.pickedAnnotationId!);
+        if(mouseState.pickedAnnotationId!==undefined){
+            ObjectTracker_IMP.getInstance().toggleSegment(mouseState.pickedAnnotationId!);
+        }
+        console.log(mouseState)
         //NH: Remove behaviour that the view changes on annotation click.
         //this.navigationState.position.value = mouseState.position;
       }

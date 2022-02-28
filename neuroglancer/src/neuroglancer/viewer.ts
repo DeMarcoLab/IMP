@@ -23,51 +23,51 @@ import svg_layers from 'ikonate/icons/layers.svg';
 //import svg_list from 'ikonate/icons/list.svg';
 import svg_settings from 'ikonate/icons/settings.svg';
 import debounce from 'lodash/debounce';
-import {CapacitySpecification, ChunkManager, ChunkQueueManager, FrameNumberCounter} from 'neuroglancer/chunk_manager/frontend';
-import {makeCoordinateSpace, TrackableCoordinateSpace} from 'neuroglancer/coordinate_transform';
-import {defaultCredentialsManager} from 'neuroglancer/credentials_provider/default_manager';
-import {InputEventBindings as DataPanelInputEventBindings} from 'neuroglancer/data_panel_layout';
-import {DataSourceProviderRegistry} from 'neuroglancer/datasource';
-import {getDefaultDataSourceProvider} from 'neuroglancer/datasource/default_provider';
-import {StateShare, stateShareEnabled} from 'neuroglancer/datasource/state_share';
-import {DisplayContext, TrackableWindowedViewport} from 'neuroglancer/display_context';
-import {HelpPanelState, InputEventBindingHelpDialog} from 'neuroglancer/help/input_event_bindings';
-import {addNewLayer, LayerManager, LayerSelectedValues, MouseSelectionState, SelectedLayerState, TopLevelLayerListSpecification, TrackableDataSelectionState} from 'neuroglancer/layer';
-import {RootLayoutContainer} from 'neuroglancer/layer_groups_layout';
-import {DisplayPose, NavigationState, OrientationState, Position, TrackableCrossSectionZoom, TrackableDepthRange, TrackableDisplayDimensions, TrackableProjectionZoom, TrackableRelativeDisplayScales, WatchableDisplayDimensionRenderInfo} from 'neuroglancer/navigation_state';
-import {overlaysOpen} from 'neuroglancer/overlay';
-import {allRenderLayerRoles, RenderLayerRole} from 'neuroglancer/renderlayer';
-import {StatusMessage} from 'neuroglancer/status';
-import {ElementVisibilityFromTrackableBoolean, TrackableBoolean} from 'neuroglancer/trackable_boolean';
-import {makeDerivedWatchableValue, observeWatchable, TrackableValue, WatchableValueInterface} from 'neuroglancer/trackable_value';
-import {LayerArchiveCountWidget, LayerListPanel, LayerListPanelState} from 'neuroglancer/ui/layer_list_panel';
-import {LayerSidePanelManager} from 'neuroglancer/ui/layer_side_panel';
-import {setupPositionDropHandlers} from 'neuroglancer/ui/position_drag_and_drop';
-import {SelectionDetailsPanel} from 'neuroglancer/ui/selection_details';
-import {SidePanelManager} from 'neuroglancer/ui/side_panel';
-import {StateEditorDialog} from 'neuroglancer/ui/state_editor';
-import {StatisticsDisplayState, StatisticsPanel} from 'neuroglancer/ui/statistics';
-import {ToolBinder} from 'neuroglancer/ui/tool';
-import {ViewerSettingsPanel, ViewerSettingsPanelState} from 'neuroglancer/ui/viewer_settings';
-import {AutomaticallyFocusedElement} from 'neuroglancer/util/automatic_focus';
-import {TrackableRGB} from 'neuroglancer/util/color';
-import {Borrowed, Owned, RefCounted} from 'neuroglancer/util/disposable';
-import {removeFromParent} from 'neuroglancer/util/dom';
-import {ActionEvent, registerActionListener} from 'neuroglancer/util/event_action_map';
-import {vec3} from 'neuroglancer/util/geom';
-import {parseFixedLengthArray, verifyFinitePositiveFloat, verifyObject, verifyOptionalObjectProperty, verifyString} from 'neuroglancer/util/json';
-import {EventActionMap, KeyboardEventBinder} from 'neuroglancer/util/keyboard_bindings';
-import {NullarySignal} from 'neuroglancer/util/signal';
-import {CompoundTrackable, optionallyRestoreFromJsonMember} from 'neuroglancer/util/trackable';
-import {ViewerState, VisibilityPrioritySpecification} from 'neuroglancer/viewer_state';
-import {WatchableVisibilityPriority} from 'neuroglancer/visibility_priority/frontend';
-import {GL} from 'neuroglancer/webgl/context';
-import {AnnotationToolStatusWidget} from 'neuroglancer/widget/annotation_tool_status';
-import {CheckboxIcon} from 'neuroglancer/widget/checkbox_icon';
-import {makeIcon} from 'neuroglancer/widget/icon';
-import {MousePositionWidget, PositionWidget} from 'neuroglancer/widget/position_widget';
-import {TrackableScaleBarOptions} from 'neuroglancer/widget/scale_bar';
-import {RPC} from 'neuroglancer/worker_rpc';
+import { CapacitySpecification, ChunkManager, ChunkQueueManager, FrameNumberCounter } from 'neuroglancer/chunk_manager/frontend';
+import { makeCoordinateSpace, TrackableCoordinateSpace } from 'neuroglancer/coordinate_transform';
+import { defaultCredentialsManager } from 'neuroglancer/credentials_provider/default_manager';
+import { InputEventBindings as DataPanelInputEventBindings } from 'neuroglancer/data_panel_layout';
+import { DataSourceProviderRegistry } from 'neuroglancer/datasource';
+import { getDefaultDataSourceProvider } from 'neuroglancer/datasource/default_provider';
+import { StateShare, stateShareEnabled } from 'neuroglancer/datasource/state_share';
+import { DisplayContext, TrackableWindowedViewport } from 'neuroglancer/display_context';
+import { HelpPanelState, InputEventBindingHelpDialog } from 'neuroglancer/help/input_event_bindings';
+import { addNewLayer, LayerManager, LayerSelectedValues, MouseSelectionState, SelectedLayerState, TopLevelLayerListSpecification, TrackableDataSelectionState } from 'neuroglancer/layer';
+import { RootLayoutContainer } from 'neuroglancer/layer_groups_layout';
+import { DisplayPose, NavigationState, OrientationState, Position, TrackableCrossSectionZoom, TrackableDepthRange, TrackableDisplayDimensions, TrackableProjectionZoom, TrackableRelativeDisplayScales, WatchableDisplayDimensionRenderInfo } from 'neuroglancer/navigation_state';
+import { overlaysOpen } from 'neuroglancer/overlay';
+import { allRenderLayerRoles, RenderLayerRole } from 'neuroglancer/renderlayer';
+import { StatusMessage } from 'neuroglancer/status';
+import { ElementVisibilityFromTrackableBoolean, TrackableBoolean } from 'neuroglancer/trackable_boolean';
+import { makeDerivedWatchableValue, observeWatchable, TrackableValue, WatchableValueInterface } from 'neuroglancer/trackable_value';
+import { LayerArchiveCountWidget, LayerListPanel, LayerListPanelState } from 'neuroglancer/ui/layer_list_panel';
+import { LayerSidePanelManager } from 'neuroglancer/ui/layer_side_panel';
+import { setupPositionDropHandlers } from 'neuroglancer/ui/position_drag_and_drop';
+import { SelectionDetailsPanel } from 'neuroglancer/ui/selection_details';
+import { SidePanelManager } from 'neuroglancer/ui/side_panel';
+import { StateEditorDialog } from 'neuroglancer/ui/state_editor';
+import { StatisticsDisplayState, StatisticsPanel } from 'neuroglancer/ui/statistics';
+import { ToolBinder } from 'neuroglancer/ui/tool';
+import { ViewerSettingsPanel, ViewerSettingsPanelState } from 'neuroglancer/ui/viewer_settings';
+import { AutomaticallyFocusedElement } from 'neuroglancer/util/automatic_focus';
+import { TrackableRGB } from 'neuroglancer/util/color';
+import { Borrowed, Owned, RefCounted } from 'neuroglancer/util/disposable';
+import { removeFromParent } from 'neuroglancer/util/dom';
+import { ActionEvent, registerActionListener } from 'neuroglancer/util/event_action_map';
+import { vec3 } from 'neuroglancer/util/geom';
+import { parseFixedLengthArray, verifyFinitePositiveFloat, verifyObject, verifyOptionalObjectProperty, verifyString } from 'neuroglancer/util/json';
+import { EventActionMap, KeyboardEventBinder } from 'neuroglancer/util/keyboard_bindings';
+import { NullarySignal } from 'neuroglancer/util/signal';
+import { CompoundTrackable, optionallyRestoreFromJsonMember } from 'neuroglancer/util/trackable';
+import { ViewerState, VisibilityPrioritySpecification } from 'neuroglancer/viewer_state';
+import { WatchableVisibilityPriority } from 'neuroglancer/visibility_priority/frontend';
+import { GL } from 'neuroglancer/webgl/context';
+import { AnnotationToolStatusWidget } from 'neuroglancer/widget/annotation_tool_status';
+import { CheckboxIcon } from 'neuroglancer/widget/checkbox_icon';
+import { makeIcon } from 'neuroglancer/widget/icon';
+import { MousePositionWidget, PositionWidget } from 'neuroglancer/widget/position_widget';
+import { TrackableScaleBarOptions } from 'neuroglancer/widget/scale_bar';
+import { RPC } from 'neuroglancer/worker_rpc';
 import { ObjectTracker_IMP } from './ObjectTracker_IMP';
 import { cancellableFetchOk, responseJson } from './util/http_request';
 
@@ -78,7 +78,7 @@ interface CreditLink {
   text: string;
 }
 
-declare var NEUROGLANCER_CREDIT_LINK: CreditLink|CreditLink[]|undefined;
+declare var NEUROGLANCER_CREDIT_LINK: CreditLink | CreditLink[] | undefined;
 
 export class DataManagementContext extends RefCounted {
   worker: Worker;
@@ -90,18 +90,18 @@ export class DataManagementContext extends RefCounted {
   }
 
   constructor(
-      public gl: GL, public frameNumberCounter: FrameNumberCounter, bundleRoot: string = '') {
+    public gl: GL, public frameNumberCounter: FrameNumberCounter, bundleRoot: string = '') {
     super();
     const chunk_worker_url = bundleRoot + 'chunk_worker.bundle.js';
     this.worker = new Worker(chunk_worker_url);
     this.chunkQueueManager = this.registerDisposer(
-        new ChunkQueueManager(new RPC(this.worker), this.gl, this.frameNumberCounter, {
-          gpuMemory: new CapacitySpecification({defaultItemLimit: 1e6, defaultSizeLimit: 1e9}),
-          systemMemory: new CapacitySpecification({defaultItemLimit: 1e7, defaultSizeLimit: 2e9}),
-          download: new CapacitySpecification(
-              {defaultItemLimit: 100, defaultSizeLimit: Number.POSITIVE_INFINITY}),
-          compute: new CapacitySpecification({defaultItemLimit: 128, defaultSizeLimit: 5e8}),
-        }));
+      new ChunkQueueManager(new RPC(this.worker), this.gl, this.frameNumberCounter, {
+        gpuMemory: new CapacitySpecification({ defaultItemLimit: 1e6, defaultSizeLimit: 1e9 }),
+        systemMemory: new CapacitySpecification({ defaultItemLimit: 1e7, defaultSizeLimit: 2e9 }),
+        download: new CapacitySpecification(
+          { defaultItemLimit: 100, defaultSizeLimit: Number.POSITIVE_INFINITY }),
+        compute: new CapacitySpecification({ defaultItemLimit: 128, defaultSizeLimit: 5e8 }),
+      }));
     this.chunkQueueManager.registerDisposer(() => this.worker.terminate());
     this.chunkManager = this.registerDisposer(new ChunkManager(this.chunkQueueManager));
   }
@@ -145,11 +145,11 @@ export type ViewerUIConfiguration = {
 
 export function makeViewerUIConfiguration(): ViewerUIConfiguration {
   return Object.fromEntries(VIEWER_UI_CONFIG_OPTIONS.map(
-             key => [key, new TrackableBoolean(true)])) as ViewerUIConfiguration;
+    key => [key, new TrackableBoolean(true)])) as ViewerUIConfiguration;
 }
 
 function setViewerUiConfiguration(
-    config: ViewerUIConfiguration, options: Partial<ViewerUIOptions>) {
+  config: ViewerUIConfiguration, options: Partial<ViewerUIOptions>) {
   for (const key of VIEWER_UI_CONFIG_OPTIONS) {
     const value = options[key];
     if (value !== undefined) {
@@ -170,11 +170,11 @@ export interface ViewerOptions extends ViewerUIOptions, VisibilityPrioritySpecif
 }
 
 const defaultViewerOptions = 'undefined' !== typeof NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS ?
-    NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS :
-    {
-      showLayerDialog: true,
-      resetStateWhenEmpty: true,
-    };
+  NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS :
+  {
+    showLayerDialog: true,
+    resetStateWhenEmpty: true,
+  };
 
 class TrackableViewerState extends CompoundTrackable {
   constructor(public viewer: Borrowed<Viewer>) {
@@ -200,10 +200,10 @@ class TrackableViewerState extends CompoundTrackable {
     this.add('gpuMemoryLimit', viewer.dataContext.chunkQueueManager.capacities.gpuMemory.sizeLimit);
     this.add('prefetch', viewer.dataContext.chunkQueueManager.enablePrefetch);
     this.add(
-        'systemMemoryLimit',
-        viewer.dataContext.chunkQueueManager.capacities.systemMemory.sizeLimit);
+      'systemMemoryLimit',
+      viewer.dataContext.chunkQueueManager.capacities.systemMemory.sizeLimit);
     this.add(
-        'concurrentDownloads', viewer.dataContext.chunkQueueManager.capacities.download.itemLimit);
+      'concurrentDownloads', viewer.dataContext.chunkQueueManager.capacities.download.itemLimit);
     this.add('selectedLayer', viewer.selectedLayer);
     this.add('crossSectionBackgroundColor', viewer.crossSectionBackgroundColor);
     this.add('projectionBackgroundColor', viewer.perspectiveViewBackgroundColor);
@@ -218,7 +218,7 @@ class TrackableViewerState extends CompoundTrackable {
   }
 
   restoreState(obj: any) {
-    const {viewer} = this;
+    const { viewer } = this;
     super.restoreState(obj);
     // Handle legacy properties
     verifyOptionalObjectProperty(obj, 'navigation', navObj => {
@@ -231,7 +231,7 @@ class TrackableViewerState extends CompoundTrackable {
           verifyOptionalObjectProperty(positionObj, 'voxelSize', voxelSizeObj => {
             // Handle legacy voxelSize representation
             const voxelSize =
-                parseFixedLengthArray(new Float64Array(3), voxelSizeObj, verifyFinitePositiveFloat);
+              parseFixedLengthArray(new Float64Array(3), voxelSizeObj, verifyFinitePositiveFloat);
             for (let i = 0; i < 3; ++i) {
               voxelSize[i] *= 1e-9;
             }
@@ -246,45 +246,46 @@ class TrackableViewerState extends CompoundTrackable {
         optionallyRestoreFromJsonMember(poseObj, 'orientation', viewer.crossSectionOrientation);
       });
       optionallyRestoreFromJsonMember(
-          navObj, 'zoomFactor', viewer.crossSectionScale.legacyJsonView);
+        navObj, 'zoomFactor', viewer.crossSectionScale.legacyJsonView);
     });
     optionallyRestoreFromJsonMember(obj, 'perspectiveOrientation', viewer.projectionOrientation);
     optionallyRestoreFromJsonMember(obj, 'perspectiveZoom', viewer.projectionScale.legacyJsonView);
     optionallyRestoreFromJsonMember(
-        obj, 'perspectiveViewBackgroundColor', viewer.perspectiveViewBackgroundColor);
+      obj, 'perspectiveViewBackgroundColor', viewer.perspectiveViewBackgroundColor);
   }
 }
 
 export class Viewer extends RefCounted implements ViewerState {
-  title = new TrackableValue<string|undefined>(undefined, verifyString);
+  title = new TrackableValue<string | undefined>(undefined, verifyString);
   coordinateSpace = new TrackableCoordinateSpace();
   position = this.registerDisposer(new Position(this.coordinateSpace));
   relativeDisplayScales =
-      this.registerDisposer(new TrackableRelativeDisplayScales(this.coordinateSpace));
+    this.registerDisposer(new TrackableRelativeDisplayScales(this.coordinateSpace));
   displayDimensions = this.registerDisposer(new TrackableDisplayDimensions(this.coordinateSpace));
   displayDimensionRenderInfo = this.registerDisposer(new WatchableDisplayDimensionRenderInfo(
-      this.relativeDisplayScales.addRef(), this.displayDimensions.addRef()));
+    this.relativeDisplayScales.addRef(), this.displayDimensions.addRef()));
   crossSectionOrientation = this.registerDisposer(new OrientationState());
   crossSectionScale = this.registerDisposer(
-      new TrackableCrossSectionZoom(this.displayDimensionRenderInfo.addRef()));
+    new TrackableCrossSectionZoom(this.displayDimensionRenderInfo.addRef()));
   projectionOrientation = this.registerDisposer(new OrientationState());
   crossSectionDepthRange =
-      this.registerDisposer(new TrackableDepthRange(-10, this.displayDimensionRenderInfo));
+    this.registerDisposer(new TrackableDepthRange(-10, this.displayDimensionRenderInfo));
   projectionDepthRange =
-      this.registerDisposer(new TrackableDepthRange(-50, this.displayDimensionRenderInfo));
+    this.registerDisposer(new TrackableDepthRange(-50, this.displayDimensionRenderInfo));
   projectionScale =
-      this.registerDisposer(new TrackableProjectionZoom(this.displayDimensionRenderInfo.addRef()));
+    this.registerDisposer(new TrackableProjectionZoom(this.displayDimensionRenderInfo.addRef()));
   navigationState = this.registerDisposer(new NavigationState(
-      new DisplayPose(
-          this.position.addRef(), this.displayDimensionRenderInfo.addRef(),
-          this.crossSectionOrientation.addRef()),
-      this.crossSectionScale.addRef(), this.crossSectionDepthRange.addRef()));
+    new DisplayPose(
+      this.position.addRef(), this.displayDimensionRenderInfo.addRef(),
+      this.crossSectionOrientation.addRef()),
+    this.crossSectionScale.addRef(), this.crossSectionDepthRange.addRef()));
   perspectiveNavigationState = this.registerDisposer(new NavigationState(
-      new DisplayPose(
-          this.position.addRef(), this.displayDimensionRenderInfo.addRef(),
-          this.projectionOrientation.addRef()),
-      this.projectionScale.addRef(), this.projectionDepthRange.addRef()));
+    new DisplayPose(
+      this.position.addRef(), this.displayDimensionRenderInfo.addRef(),
+      this.projectionOrientation.addRef()),
+    this.projectionScale.addRef(), this.projectionDepthRange.addRef()));
   mouseState = new MouseSelectionState();
+
   layerManager = this.registerDisposer(new LayerManager());
   selectedLayer = this.registerDisposer(new SelectedLayerState(this.layerManager.addRef()));
   showAxisLines = new TrackableBoolean(true, true);
@@ -301,9 +302,9 @@ export class Viewer extends RefCounted implements ViewerState {
   helpPanelState = new HelpPanelState();
   settingsPanelState = new ViewerSettingsPanelState();
   layerSelectedValues =
-      this.registerDisposer(new LayerSelectedValues(this.layerManager, this.mouseState));
+    this.registerDisposer(new LayerSelectedValues(this.layerManager, this.mouseState));
   selectionDetailsState = this.registerDisposer(
-      new TrackableDataSelectionState(this.coordinateSpace, this.layerSelectedValues));
+    new TrackableDataSelectionState(this.coordinateSpace, this.layerSelectedValues));
   selectedStateServer = new TrackableValue<string>('', verifyString);
   layerListPanelState = new LayerListPanelState();
 
@@ -330,18 +331,19 @@ export class Viewer extends RefCounted implements ViewerState {
 
   uiConfiguration: ViewerUIConfiguration;
 
+
   private makeUiControlVisibilityState(key: keyof ViewerUIOptions) {
     const showUIControls = this.uiConfiguration.showUIControls;
     const option = this.uiConfiguration[key];
     return this.registerDisposer(
-        makeDerivedWatchableValue((a, b) => a && b, showUIControls, option));
+      makeDerivedWatchableValue((a, b) => a && b, showUIControls, option));
   }
 
   /**
    * Logical and of each `VIEWER_UI_CONTROL_CONFIG_OPTIONS` option with the value of showUIControls.
    */
   uiControlVisibility: {
-    [key in(typeof VIEWER_UI_CONTROL_CONFIG_OPTIONS)[number]]: WatchableValueInterface<boolean>
+    [key in (typeof VIEWER_UI_CONTROL_CONFIG_OPTIONS)[number]]: WatchableValueInterface<boolean>
   } = <any>{};
 
   showLayerDialog: boolean;
@@ -366,7 +368,7 @@ export class Viewer extends RefCounted implements ViewerState {
       },
       element = display.makeCanvasOverlayElement(),
       dataSourceProvider =
-          getDefaultDataSourceProvider({credentialsManager: defaultCredentialsManager}),
+      getDefaultDataSourceProvider({ credentialsManager: defaultCredentialsManager }),
       uiConfiguration = makeViewerUIConfiguration(),
     } = options;
     this.visibility = visibility;
@@ -385,7 +387,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
     setViewerUiConfiguration(uiConfiguration, options);
 
-    const optionsWithDefaults = {...defaultViewerOptions, ...options};
+    const optionsWithDefaults = { ...defaultViewerOptions, ...options };
     const {
       resetStateWhenEmpty,
       showLayerDialog,
@@ -402,9 +404,9 @@ export class Viewer extends RefCounted implements ViewerState {
     this.resetStateWhenEmpty = resetStateWhenEmpty;
 
     this.layerSpecification = new TopLevelLayerListSpecification(
-        this.display, this.dataSourceProvider, this.layerManager, this.chunkManager,
-        this.selectionDetailsState, this.selectedLayer, this.navigationState.coordinateSpace,
-        this.navigationState.pose.position, this.toolBinder);
+      this.display, this.dataSourceProvider, this.layerManager, this.chunkManager,
+      this.selectionDetailsState, this.selectedLayer, this.navigationState.coordinateSpace,
+      this.navigationState.pose.position, this.toolBinder);
 
     this.registerDisposer(display.updateStarted.add(() => {
       this.onUpdateDisplay();
@@ -426,7 +428,7 @@ export class Viewer extends RefCounted implements ViewerState {
     // shown.
     const maybeResetState = this.registerCancellable(debounce(() => {
       if (!this.wasDisposed && this.layerManager.managedLayers.length === 0 &&
-          this.resetStateWhenEmpty) {
+        this.resetStateWhenEmpty) {
         // No layers, reset state.
         this.navigationState.reset();
         this.perspectiveNavigationState.pose.orientation.reset();
@@ -463,7 +465,7 @@ export class Viewer extends RefCounted implements ViewerState {
   }
 
   private updateShowBorders() {
-    const {element} = this;
+    const { element } = this;
     const className = 'neuroglancer-show-panel-borders';
     if (this.uiConfiguration.showPanelBorders.value) {
       element.classList.add(className);
@@ -486,35 +488,35 @@ export class Viewer extends RefCounted implements ViewerState {
     topRow.style.alignItems = 'stretch';
 
     const positionWidget = this.registerDisposer(new PositionWidget(
-        this.navigationState.position, this.layerSpecification.coordinateSpaceCombiner));
+      this.navigationState.position, this.layerSpecification.coordinateSpaceCombiner));
     this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
-        this.uiControlVisibility.showLocation, positionWidget.element));
+      this.uiControlVisibility.showLocation, positionWidget.element));
     topRow.appendChild(positionWidget.element);
 
 
 
-       //SEARCH NH
+    //SEARCH NH
     let colorByDiv = document.createElement("div");
     colorByDiv.id = "imp-color-by-div";
     colorByDiv.style.display = "flex";
     //colorByDiv.style.alignItems='stretch';
     topRow.appendChild(colorByDiv)
     const mousePositionWidget = this.registerDisposer(new MousePositionWidget(
-        document.createElement('div'), this.mouseState, this.navigationState.coordinateSpace));
+      document.createElement('div'), this.mouseState, this.navigationState.coordinateSpace));
     mousePositionWidget.element.style.flex = '1';
     mousePositionWidget.element.style.alignSelf = 'center';
     this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
-        this.uiControlVisibility.showLocation, mousePositionWidget.element));
+      this.uiControlVisibility.showLocation, mousePositionWidget.element));
     topRow.appendChild(mousePositionWidget.element);
 
 
-    
+
     if (typeof NEUROGLANCER_CREDIT_LINK !== 'undefined') {
       let creditInfo = NEUROGLANCER_CREDIT_LINK!;
       if (!Array.isArray(creditInfo)) {
         creditInfo = [creditInfo];
       }
-      for (const {url, text} of creditInfo) {
+      for (const { url, text } of creditInfo) {
         const creditLink = document.createElement('a');
         creditLink.style.marginRight = '5px';
         creditLink.href = url;
@@ -527,10 +529,10 @@ export class Viewer extends RefCounted implements ViewerState {
     }
 
     const annotationToolStatus =
-        this.registerDisposer(new AnnotationToolStatusWidget(this.selectedLayer, this.toolBinder));
+      this.registerDisposer(new AnnotationToolStatusWidget(this.selectedLayer, this.toolBinder));
     topRow.appendChild(annotationToolStatus.element);
     this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
-        this.uiControlVisibility.showAnnotationToolStatus, annotationToolStatus.element));
+      this.uiControlVisibility.showAnnotationToolStatus, annotationToolStatus.element));
 
     if (stateShareEnabled) {
       const stateShare = this.registerDisposer(new StateShare(this));
@@ -538,66 +540,66 @@ export class Viewer extends RefCounted implements ViewerState {
     }
 
     {
-      const {layerListPanelState} = this;
+      const { layerListPanelState } = this;
       const button =
-          this.registerDisposer(new CheckboxIcon(layerListPanelState.location.watchableVisible, {
-            svg: svg_layers,
-            backgroundScheme: 'dark',
-            enableTitle: 'Show layer list panel',
-            disableTitle: 'Hide layer list panel'
-          }));
+        this.registerDisposer(new CheckboxIcon(layerListPanelState.location.watchableVisible, {
+          svg: svg_layers,
+          backgroundScheme: 'dark',
+          enableTitle: 'Show layer list panel',
+          disableTitle: 'Hide layer list panel'
+        }));
       button.element.insertAdjacentElement(
-          'afterbegin',
-          this.registerDisposer(new LayerArchiveCountWidget(this.layerManager)).element);
+        'afterbegin',
+        this.registerDisposer(new LayerArchiveCountWidget(this.layerManager)).element);
       this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
-          this.uiControlVisibility.showLayerListPanelButton, button.element));
+        this.uiControlVisibility.showLayerListPanelButton, button.element));
       topRow.appendChild(button.element);
     }
- 
-  /*  {
-      const {selectionDetailsState} = this;
-      const button =
-          this.registerDisposer(new CheckboxIcon(selectionDetailsState.location.watchableVisible, {
-            svg: svg_list,
-            backgroundScheme: 'dark',
-            enableTitle: 'Show selection details panel',
-            disableTitle: 'Hide selection details panel'
-          }));
-      this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
-          this.uiControlVisibility.showSelectionPanelButton, button.element));
-      topRow.appendChild(button.element);
-    }
-*/
+
+    /*  {
+        const {selectionDetailsState} = this;
+        const button =
+            this.registerDisposer(new CheckboxIcon(selectionDetailsState.location.watchableVisible, {
+              svg: svg_list,
+              backgroundScheme: 'dark',
+              enableTitle: 'Show selection details panel',
+              disableTitle: 'Hide selection details panel'
+            }));
+        this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
+            this.uiControlVisibility.showSelectionPanelButton, button.element));
+        topRow.appendChild(button.element);
+      }
+  */
     {
-      const {selectedLayer} = this;
+      const { selectedLayer } = this;
       const button = this.registerDisposer(new CheckboxIcon(
-          {
-            get value() {
-              return selectedLayer.visible;
-            },
-            set value(visible: boolean) {
-              selectedLayer.visible = visible;
-            },
-            changed: selectedLayer.location.locationChanged,
+        {
+          get value() {
+            return selectedLayer.visible;
           },
-          {
-            svg: svg_controls_alt,
-            backgroundScheme: 'dark',
-            enableTitle: 'Show layer side panel',
-            disableTitle: 'Hide layer side panel'
-          }));
+          set value(visible: boolean) {
+            selectedLayer.visible = visible;
+          },
+          changed: selectedLayer.location.locationChanged,
+        },
+        {
+          svg: svg_controls_alt,
+          backgroundScheme: 'dark',
+          enableTitle: 'Show layer side panel',
+          disableTitle: 'Hide layer side panel'
+        }));
       this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
-          this.uiControlVisibility.showLayerSidePanelButton, button.element));
+        this.uiControlVisibility.showLayerSidePanelButton, button.element));
       topRow.appendChild(button.element);
     }
 
     {
-      const button = makeIcon({text: '{}', title: 'Edit JSON state'});
+      const button = makeIcon({ text: '{}', title: 'Edit JSON state' });
       this.registerEventListener(button, 'click', () => {
         this.editJsonState();
       });
       this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
-          this.uiControlVisibility.showEditStateButton, button));
+        this.uiControlVisibility.showEditStateButton, button));
       topRow.appendChild(button);
     }
     {
@@ -612,80 +614,80 @@ export class Viewer extends RefCounted implements ViewerState {
     }
 
     {
-      const {helpPanelState} = this;
+      const { helpPanelState } = this;
       const button =
-          this.registerDisposer(new CheckboxIcon(helpPanelState.location.watchableVisible, {
-            text: '?',
-            backgroundScheme: 'dark',
-            enableTitle: 'Show help panel',
-            disableTitle: 'Hide help panel'
-          }));
+        this.registerDisposer(new CheckboxIcon(helpPanelState.location.watchableVisible, {
+          text: '?',
+          backgroundScheme: 'dark',
+          enableTitle: 'Show help panel',
+          disableTitle: 'Hide help panel'
+        }));
       this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
-          this.uiControlVisibility.showHelpButton, button.element));
+        this.uiControlVisibility.showHelpButton, button.element));
       topRow.appendChild(button.element);
     }
 
     {
-      const {settingsPanelState} = this;
+      const { settingsPanelState } = this;
       const button =
-          this.registerDisposer(new CheckboxIcon(settingsPanelState.location.watchableVisible, {
-            svg: svg_settings,
-            backgroundScheme: 'dark',
-            enableTitle: 'Show settings panel',
-            disableTitle: 'Hide settings panel'
-          }));
+        this.registerDisposer(new CheckboxIcon(settingsPanelState.location.watchableVisible, {
+          svg: svg_settings,
+          backgroundScheme: 'dark',
+          enableTitle: 'Show settings panel',
+          disableTitle: 'Hide settings panel'
+        }));
       this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
-          this.uiControlVisibility.showSettingsButton, button.element));
+        this.uiControlVisibility.showSettingsButton, button.element));
       topRow.appendChild(button.element);
-    } 
+    }
 
-  
+
     this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
-        makeDerivedWatchableValue(
-            (...values: boolean[]) => values.reduce((a, b) => a || b, false),
-            ...VIEWER_TOP_ROW_CONFIG_OPTIONS.map(key => this.uiControlVisibility[key])),
-        topRow));
+      makeDerivedWatchableValue(
+        (...values: boolean[]) => values.reduce((a, b) => a || b, false),
+        ...VIEWER_TOP_ROW_CONFIG_OPTIONS.map(key => this.uiControlVisibility[key])),
+      topRow));
 
     gridContainer.appendChild(topRow);
 
     this.layout = this.registerDisposer(new RootLayoutContainer(this, '4panel'));
     this.sidePanelManager = this.registerDisposer(
-        new SidePanelManager(this.display, this.layout.element, this.visibility));
+      new SidePanelManager(this.display, this.layout.element, this.visibility));
     this.registerDisposer(this.sidePanelManager.registerPanel({
       location: this.layerListPanelState.location,
       makePanel: () =>
-          new LayerListPanel(this.sidePanelManager, this.layerSpecification, this.layerListPanelState),
+        new LayerListPanel(this.sidePanelManager, this.layerSpecification, this.layerListPanelState),
     }));
     this.registerDisposer(
-        new LayerSidePanelManager(this.sidePanelManager, this.selectedLayer.addRef()));
+      new LayerSidePanelManager(this.sidePanelManager, this.selectedLayer.addRef()));
     this.registerDisposer(this.sidePanelManager.registerPanel({
       location: this.selectionDetailsState.location,
       makePanel: () => new SelectionDetailsPanel(
-          this.sidePanelManager, this.selectionDetailsState, this.layerSpecification,
-          this.selectedLayer),
+        this.sidePanelManager, this.selectionDetailsState, this.layerSpecification,
+        this.selectedLayer),
     }));
     gridContainer.appendChild(this.sidePanelManager.element);
 
     this.registerDisposer(this.sidePanelManager.registerPanel({
       location: this.statisticsDisplayState.location,
       makePanel: () => new StatisticsPanel(
-          this.sidePanelManager, this.chunkQueueManager, this.statisticsDisplayState),
+        this.sidePanelManager, this.chunkQueueManager, this.statisticsDisplayState),
     }));
 
     this.registerDisposer(this.sidePanelManager.registerPanel({
       location: this.helpPanelState.location,
       makePanel: () => {
-        const {inputEventBindings} = this;
+        const { inputEventBindings } = this;
         return new InputEventBindingHelpDialog(
-            this.sidePanelManager,
-            this.helpPanelState,
-            [
-              ['Global', inputEventBindings.global],
-              ['Cross section view', inputEventBindings.sliceView],
-              ['3-D projection view', inputEventBindings.perspectiveView]
-            ],
-            this.layerManager,
-            this.toolBinder,
+          this.sidePanelManager,
+          this.helpPanelState,
+          [
+            ['Global', inputEventBindings.global],
+            ['Cross section view', inputEventBindings.sliceView],
+            ['3-D projection view', inputEventBindings.perspectiveView]
+          ],
+          this.layerManager,
+          this.toolBinder,
         );
       },
     }));
@@ -693,7 +695,7 @@ export class Viewer extends RefCounted implements ViewerState {
     this.registerDisposer(this.sidePanelManager.registerPanel({
       location: this.settingsPanelState.location,
       makePanel: () =>
-          new ViewerSettingsPanel(this.sidePanelManager, this.settingsPanelState, this),
+        new ViewerSettingsPanel(this.sidePanelManager, this.settingsPanelState, this),
     }));
 
     const updateVisibility = () => {
@@ -711,7 +713,7 @@ export class Viewer extends RefCounted implements ViewerState {
    * Called once by the constructor to set up event handlers.
    */
   private registerEventActionBindings() {
-    const {element} = this;
+    const { element } = this;
     this.registerDisposer(new KeyboardEventBinder(element, this.inputEventMap));
     this.registerDisposer(new AutomaticallyFocusedElement(element));
   }
@@ -776,8 +778,7 @@ export class Viewer extends RefCounted implements ViewerState {
       }
       const userLayer = selectedLayer.layer;
       if (userLayer === null || userLayer.tool.value === undefined) {
-        StatusMessage.showTemporaryMessage(`The selected layer (${
-            JSON.stringify(selectedLayer.name)}) does not have an active annotation tool.`);
+        StatusMessage.showTemporaryMessage(`The selected layer (${JSON.stringify(selectedLayer.name)}) does not have an active annotation tool.`);
         return;
       }
       userLayer.tool.value.trigger(this.mouseState);
@@ -796,11 +797,11 @@ export class Viewer extends RefCounted implements ViewerState {
 
   private toolInputEventMapBinder = (inputEventMap: EventActionMap, context: RefCounted) => {
     context.registerDisposer(
-          this.inputEventBindings.sliceView.addParent(inputEventMap, Number.POSITIVE_INFINITY));
+      this.inputEventBindings.sliceView.addParent(inputEventMap, Number.POSITIVE_INFINITY));
     context.registerDisposer(this.inputEventBindings.perspectiveView.addParent(
-          inputEventMap, Number.POSITIVE_INFINITY));
+      inputEventMap, Number.POSITIVE_INFINITY));
   };
-  
+
   private toolBinder = this.registerDisposer(new ToolBinder(this.toolInputEventMapBinder));
 
   activateTool(uppercase: string) {
@@ -811,7 +812,7 @@ export class Viewer extends RefCounted implements ViewerState {
     new StateEditorDialog(this);
   }
 
-  showStatistics(value: boolean|undefined = undefined) {
+  showStatistics(value: boolean | undefined = undefined) {
     if (value === undefined) {
       value = !this.statisticsDisplayState.location.visible;
     }
@@ -830,7 +831,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
   private handleNavigationStateChanged() {
     if (this.visible) {
-      let {chunkQueueManager} = this.dataContext;
+      let { chunkQueueManager } = this.dataContext;
       if (chunkQueueManager.chunkUpdateDeadline === null) {
         chunkQueueManager.chunkUpdateDeadline = Date.now() + 10;
       }
@@ -838,389 +839,409 @@ export class Viewer extends RefCounted implements ViewerState {
   }
 
 
-   //NH_Monash
+  //NH_Monash
 
-   datasets = [] as Array<any>
-   async connectToDatabase(url: string) {
-     const axios = require('axios').default;
-     axios.defaults.headers.post['Access-Control-Allow-Origin'] = '*'
-     let self = this
-     console.log(url)
-     axios.get(url).then((response: any) => {
-       self.datasets = response.data
-     })
-       .catch((error: any) => {
-         console.error(error);
-       })
- 
- 
-   }
+  datasets = [] as Array<any>
+  async connectToDatabase(url: string) {
+    const axios = require('axios').default;
+    axios.defaults.headers.post['Access-Control-Allow-Origin'] = '*'
+    let self = this
+    console.log(url)
+    axios.get(url).then((response: any) => {
+      self.datasets = response.data
+      this.openDatabasePanel();
+    })
+      .catch((error: any) => {
+        console.error(error);
+      })
 
-   currentDataset = {} as Object
-   tryFetchByName(selected_name: string) {
-     //console.log(selected_id)
-     const axios = require('axios').default;
-     const url: string = 'https://webdev.imp-db.cloud.edu.au:3005/tomosets/' + selected_name;
-     let self = this
-     axios.get(url).then((response: any) => {
-       self.loadDBsetIntoNeuroglancer(response.data)
-     })
-       .catch((error: any) => {
-         console.error(error);
-       })
-   }
- 
- 
-   async loadDBsetIntoNeuroglancer(dataset: any) {
-     if (dataset.stateFile.exists) {
-       console.log("Has state file")
-       let path = dataset.stateFile.path;
-       StatusMessage
-         .forPromise(
-           cancellableFetchOk(path, {}, responseJson)
-             .then(response => {
-               console.log("response")
-               this.state.restoreState(response);
-             }),
-           {
-             initialMessage: `Retrieving state from json_url: ${path}.`,
-             delay: true,
-             errorPrefix: `Error retrieving state: `,
-           });
- 
-     } else {
-       console.log("Has no state file")
-       this.navigationState.reset();
-       this.perspectiveNavigationState.pose.orientation.reset();
-       this.perspectiveNavigationState.zoomFactor.reset();
-       this.resetInitiated.dispatch();
-       if (!overlaysOpen && this.showLayerDialog && this.visibility.visible) {
-         addNewLayer(this.layerSpecification, this.selectedLayer);
-       }//reset state and load new one
- 
-       //get the header information
-       const response = await fetch(dataset.image + "/" + dataset.name + ".json", { method: "GET" });
-       let shaderstring = '#uicontrol invlerp normalized(range=[-0.02,0.1], window=[-0.01, 0.1])';
-       let position = [100, 100, 100]
-       let dimensions = {'x': [1,'nm'],'y': [1,'nm'],'z': [1,'nm']}
-       if (response.ok) {
-         //if a header json exists, the correct posistion for the normalized brightness/contrast value is used. if no file is present, best guess defaults are used, which
-         //are likely not great.
-         const headerdata = await (response.json());
-         //console.log(headerdata)
-         if (!(headerdata.mean === 0 && headerdata.min === 0 && headerdata.max === 0 || headerdata.max < headerdata.min)) {
-           shaderstring = '#uicontrol invlerp normalized(range=[' + (headerdata.mean - (headerdata.mean - headerdata.min) / 2) + ',' + (headerdata.mean + (headerdata.max - headerdata.mean) / 2) + '], window=[' + headerdata.min + ',' + headerdata.max + '])';
-         }
-         position = [headerdata.x / 2, headerdata.y / 2, headerdata.z / 2];
- 
-         //console.log(Object.values(headerdata.pixel_spacing))
- 
-        if (headerdata.pixel_spacing) {
-           dimensions = { 'x': [ headerdata.pixel_spacing[0], 'nm' ], 'y': [headerdata.pixel_spacing[1], 'nm'], 'z': [headerdata.pixel_spacing[2], 'nm'] }; //if this is in the dataset info, should be more precise
-       
-          }
+
+  }
+
+  currentDataset = {} as Object
+  tryFetchByName(selected_name: string) {
+    //console.log(selected_id)
+    const axios = require('axios').default;
+    const url: string = 'https://webdev.imp-db.cloud.edu.au:3005/tomosets/' + selected_name;
+    let self = this
+    axios.get(url).then((response: any) => {
+      self.loadDBsetIntoNeuroglancer(response.data)
+    })
+      .catch((error: any) => {
+        console.error(error);
+      })
+  }
+
+
+  async loadDBsetIntoNeuroglancer(dataset: any) {
+    if (dataset.stateFile.exists) {
+      console.log("Has state file")
+      let path = dataset.stateFile.path;
+      StatusMessage
+        .forPromise(
+          cancellableFetchOk(path, {}, responseJson)
+            .then(response => {
+              console.log("response")
+              this.state.restoreState(response);
+            }),
+          {
+            initialMessage: `Retrieving state from json_url: ${path}.`,
+            delay: true,
+            errorPrefix: `Error retrieving state: `,
+          });
+
+    } else {
+      console.log("Has no state file")
+      this.navigationState.reset();
+      this.perspectiveNavigationState.pose.orientation.reset();
+      this.perspectiveNavigationState.zoomFactor.reset();
+      this.resetInitiated.dispatch();
+      if (!overlaysOpen && this.showLayerDialog && this.visibility.visible) {
+        addNewLayer(this.layerSpecification, this.selectedLayer);
+      }//reset state and load new one
+
+      //get the header information
+      const response = await fetch(dataset.image + "/" + dataset.name + ".json", { method: "GET" });
+      let shaderstring = '#uicontrol invlerp normalized(range=[-0.02,0.1], window=[-0.01, 0.1])';
+      let position = [100, 100, 100]
+      let dimensions = { 'x': [1, 'nm'], 'y': [1, 'nm'], 'z': [1, 'nm'] }
+      if (response.ok) {
+        //if a header json exists, the correct posistion for the normalized brightness/contrast value is used. if no file is present, best guess defaults are used, which
+        //are likely not great.
+        const headerdata = await (response.json());
+        //console.log(headerdata)
+        if (!(headerdata.mean === 0 && headerdata.min === 0 && headerdata.max === 0 || headerdata.max < headerdata.min)) {
+          shaderstring = '#uicontrol invlerp normalized(range=[' + (headerdata.mean - (headerdata.mean - headerdata.min) / 2) + ',' + (headerdata.mean + (headerdata.max - headerdata.mean) / 2) + '], window=[' + headerdata.min + ',' + headerdata.max + '])';
         }
+        position = [headerdata.x / 2, headerdata.y / 2, headerdata.z / 2];
+
+        //console.log(Object.values(headerdata.pixel_spacing))
+
+        if (headerdata.pixel_spacing) {
+          dimensions = { 'x': [headerdata.pixel_spacing[0], 'nm'], 'y': [headerdata.pixel_spacing[1], 'nm'], 'z': [headerdata.pixel_spacing[2], 'nm'] }; //if this is in the dataset info, should be more precise
+
+        }
+      }
+
+      shaderstring += '\n#uicontrol int invertColormap slider(min=0, max=1, step=1, default=0)';
+      shaderstring += '\n#uicontrol vec3 color color(default="white")';
+      shaderstring += '\n float inverter(float val, int invert) {return 0.5 + ((2.0 * (-float(invert) + 0.5)) * (val - 0.5));}';
+      shaderstring += '\nvoid main() {\n   emitRGB(color * inverter(normalized(), invertColormap));\n}\n';
+      const imgLayer = { "type": "image", "visible": true, "source": "precomputed://" + dataset.image, "tab": "rendering", "name": dataset.name, "shader": shaderstring };
       
-       shaderstring += '\n#uicontrol int invertColormap slider(min=0, max=1, step=1, default=0)';
-       shaderstring += '\n#uicontrol vec3 color color(default="white")';
-       shaderstring += '\n float inverter(float val, int invert) {return 0.5 + ((2.0 * (-float(invert) + 0.5)) * (val - 0.5));}';
-       shaderstring += '\nvoid main() {\n   emitRGB(color * inverter(normalized(), invertColormap));\n}\n';
-       const imgLayer = { "type": "image", "visible":true,"source": "precomputed://" + dataset.image, "tab": "source", "name": dataset.name, "shader": shaderstring };
-       
-       ObjectTracker_IMP.getInstance().addLayer(imgLayer,true)
+      ObjectTracker_IMP.getInstance().addLayer(imgLayer, true)
       // ObjectTracker_IMP.getInstance().setActiveLayerName(dataset.name)
- 
-       let names = []
-       let colours = []
-       if (dataset.layers) {
-         for (let layer of dataset.layers) {
-           if (layer) {
- 
-             //fetch the json for the annotations 
-             const response = await fetch(layer.path, { method: "GET" });
- 
-             if (!response.ok) {
-               console.log("Response is not ok: " + response.json());
-               continue;
-             }
- 
-             let resText = await (response.text())
- 
-             let re = new RegExp('(?<=\>)(.*?)(.json)', 'g');  //parses the resulting page for the file names present in that folder, format is a href="...."
- 
-             let sublayers = [...resText.matchAll(re)]
- 
-             let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
-             let meshes = [...resText.matchAll(re1)]
-             //console.log(meshes)
-             let a = await fetch(layer.path + "columns.json", { method: "GET" })
-             let columns = await (a.json());
-             //console.log(columns)
-             let option = document.createElement("input");
-              option.type="radio";
-              option.id = "color-by-type";
-              option.name="colorBy";
-              option.value="type";
-              option.checked = true;
-              option.addEventListener('change', () => {
-                ObjectTracker_IMP.getInstance().updateAttribute("colorBy",0, option.checked);
-              });
-              //option.onclick = (ev) => {
-              //  ObjectTracker_IMP.getInstance().updateAttribute("colorBy","type",ev)
-              //}
-              let label = document.createElement("label");
-              label.className="imp-option-label";
-              label.htmlFor ="color-by-type";
-              label.innerHTML = "type";
 
-              //label for div:
-              let labDiv = document.createElement("div")
-              labDiv.innerText = "Colour by:  ";
-              document.getElementById('imp-color-by-div')?.appendChild(labDiv)
-              document.getElementById('imp-color-by-div')?.appendChild(label);
-              document.getElementById('imp-color-by-div')?.appendChild(option);
+      let names = []
+      let colours = []
+      if (dataset.layers) {
+        for (let layer of dataset.layers) {
+          if (layer) {
 
-             for(let i = 0; i < columns.length; i++){
+            //fetch the json for the annotations 
+            const response = await fetch(layer.path, { method: "GET" });
+
+            if (!response.ok) {
+              console.log("Response is not ok: " + response.json());
+              continue;
+            }
+
+            let resText = await (response.text())
+
+            let re = new RegExp('(?<=\>)(.*?)(.json)', 'g');  //parses the resulting page for the file names present in that folder, format is a href="...."
+
+            let sublayers = [...resText.matchAll(re)]
+
+            let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
+            let meshes = [...resText.matchAll(re1)]
+            //console.log(meshes)
+            let a = await fetch(layer.path + "columns.json", { method: "GET" })
+            let columns = await (a.json());
+            //console.log(columns)
+            let option = document.createElement("input");
+            option.type = "radio";
+            option.id = "color-by-type";
+            option.name = "colorBy";
+            option.value = "type";
+            option.checked = true;
+            option.addEventListener('change', () => {
+              ObjectTracker_IMP.getInstance().updateAttribute(0);
+            });
+            //option.onclick = (ev) => {
+            //  ObjectTracker_IMP.getInstance().updateAttribute("colorBy","type",ev)
+            //}
+            let label = document.createElement("label");
+            label.className = "imp-option-label";
+            label.htmlFor = "color-by-type";
+            label.innerHTML = "type";
+
+            //label for div:
+            let labDiv = document.createElement("div")
+            labDiv.innerText = "Colour by:  ";
+            document.getElementById('imp-color-by-div')?.appendChild(labDiv)
+            document.getElementById('imp-color-by-div')?.appendChild(label);
+            document.getElementById('imp-color-by-div')?.appendChild(option);
+
+            for (let i = 0; i < columns.length; i++) {
               let option = document.createElement("input")
-              option.type="radio"
+              option.type = "radio"
               option.id = columns[i]
-              option.name="colorBy"
-              option.value=columns[i]
+              option.name = "colorBy"
+              option.value = columns[i]
               option.addEventListener('change', () => {
-                ObjectTracker_IMP.getInstance().updateAttribute("colorBy",i+1, option.checked);
+                ObjectTracker_IMP.getInstance().updateAttribute(i + 1);
               });
 
               let label = document.createElement("label");
-              label.className="imp-option-label";
+              label.className = "imp-option-label";
               label.htmlFor = columns[i]
               label.innerHTML = columns[i]
               document.getElementById('imp-color-by-div')?.appendChild(label)
               document.getElementById('imp-color-by-div')?.appendChild(option)
-             }
-             //fetch each layer
-             for (let sublayer of sublayers) {
-               let colour = ""
-               if (sublayer[0].indexOf("column") < 0) {
- 
-                 const sublayerresponse = await fetch(layer.path + "/" + sublayer[0], { method: "GET" })
-                 const annots = await sublayerresponse.json()
-                 //console.log(annots)
-                 for(let annotation of annots){
-                   ObjectTracker_IMP.getInstance().addIdName(annotation.id, sublayer[0].split(".json")[0] );
-                 }
-                 let shaderstring = "\n#uicontrol int colour_by slider(min=0,max=" + (columns.length > 0 ? columns.length : 1) + ")"
-                 shaderstring += "\nvoid main() {\n"
-                 //build ugly shaderstring TODO make this nice
-                 shaderstring += "\nif(colour_by==0) {\n        setColor(prop_color());\n}";
-                 //build configuration from available columns
-                 let annotationProperties = [{ "id": "color", "type": "rgb", "default": "red" }];
 
-                 //build radio box in top row if we have more than one column to color by
-             
-                 
-              
-                 for (let i = 0; i < columns.length; i++) {
-                
-                   let obj = { "id": columns[i], "type": "rgb", "default": "yellow" }
-                   annotationProperties.push(obj)
-                   //adjust shader string
-                   shaderstring += "\nif(colour_by==" + (i + 1) + ") {\n        setColor(prop_" + columns[i] + "());\n}";
-                 }
-                 shaderstring += "\n}"
-                 const newLayer = {
-                   "type": layer.type, "source": "local://annotations", "tab": "annotations", "name": sublayer[0].split(".json")[0],
-                   "shader": shaderstring,
-                   "annotationProperties": annotationProperties,
-                   "annotations": annots,
-                   "visible": false  //disable layer per default
-                 }
-     
-         
-                 names.push(sublayer[0].split(".json")[0])
-                 colours.push(annots[0].props[0])
-                 colour = annots[0].props[0]
-                 //console.log(newLayer)
-                 //ObjectTracker_IMP.getInstance().addNameID(sublayer[0].split(".json")[0],annots[0].id) //TODO: Make_better!
-                 ObjectTracker_IMP.getInstance().addLayer(newLayer,false)
- 
-               }
- 
- 
- 
-               /*try to load the mesh layer if available */
-               for (let mesh of meshes) {
-                 if (mesh[1] === sublayer[0].split(".json")[0]) {
-                   const meshlayer = {
-                     "type": "segmentation",
-                     "source": "precomputed://" + layer.path + mesh[0],
-                     "tab": "segments",
-                     "segments": [],
-                     "segmentDefaultColor": colour,
-                     "name": sublayer[0].split(".json")[0] + "_mesh",
-                     "visible":true
-                   };
-                   ObjectTracker_IMP.getInstance().addLayer(meshlayer,false)
-               
-                 }
-               }
-             }
-             //console.log(ObjectTracker_IMP.getInstance().getLayers())
- 
-           }
-         }
-       }
- 
-       ObjectTracker_IMP.getInstance().setState(this.state);
-       ObjectTracker_IMP.getInstance().setPosAndDim(position,dimensions)
-       ObjectTracker_IMP.getInstance().makeStateJSON();
+              //colorMap selection
+              let cMap = document.createElement("select");
+              cMap.className = "imp-cmap-dropdown";
+              let options = ObjectTracker_IMP.getInstance().getColormapKeys();
+              for (var j = 0; j < options.length; j++) {
+                var opt = options[j];
+                var el = document.createElement("option");
+                el.textContent = opt;
+                el.value = opt;
+                el.selected = opt === "jet";
+                cMap.appendChild(el);
+              }
+              cMap.addEventListener('change', () => {
+                ObjectTracker_IMP.getInstance().updateColormap(cMap.value)
+              })
+              document.getElementById('imp-color-by-div')?.appendChild(cMap)
+            }
+            //fetch each layer
+            for (let sublayer of sublayers) {
+              let colour = ""
+              if (sublayer[0].indexOf("column") < 0) {
 
-       
+                const sublayerresponse = await fetch(layer.path + "/" + sublayer[0], { method: "GET" })
+                const annots = await sublayerresponse.json()
+                console.log(annots)
+                for (let annotation of annots) {
+                  ObjectTracker_IMP.getInstance().addIdName(annotation.id, sublayer[0].split(".json")[0]);
+                }
+                let shaderstring = "\n#uicontrol int colour_by slider(min=0,max=" + (columns.length > 0 ? columns.length : 1) + ")"
+                shaderstring += "\nvoid main() {\n"
+                //build ugly shaderstring TODO make this nice
+                shaderstring += "\nif(colour_by==0) {\n        setColor(prop_color());\n}";
+                //build configuration from available columns
+                let annotationProperties = [{ "id": "color", "type": "rgb", "default": "red" }];
+
+                //build radio box in top row if we have more than one column to color by
+
+
+
+                for (let i = 0; i < columns.length; i++) {
+
+                  let obj = { "id": columns[i], "type": "rgb", "default": "yellow" }
+                  annotationProperties.push(obj)
+                  //adjust shader string
+                  shaderstring += "\nif(colour_by==" + (i + 1) + ") {\n        setColor(prop_" + columns[i] + "());\n}";
+                }
+                shaderstring += "\n}"
+                const newLayer = {
+                  "type": layer.type, "source": "local://annotations", "tab": "annotations", "name": sublayer[0].split(".json")[0],
+                  "shader": shaderstring,
+                  "annotationProperties": annotationProperties,
+                  "annotations": annots,
+                  "visible": false  //disable layer per default
+                }
+
+
+                names.push(sublayer[0].split(".json")[0])
+                colours.push(annots[0].props[0])
+                colour = annots[0].props[0]
+                //console.log(newLayer)
+                //ObjectTracker_IMP.getInstance().addNameID(sublayer[0].split(".json")[0],annots[0].id) //TODO: Make_better!
+                ObjectTracker_IMP.getInstance().addLayer(newLayer, false)
+
+              }
+
+
+
+              /*try to load the mesh layer if available */
+              for (let mesh of meshes) {
+                if (mesh[1] === sublayer[0].split(".json")[0]) {
+                  const meshlayer = {
+                    "type": "segmentation",
+                    "source": "precomputed://" + layer.path + mesh[0],
+                    "tab": "segments",
+                    "segments": [],
+                    "segmentDefaultColor": colour,
+                    "name": sublayer[0].split(".json")[0] + "_mesh",
+                    "visible": true
+                  };
+                  ObjectTracker_IMP.getInstance().addLayer(meshlayer, false)
+
+                }
+              }
+            }
+            //console.log(ObjectTracker_IMP.getInstance().getLayers())
+
+          }
+        }
       }
-      
-      
-     
-     //Proteomics
-     //this constructs the div element with proteomics content. it is appended to the root node and not displayed. Once the proteomics tab is activated, this node is 
-     //pulled to that panel and displayed there. 
-     const rootNode = document.getElementById("neuroglancer-container")!;
- 
-     let responseElement = document.getElementById("proteomics-content")
- 
-     if (rootNode !== null) {
- 
-       if (responseElement !== null) {
-         responseElement.textContent = ''
-       } else {
-         responseElement = document.createElement('div')
-         responseElement.id = "proteomics-content"
-         rootNode.append(responseElement)
-       }
- 
- 
-       if (dataset.proteomics.path) {
-         let protTable = document.createElement("table")
-         protTable.id = "proteomics-table"
- 
-         responseElement.append(protTable)
- 
-         let tableHead = document.createElement("thead")
- 
-         let trEl_head = document.createElement("tr")
-         trEl_head.className = "proteomics-row"
-         trEl_head.id = "protTableHeadRow"
-         tableHead.append(trEl_head)
-         protTable.append(tableHead)
-         //table body
-         let tbodyEl = document.createElement("tbody")
-         tbodyEl.id = "protTableBody"
-         protTable.append(tbodyEl)
-         const response = await fetch(dataset.proteomics.path, { method: "GET" });
-         const res = await response.json();
- 
-         const keys = []
-         for (const item of res) {
-           //fill the header row with the keys in the table
-           if (trEl_head !== null && trEl_head.childElementCount == 0) {
-             trEl_head.innerHTML = ''; //reset table
-             for (const key of Object.keys(item)) {
-               let tdEl = document.createElement("td")
-               tdEl.textContent = key
-               trEl_head.append(tdEl)
-               keys.push(key)
-             }
-           }
-           let rowEl = document.createElement("tr")
-           for (const key of keys) {
-             let tdEl1_ = document.createElement("td")
-             tdEl1_.textContent = item[key]
-             rowEl.append(tdEl1_)
-           }
- 
-           if (tbodyEl !== null) {
-             tbodyEl.append(rowEl)
-           }
-         }
- 
- 
-       } else {
-         //console.log("no proteomics")
-         responseElement.textContent = "No Proteomics data found."
-       }
-       responseElement.style.display = "none"
-       //console.log(responseElement)
-     }
- 
- 
-     //Metadata
- 
-     //this pulls the metadata and creates a node element as a child of the rootnode. Initially this is invisible, once the metadata tab is activated, the node will be appended
-     //to that panel as a child.
-     //all available metadata for layers will get their own content...
-     if (rootNode !== null) {
-       //console.log(response.toString())
-       let responseElement = document.getElementById("metadataOptions-content")
-       if (responseElement === null) {
-         responseElement = document.createElement('div')
-         responseElement.id = "metadataOptions-content"
-         rootNode.append(responseElement)
-         responseElement.style.display = "none"
-       } else {
-         responseElement.textContent = '';
-       }
-       let datasetMetadatadiv = document.createElement('div')
-       datasetMetadatadiv.className = "metadata-dataset"
-       let heading = document.createElement('h3')
-       heading.textContent = "About this dataset"
-       datasetMetadatadiv.append(heading)
-       let datasetContent = document.createElement('p')
-       if (dataset.metadata.text) {
-         datasetContent.textContent = dataset.metadata.text;
-       } else {
-         datasetContent.textContent = "No metadata provided for this dataset."
-       }
-       datasetMetadatadiv.append(datasetContent)
-       responseElement.append(datasetMetadatadiv)
-       responseElement.append(document.createElement('hl'))
- 
-       //metadata about the selected layer
-       let layerMetadatadiv = document.createElement('div')
-       layerMetadatadiv.className = "metadata-layer"
-       let layerheading = document.createElement('h3')
-       layerheading.textContent = "About the selected layer"
-       layerMetadatadiv.append(layerheading)
- 
-       for (const elem of dataset.layers) {
-         let layerContent = document.createElement('div')
-         layerContent.style.display = "none"
-         layerContent.className = "layer-metadata-" + elem.name;
-         if (elem.metadata) {
-           layerContent.textContent = elem.metadata
-         } else {
-           layerContent.textContent = "No metadata available for this layer"
-         }
-         layerMetadatadiv.append(layerContent)
-       }
-       responseElement.append(layerMetadatadiv)
- 
-     }
-   }
 
-   openDatabasePanel() {
+      ObjectTracker_IMP.getInstance().setState(this.state);
+      ObjectTracker_IMP.getInstance().setPosAndDim(position, dimensions)
+      ObjectTracker_IMP.getInstance().makeStateJSON();
+
+
+    }
+
+
+
+    //Proteomics
+    //this constructs the div element with proteomics content. it is appended to the root node and not displayed. Once the proteomics tab is activated, this node is 
+    //pulled to that panel and displayed there. 
+    const rootNode = document.getElementById("neuroglancer-container")!;
+
+    let responseElement = document.getElementById("proteomics-content")
+
+    if (rootNode !== null) {
+
+      if (responseElement !== null) {
+        responseElement.textContent = ''
+      } else {
+        responseElement = document.createElement('div')
+        responseElement.id = "proteomics-content"
+        rootNode.append(responseElement)
+      }
+
+
+      if (dataset.proteomics.path) {
+        let protTable = document.createElement("table")
+        protTable.id = "proteomics-table"
+
+        responseElement.append(protTable)
+
+        let tableHead = document.createElement("thead")
+
+        let trEl_head = document.createElement("tr")
+        trEl_head.className = "proteomics-row"
+        trEl_head.id = "protTableHeadRow"
+        tableHead.append(trEl_head)
+        protTable.append(tableHead)
+        //table body
+        let tbodyEl = document.createElement("tbody")
+        tbodyEl.id = "protTableBody"
+        protTable.append(tbodyEl)
+        const response = await fetch(dataset.proteomics.path, { method: "GET" });
+        const res = await response.json();
+
+        const keys = []
+        for (const item of res) {
+          //fill the header row with the keys in the table
+          if (trEl_head !== null && trEl_head.childElementCount == 0) {
+            trEl_head.innerHTML = ''; //reset table
+            for (const key of Object.keys(item)) {
+              let tdEl = document.createElement("td")
+              tdEl.textContent = key
+              trEl_head.append(tdEl)
+              keys.push(key)
+            }
+          }
+          let rowEl = document.createElement("tr")
+          for (const key of keys) {
+            let tdEl1_ = document.createElement("td")
+            tdEl1_.textContent = item[key]
+            rowEl.append(tdEl1_)
+          }
+
+          if (tbodyEl !== null) {
+            tbodyEl.append(rowEl)
+          }
+        }
+
+
+      } else {
+        //console.log("no proteomics")
+        responseElement.textContent = "No Proteomics data found."
+      }
+      responseElement.style.display = "none"
+      //console.log(responseElement)
+    }
+
+
+    //Metadata
+
+    //this pulls the metadata and creates a node element as a child of the rootnode. Initially this is invisible, once the metadata tab is activated, the node will be appended
+    //to that panel as a child.
+    //all available metadata for layers will get their own content...
+    if (rootNode !== null) {
+      //console.log(response.toString())
+      let responseElement = document.getElementById("metadataOptions-content")
+      if (responseElement === null) {
+        responseElement = document.createElement('div')
+        responseElement.id = "metadataOptions-content"
+        rootNode.append(responseElement)
+        responseElement.style.display = "none"
+      } else {
+        responseElement.textContent = '';
+      }
+      let datasetMetadatadiv = document.createElement('div')
+      datasetMetadatadiv.className = "metadata-dataset"
+      let heading = document.createElement('h3')
+      heading.textContent = "About this dataset"
+      datasetMetadatadiv.append(heading)
+      let datasetContent = document.createElement('p')
+      if (dataset.metadata.text) {
+        datasetContent.textContent = dataset.metadata.text;
+      } else {
+        datasetContent.textContent = "No metadata provided for this dataset."
+      }
+      datasetMetadatadiv.append(datasetContent)
+      responseElement.append(datasetMetadatadiv)
+      responseElement.append(document.createElement('hl'))
+
+      //metadata about the selected layer
+      let layerMetadatadiv = document.createElement('div')
+      layerMetadatadiv.className = "metadata-layer"
+      let layerheading = document.createElement('h3')
+      layerheading.textContent = "About the selected layer"
+      layerMetadatadiv.append(layerheading)
+
+      for (const elem of dataset.layers) {
+        let layerContent = document.createElement('div')
+        layerContent.style.display = "none"
+        layerContent.className = "layer-metadata-" + elem.name;
+        if (elem.metadata) {
+          layerContent.textContent = elem.metadata
+        } else {
+          layerContent.textContent = "No metadata available for this layer"
+        }
+        layerMetadatadiv.append(layerContent)
+      }
+      responseElement.append(layerMetadatadiv)
+
+    }
+
+  }
+
+  openDatabasePanel() {
     //console.log("button clicked");
     let db_panel = document.getElementById("db_panel")
     if (db_panel !== null) {
       db_panel.style.display = "block"
     } else {
       db_panel = document.createElement('div');
+
       db_panel.style.position = "absolute";
       db_panel.style.zIndex = "4000";
-      db_panel.style.width = "50%";
-      db_panel.style.height = "50%";
-      db_panel.style.marginTop = "10%";
-      db_panel.style.marginLeft = "25%";
+      //db_panel.style.width = "50%";
+      //db_panel.style.height = "50%";
+      db_panel.style.marginTop = "25px";
+      db_panel.style.right = "20px";
       db_panel.id = "db_panel";
       const closeButton = document.createElement('button');
-      closeButton.textContent = "Close";
+      closeButton.textContent = "X";
       closeButton.className = "db_btn";
       closeButton.onclick = () => {
         if (db_panel !== null) {
@@ -1239,24 +1260,24 @@ export class Viewer extends RefCounted implements ViewerState {
       for (var i = 0; i < this.datasets.length; i++) {
         var el = document.createElement('li')
         el.className = "db_li";
-        el.textContent=this.datasets[i].name;
-        
-      
+        el.textContent = this.datasets[i].name;
+
+
 
         el.onclick = (ev) => {
           //delete list of elemets
           let elList = document.getElementById("imp-avail-layers-list");
           ObjectTracker_IMP.getInstance().reset();
-          elList!==null?elList.innerHTML="" : "";
+          elList !== null ? elList.innerHTML = "" : "";
           var element = ev.target as HTMLLIElement
           if (element.textContent) {
             //console.log(element.textConten)
             this.tryFetchByName(element.textContent);
           }
-     
-            //close panel upon dataset selection
-            db_panel!.style.display = "none"
-          
+
+          //close panel upon dataset selection
+          db_panel!.style.display = "none"
+
 
 
           //console.log(element.innerHTML)
@@ -1275,24 +1296,24 @@ export class Viewer extends RefCounted implements ViewerState {
       }
     }
   }
-  getClassNamePerType(typ:string){
+  getClassNamePerType(typ: string) {
     let className = "";
-           
-                switch(typ){
-                  case "image":
-                    className = "ngImage";
-                    break;
-                  case "segmentation":
-                    className = "ngSegmentation";
-                    break;
-                  case "annotation":
-                    className = "ngAnnotation";
-                    break;
-                  default:
-                    className = "ngDefault";
 
-                }
-                return className;
+    switch (typ) {
+      case "image":
+        className = "ngImage";
+        break;
+      case "segmentation":
+        className = "ngSegmentation";
+        break;
+      case "annotation":
+        className = "ngAnnotation";
+        break;
+      default:
+        className = "ngDefault";
+
+    }
+    return className;
   }
 
   loadFromJsonUrl() {

@@ -96,6 +96,7 @@ export class SelectSegmentsTool extends Tool<SegmentationUserLayer> {
             visibleSegments.add(segment);
             break;
           case ToolState.DESELECT:
+         
             visibleSegments.delete(segment);
             break;
         }
