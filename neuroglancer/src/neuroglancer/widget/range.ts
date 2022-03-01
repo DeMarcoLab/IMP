@@ -19,7 +19,6 @@ import './range.css';
 import {WatchableValueInterface} from 'neuroglancer/trackable_value';
 import {RefCounted} from 'neuroglancer/util/disposable';
 import {removeFromParent} from 'neuroglancer/util/dom';
-//import { ObjectTracker_IMP } from '../ObjectTracker_IMP';
 
 export interface RangeWidgetOptions {
   min?: number;
@@ -66,9 +65,7 @@ export class RangeWidget extends RefCounted {
   }
 
   private inputValueChanged(element: HTMLInputElement) {
-  
     this.value.value = element.valueAsNumber;
-    
   }
 
   adjustViaWheel(element: HTMLInputElement, event: WheelEvent) {

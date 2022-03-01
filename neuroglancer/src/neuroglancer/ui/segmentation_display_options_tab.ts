@@ -19,7 +19,7 @@ import {LAYER_CONTROLS, SegmentationUserLayer, SKELETON_RENDERING_SHADER_CONTROL
 import {DependentViewWidget} from 'neuroglancer/widget/dependent_view_widget';
 import {makeHelpButton} from 'neuroglancer/widget/help_button';
 import {addLayerControlToOptionsTab} from 'neuroglancer/widget/layer_control';
-//import {LinkedLayerGroupWidget} from 'neuroglancer/widget/linked_layer';
+import {LinkedLayerGroupWidget} from 'neuroglancer/widget/linked_layer';
 import {makeMaximizeButton} from 'neuroglancer/widget/maximize_button';
 import {ShaderCodeWidget} from 'neuroglancer/widget/shader_code_widget';
 import {ShaderControls} from 'neuroglancer/widget/shader_controls';
@@ -40,7 +40,7 @@ export class DisplayOptionsTab extends Tab {
     element.classList.add('neuroglancer-segmentation-rendering-tab');
 
     // Linked segmentation control
-  /*  {
+    {
       const widget = this.registerDisposer(
           new LinkedLayerGroupWidget(layer.displayState.linkedSegmentationGroup));
       widget.label.textContent = 'Linked to: ';
@@ -53,7 +53,7 @@ export class DisplayOptionsTab extends Tab {
           new LinkedLayerGroupWidget(layer.displayState.linkedSegmentationColorGroup));
       widget.label.textContent = 'Colors linked to: ';
       element.appendChild(widget.element);
-    }*/
+    }
 
     for (const control of LAYER_CONTROLS) {
       element.appendChild(addLayerControlToOptionsTab(this, layer, this.visibility, control));

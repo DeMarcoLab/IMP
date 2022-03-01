@@ -19,7 +19,6 @@ import {TrackableBooleanCheckbox} from 'neuroglancer/trackable_boolean';
 import {WatchableValueInterface} from 'neuroglancer/trackable_value';
 import {LayerControlFactory} from 'neuroglancer/widget/layer_control';
 
-
 export function checkboxLayerControl<LayerType extends UserLayer>(
     getter: (layer: LayerType) => WatchableValueInterface<boolean>):
     LayerControlFactory<LayerType, TrackableBooleanCheckbox> {
@@ -30,8 +29,7 @@ export function checkboxLayerControl<LayerType extends UserLayer>(
       return {control, controlElement: control.element};
     },
     activateTool: (_activation, control) => {
-      control.model.value = !control.model.value;  
-      
+      control.model.value = !control.model.value;
     },
   };
 }

@@ -40,7 +40,6 @@ export class Tab extends RefCounted {
     super();
     const {element} = this;
     element.classList.add('neuroglancer-tab-content');
-
   }
 
   disposed() {

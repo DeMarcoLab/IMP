@@ -89,7 +89,6 @@ void main() {
 export class AnnotationDisplayState extends RefCounted {
   shader = makeTrackableFragmentMain(DEFAULT_FRAGMENT_MAIN);
   shaderControls = new ShaderControlState(this.shader);
-
   fallbackShaderControls =
       new WatchableValue(getFallbackBuilderState(parseShaderUiControls(DEFAULT_FRAGMENT_MAIN)));
   shaderError = makeWatchableShaderError();

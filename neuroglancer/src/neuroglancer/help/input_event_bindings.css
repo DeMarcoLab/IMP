@@ -45,7 +45,7 @@
 }
 
 .neuroglancer-help-scroll-container .dt {
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   font-weight: bold;
   color: yellow;
 }

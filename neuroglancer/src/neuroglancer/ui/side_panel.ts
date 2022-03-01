@@ -25,7 +25,6 @@ import {startRelativeMouseDrag} from 'neuroglancer/util/mouse_drag';
 import {Signal} from 'neuroglancer/util/signal';
 import {WatchableVisibilityPriority} from 'neuroglancer/visibility_priority/frontend';
 import {makeCloseButton} from 'neuroglancer/widget/close_button';
-import { ObjectTracker_IMP } from '../ObjectTracker_IMP';
 
 export const DRAG_OVER_CLASSNAME = 'neuroglancer-drag-over';
 
@@ -151,16 +150,6 @@ export class SidePanel extends RefCounted {
       event.stopPropagation();
     });
     this.element.appendChild(body);
-
-
-         //license, only once
-         if(!ObjectTracker_IMP.getInstance().hasLicense()){
-         let licenseEl = document.createElement("div")
-         licenseEl.innerHTML = '<a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/"><img alt="Creative Commons Licence" style="border-width:0" src="https://i.creativecommons.org/l/by-nc/4.0/80x15.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 International License</a>'
-         licenseEl.className="licenseDiv"
-         this.element.appendChild(licenseEl)
-          ObjectTracker_IMP.getInstance().setLicense(true);
-        }
   }
 }
 

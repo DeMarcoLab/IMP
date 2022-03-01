@@ -593,7 +593,6 @@ export class ManagedUserLayer extends RefCounted {
     }
     this.visible = value;
     this.layerChanged.dispatch();
-
   }
 
   setArchived(value: boolean) {

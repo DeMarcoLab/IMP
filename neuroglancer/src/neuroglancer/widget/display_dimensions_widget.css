@@ -40,7 +40,7 @@
 
 .neuroglancer-display-dimensions-widget input,
 .neuroglancer-display-dimensions-widget {
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   color: white;
 }
 

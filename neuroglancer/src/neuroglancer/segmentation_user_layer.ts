@@ -53,11 +53,11 @@ import {Uint64} from 'neuroglancer/util/uint64';
 import {makeWatchableShaderError} from 'neuroglancer/webgl/dynamic_shader';
 import {DependentViewContext} from 'neuroglancer/widget/dependent_view_widget';
 import {LayerControlDefinition, registerLayerControl} from 'neuroglancer/widget/layer_control';
-//import {checkboxLayerControl} from 'neuroglancer/widget/layer_control_checkbox';
+import {checkboxLayerControl} from 'neuroglancer/widget/layer_control_checkbox';
 import {enumLayerControl} from 'neuroglancer/widget/layer_control_enum';
 import {rangeLayerControl} from 'neuroglancer/widget/layer_control_range';
 import {renderScaleLayerControl} from 'neuroglancer/widget/render_scale_widget';
-//import {colorSeedLayerControl, fixedColorLayerControl} from 'neuroglancer/widget/segmentation_color_mode';
+import {colorSeedLayerControl, fixedColorLayerControl} from 'neuroglancer/widget/segmentation_color_mode';
 import {registerLayerShaderControlsTool} from 'neuroglancer/widget/shader_controls';
 import {registerSegmentSelectTools} from 'neuroglancer/ui/segment_select_tools';
 
@@ -817,7 +817,7 @@ function getViewSpecificSkeletonRenderingControl(viewName: '2d'|'3d'):
 }
 
 export const LAYER_CONTROLS: LayerControlDefinition<SegmentationUserLayer>[] = [
- /* {
+  {
     label: 'Color seed',
     title: 'Color segments based on a hash of their id',
     toolJson: COLOR_SEED_JSON_KEY,
@@ -828,7 +828,7 @@ export const LAYER_CONTROLS: LayerControlDefinition<SegmentationUserLayer>[] = [
     title: 'Use a fixed color for all segments without an explicitly-specified color',
     toolJson: SEGMENT_DEFAULT_COLOR_JSON_KEY,
     ...fixedColorLayerControl(),
-  },*/
+  },
   {
     label: 'Saturation',
     toolJson: SATURATION_JSON_KEY,
@@ -885,7 +885,7 @@ export const LAYER_CONTROLS: LayerControlDefinition<SegmentationUserLayer>[] = [
                            options: {min: 0, max: maxSilhouettePower, step: 0.1}
                          })),
   },
- /* {
+  {
     label: 'Hide segment ID 0',
     toolJson: HIDE_SEGMENT_ZERO_JSON_KEY,
     title: 'Disallow selection and display of segment id 0',
@@ -902,7 +902,7 @@ export const LAYER_CONTROLS: LayerControlDefinition<SegmentationUserLayer>[] = [
     title: 'Show all segments if none are selected',
     toolJson: IGNORE_NULL_VISIBLE_SET_JSON_KEY,
     ...checkboxLayerControl(layer => layer.displayState.ignoreNullVisibleSet),
-  },*/
+  },
   ...getViewSpecificSkeletonRenderingControl('2d'),
   ...getViewSpecificSkeletonRenderingControl('3d'),
 ];

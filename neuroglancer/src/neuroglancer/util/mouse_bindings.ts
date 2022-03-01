@@ -20,7 +20,6 @@
 
 import {RefCounted} from 'neuroglancer/util/disposable';
 import {ActionEvent, dispatchEventWithModifiers, EventActionMap, EventActionMapInterface, registerActionListener} from 'neuroglancer/util/event_action_map';
-import { ObjectTracker_IMP } from '../ObjectTracker_IMP';
 
 export class MouseEventBinder<EventMap extends EventActionMapInterface> extends RefCounted {
   private dispatch(baseIdentifier: string, event: MouseEvent) {
@@ -40,36 +39,6 @@ export class MouseEventBinder<EventMap extends EventActionMapInterface> extends 
     });
     this.registerEventListener(target, 'dblclick', (event: MouseEvent) => {
       if (commonHandler !== undefined) commonHandler(event);
-      
-      let els = document.getElementsByClassName("neuroglancer-layer-item-value");
-      console.log(els)
-      for(let i = 0 ; i < els.length; i++){
-        if(els[i].childNodes.length > 0){
-          if( els[i].textContent!.indexOf("#")<0 && els[i].textContent!.length < 12 && els[i].textContent! !== "0") { //not an annotation dot...
-            console.log("clicked mesh: " + els[i].textContent);
-            let id = els[i].textContent
-            let colorPickerDiv = document.createElement("div");
-            colorPickerDiv.style.zIndex="5000";
-            colorPickerDiv.className="imp-color-picker"
-            colorPickerDiv.style.position = 'absolute';
-            colorPickerDiv.style.left = event.pageX + "px"
-            colorPickerDiv.style.top = event.pageY+"px"
-            let inpEl = document.createElement("input");
-            inpEl.type = "color";
-            inpEl.value = "#000002";
-            inpEl.id="segmentcolorPicker"
-            colorPickerDiv.appendChild(inpEl)
-            inpEl.onchange= function(ev) {
-              //console.log(inpEl.value)
-              //console.log(id)
-              ObjectTracker_IMP.getInstance().changeSegmentColor(inpEl.value, id!);
-              document.getElementById("neuroglancer-container")!.removeChild(colorPickerDiv)
-            }
-            document.getElementById("neuroglancer-container")!.appendChild(colorPickerDiv)
-            return; //don't do the default neuroglancer action on double click.
-          }
-        }
-      }
       this.dispatch(`dblclick${event.button}`, event);
     });
     this.registerEventListener(target, 'mousedown', (event: MouseEvent) => {

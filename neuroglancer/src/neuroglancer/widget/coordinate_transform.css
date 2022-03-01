@@ -20,7 +20,7 @@
 }
 
 .neuroglancer-coordinate-space-transform-widget input {
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   justify-self: stretch;
   background-color: black;
   color: white;
@@ -88,7 +88,7 @@
 }
 
 .neuroglancer-coordinate-space-transform-input-name, input.neuroglancer-coordinate-space-transform-output-name {
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   color: #ff6;
 }
 
@@ -98,7 +98,7 @@
 
 .neuroglancer-coordinate-space-transform-input-bounds, .neuroglancer-coordinate-space-transform-output-bounds {
   white-space: nowrap;
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   font-size: small;
   text-align: right;
   padding-left: 2px;
@@ -175,7 +175,7 @@
 }
 
 .neuroglancer-coordinate-space-transform-scale-suggestion {
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   cursor: pointer;
   border-radius: 20%;
   border: 1px solid #333;

@@ -743,7 +743,6 @@ export class AnnotationLayerView extends Tab {
     });
 
     element.addEventListener('action:move-to-annotation', event => {
-      console.log(annotation.id)
       event.stopPropagation();
       event.preventDefault();
       const {layerRank} = chunkTransform;

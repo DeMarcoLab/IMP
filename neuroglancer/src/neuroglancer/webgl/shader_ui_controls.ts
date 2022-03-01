@@ -763,7 +763,6 @@ export class ShaderControlState extends RefCounted implements
   }
 
   private handleControlsChanged() {
-
     const generation = this.controls.changed.count;
     if (generation === this.controlsGeneration) {
       return;
@@ -782,7 +781,6 @@ export class ShaderControlState extends RefCounted implements
         controlState.trackable.changed.remove(this.changed.dispatch);
         state_.delete(name);
         changed = true;
-
         continue;
       }
     }
@@ -815,7 +813,6 @@ export class ShaderControlState extends RefCounted implements
     this.unparsedJson = undefined;
     if (changed) {
       this.changed.dispatch();
-  
     }
   }
 

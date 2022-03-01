@@ -48,10 +48,10 @@ export function setupDefaultViewer() {
   hashBinding.updateFromUrlHash();
   viewer.registerDisposer(bindTitle(viewer.title));
 
-  viewer.loadFromJsonUrl();
+  //viewer.loadFromJsonUrl();
   const url: string = 'https://webdev.imp-db.cloud.edu.au:3005/tomosets/';
   viewer.connectToDatabase(url);
-  
+
   bindDefaultCopyHandler(viewer);
   bindDefaultPasteHandler(viewer);
 

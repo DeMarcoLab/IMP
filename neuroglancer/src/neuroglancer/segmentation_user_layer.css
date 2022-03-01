@@ -69,7 +69,7 @@
 .neuroglancer-segment-list-entry-id,
 .neuroglancer-selection-details-segment-id {
   display: block;
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   font-size: medium;
   flex-shrink: 0;
   text-align: right;

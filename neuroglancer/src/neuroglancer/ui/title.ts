@@ -21,9 +21,9 @@ export function bindTitle(title: WatchableValueInterface<string|undefined>) {
   const debouncedSetTitle = animationFrameDebounce(() => {
     const value = title.value?.trim();
     if (value) {
-      document.title = `${value} - IMP`;
+      document.title = `${value} - neuroglancer`;
     } else {
-      document.title = 'Integrated Microscopy & Proteomics';
+      document.title = 'neuroglancer';
     }
   });
   const unregisterSignalHandler = title.changed.add(debouncedSetTitle);

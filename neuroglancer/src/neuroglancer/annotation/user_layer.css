@@ -32,7 +32,7 @@
 
 .neuroglancer-annotation-shader-property {
   white-space: pre;
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   font-size: medium;
 }
 

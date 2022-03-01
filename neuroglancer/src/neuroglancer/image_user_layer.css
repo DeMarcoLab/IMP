@@ -41,7 +41,7 @@
 .neuroglancer-selection-details-value-grid {
   display: grid;
   grid-auto-rows: auto;
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   font-size: medium;
   align-items: center;
 }

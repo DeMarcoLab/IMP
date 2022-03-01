@@ -34,7 +34,6 @@ import {startRelativeMouseDrag} from 'neuroglancer/util/mouse_drag';
 import {TouchEventBinder, TouchPinchInfo, TouchTranslateInfo} from 'neuroglancer/util/touch_bindings';
 import {getWheelZoomAmount} from 'neuroglancer/util/wheel_zoom';
 import {ViewerState} from 'neuroglancer/viewer_state';
-import { ObjectTracker_IMP } from './ObjectTracker_IMP';
 
 declare var NEUROGLANCER_SHOW_OBJECT_SELECTION_TOOLTIP: boolean|undefined;
 
@@ -510,17 +509,9 @@ export abstract class RenderedDataPanel extends RenderedPanel {
     }
 
     registerActionListener(element, 'move-to-mouse-position', () => {
-      
       const {mouseState} = this.viewer;
       if (mouseState.updateUnconditionally()) {
-        /* SEARCH: NH */
-        console.log(mouseState.pickedAnnotationId)
-        if(mouseState.pickedAnnotationId!==undefined){
-            ObjectTracker_IMP.getInstance().toggleSegment(mouseState.pickedAnnotationId!);
-        }
-        console.log(mouseState)
-        //NH: Remove behaviour that the view changes on annotation click.
-        //this.navigationState.position.value = mouseState.position;
+        this.navigationState.position.value = mouseState.position;
       }
     });
 

@@ -110,14 +110,12 @@ class Builder {
   }
 
   async writeIndex() {
- 
     let indexHtml = `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>IMP</title>
+    <title>neuroglancer</title>
     <link href="main.bundle.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap" rel="stylesheet">
 `;
 
     const {googleTagManager} = this;

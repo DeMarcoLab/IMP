@@ -1,0 +1,38 @@
+[33m82ddf5f[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m)[m HEAD@{0}: commit: removed ui shaking, right click on ball activates mesh correctly, db select menu visible on start
+[33m7316181[m[33m ([m[1;31morigin/main[m[33m)[m HEAD@{1}: commit: updated neuroglancer. mesh colouring works. global colour by on top row. better usage of existing states.
+[33m68c27de[m HEAD@{2}: commit: colour_by applies to meshes
+[33mf7e53b2[m HEAD@{3}: commit: roboto, segment colour same as annotation ball
+[33mf5e986e[m[33m ([m[1;32mfeature/toggle-mesh-on-click[m[33m)[m HEAD@{4}: merge feature/toggle-mesh-on-click: Fast-forward
+[33mf691bff[m HEAD@{5}: checkout: moving from feature/toggle-mesh-on-click to main
+[33mf5e986e[m[33m ([m[1;32mfeature/toggle-mesh-on-click[m[33m)[m HEAD@{6}: commit: css change
+[33m1c97b94[m[33m ([m[1;31morigin/feature/toggle-mesh-on-click[m[33m)[m HEAD@{7}: commit: menu improvements
+[33m110826c[m HEAD@{8}: commit: correct tracking of active layers, selectable in new menu
+[33me6948dc[m HEAD@{9}: commit: toggling segment from segment menu now reflected in annotation list
+[33ma517eab[m HEAD@{10}: commit: visual feedback in menu on segment toggle works
+[33m9e34b65[m HEAD@{11}: commit: toggle of segments works without loading segment tab first.
+[33mb1ba5ae[m HEAD@{12}: commit: right click on annot toggles corresponding mesh
+[33mf691bff[m HEAD@{13}: checkout: moving from main to feature/toggle-mesh-on-click
+[33mf691bff[m HEAD@{14}: commit: license String, Object tracker
+[33mc904fad[m HEAD@{15}: commit: more flexible reading of available colour-by parameters
+[33me6d0aa6[m HEAD@{16}: commit: added preprocessing pipeline
+[33m6630d61[m HEAD@{17}: commit: default brightness/contrast implemented
+[33mb13ca89[m HEAD@{18}: commit: better default
+[33maeb72d0[m HEAD@{19}: commit: improved Rendering controls
+[33m654b493[m HEAD@{20}: commit: rendering options with preset
+[33m9ddd207[m[33m ([m[1;32mfeatures/db-connection[m[33m)[m HEAD@{21}: merge features/db-connection: Fast-forward
+[33m5a8c742[m HEAD@{22}: checkout: moving from features/db-connection to main
+[33m9ddd207[m[33m ([m[1;32mfeatures/db-connection[m[33m)[m HEAD@{23}: commit: Proteomics, Metadata loading
+[33m319eb48[m HEAD@{24}: commit: better inital location, reset on new dataset
+[33maf213e2[m HEAD@{25}: commit: database connection to load files
+[33m5a8c742[m HEAD@{26}: checkout: moving from main to features/db-connection
+[33m5a8c742[m HEAD@{27}: checkout: moving from feature/state-upload to main
+[33m5a8c742[m HEAD@{28}: reset: moving to HEAD
+[33m5a8c742[m HEAD@{29}: checkout: moving from main to feature/state-upload
+[33m5a8c742[m HEAD@{30}: merge feature/db-panel: Fast-forward
+[33m9adf0df[m HEAD@{31}: checkout: moving from feature/db-panel to main
+[33m5a8c742[m HEAD@{32}: commit: added database query panel
+[33m9adf0df[m HEAD@{33}: checkout: moving from main to feature/db-panel
+[33m9adf0df[m HEAD@{34}: commit: loading from config file if there's no saved state
+[33m881ff70[m HEAD@{35}: commit: gitignore and some old website changes
+[33m4de44ba[m HEAD@{36}: commit: Initial neuroglancer commit
+[33mfb580b0[m HEAD@{37}: clone: from https://github.com/DeMarcoLab/IMP.git

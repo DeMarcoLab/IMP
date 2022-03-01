@@ -463,7 +463,6 @@ function AnnotationRenderLayer<TBase extends AnyConstructor<VisibilityTrackedRen
             const index = idMap.get(hoverValue.id);
             if (index !== undefined) {
               selectedIndex = index * handler.pickIdsPerInstance;
-   
               // If we wanted to include the partIndex, we would add:
               // selectedIndex += hoverValue.partIndex;
             }

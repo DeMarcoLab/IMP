@@ -27,7 +27,7 @@
   flex-direction: row;
   align-items: center;
   justify-items: left;
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   font-size: medium;
 }
 

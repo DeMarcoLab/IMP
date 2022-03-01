@@ -125,7 +125,6 @@ export class RenderScaleWidget extends RefCounted {
 
 
     this.registerDisposer(registerActionListener(canvas, 'reset', event => {
-
       this.reset();
       event.preventDefault();
     }));

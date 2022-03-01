@@ -38,7 +38,7 @@
   box-shadow: none;
   border: 0;
   margin: 0;
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   font-size: medium;
   color: #ff6;
 }
@@ -46,7 +46,7 @@
 .neuroglancer-channel-dimensions-widget-name,
 .neuroglancer-channel-dimensions-widget-lower,
 .neuroglancer-channel-dimensions-widget-upper {
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
 }
 
 

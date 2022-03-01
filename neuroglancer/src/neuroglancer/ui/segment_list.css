@@ -58,7 +58,7 @@
 .neuroglancer-segment-list-entry-name {
   order: 1000;
   display: inline-block;
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   font-size: medium;
   user-select: text;
   white-space: nowrap;
@@ -67,7 +67,7 @@
 .neuroglancer-segment-list-query {
   background-color: #151515;
   color: white;
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   font-size: medium;
   border: 2px solid #333;
   padding: 2px;

@@ -99,7 +99,6 @@ export class SegmentSelectionState extends RefCounted {
     }
     if (!hasSelectedSegment) {
       if (this.hasSelectedSegment) {
-   
         this.hasSelectedSegment = false;
         this.changed.dispatch();
       }

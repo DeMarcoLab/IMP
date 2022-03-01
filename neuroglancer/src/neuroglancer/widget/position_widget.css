@@ -35,7 +35,7 @@ interferes with our click handling.  Setting `pointer-events: none;` avoids that
   box-shadow: none;
   border: 0;
   margin: 0;
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   font-size: medium;
 }
 
@@ -140,7 +140,7 @@ interferes with our click handling.  Setting `pointer-events: none;` avoids that
   border: 1px solid transparent;
   position: relative;
   display: inline-block;
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   font-size: medium;
   white-space: nowrap;
 }
@@ -176,7 +176,7 @@ interferes with our click handling.  Setting `pointer-events: none;` avoids that
 .neuroglancer-mouse-position-widget {
   margin-left: 1ch;
   vertical-align: center;
-  font-family: 'Roboto', sans-serif;
+  font-family: monospace;
   font-size: medium;
   color: orange;
   white-space: pre;
