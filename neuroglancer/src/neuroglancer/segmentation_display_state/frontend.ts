@@ -389,12 +389,14 @@ function makeRegisterSegmentWidgetEventHandlers(displayState: SegmentationDispla
   };
 
   const onMousedown = (event: MouseEvent) => {
+    //NH: effects when clicking inside the segmentation menu
     if (event.button !== 2 || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) {
       return;
     }
     const entryElement = event.currentTarget as HTMLElement;
     const idString = entryElement.dataset.id!;
     const id = tempStatedColor
+  
     id.tryParseString(idString);
     displayState.moveToSegment(id);
   };

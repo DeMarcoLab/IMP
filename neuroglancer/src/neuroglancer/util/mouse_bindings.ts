@@ -72,6 +72,7 @@ export class MouseEventBinder<EventMap extends EventActionMapInterface> extends 
         // `button` is 2 (right button), but only the left button is currently pressed.
         button = 0;
       }
+
       this.dispatch(`mousedown${button}`, event);
     });
     this.registerEventListener(target, 'mouseup', (event: MouseEvent) => {

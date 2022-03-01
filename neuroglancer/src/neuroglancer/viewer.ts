@@ -16,7 +16,7 @@
 
 import './viewer.css';
 import 'neuroglancer/noselect.css';
-
+import './NH_style.css';
 import svg_controls_alt from 'ikonate/icons/controls-alt.svg';
 import svg_layers from 'ikonate/icons/layers.svg';
 import svg_list from 'ikonate/icons/list.svg';
@@ -1068,7 +1068,7 @@ export class Viewer extends RefCounted implements ViewerState {
         ObjectTracker_IMP.getInstance().setState(this.state);
         ObjectTracker_IMP.getInstance().setPosAndDim(position,dimensions)
         ObjectTracker_IMP.getInstance().makeStateJSON();
- 
+        
         
        }
        
@@ -1209,13 +1209,13 @@ export class Viewer extends RefCounted implements ViewerState {
        db_panel = document.createElement('div');
        db_panel.style.position = "absolute";
        db_panel.style.zIndex = "4000";
-       db_panel.style.width = "50%";
-       db_panel.style.height = "50%";
-       db_panel.style.marginTop = "10%";
-       db_panel.style.marginLeft = "25%";
+       db_panel.style.width = "200px";
+       //db_panel.style.height = "50%";
+       db_panel.style.marginTop = "20px";
+       db_panel.style.right = "20px";
        db_panel.id = "db_panel";
        const closeButton = document.createElement('button');
-       closeButton.textContent = "Close";
+       closeButton.textContent = "X";
        closeButton.className = "db_btn";
        closeButton.onclick = () => {
          if (db_panel !== null) {

@@ -49,6 +49,7 @@ import {WatchableVisibilityPriority} from 'neuroglancer/visibility_priority/fron
 import {DependentViewContext} from 'neuroglancer/widget/dependent_view_widget';
 import {TabSpecification} from 'neuroglancer/widget/tab_view';
 import {RPC} from 'neuroglancer/worker_rpc';
+import { ObjectTracker_IMP } from './ObjectTracker_IMP';
 
 const TOOL_JSON_KEY = 'tool';
 const TOOL_BINDINGS_JSON_KEY = 'toolBindings';
@@ -608,6 +609,7 @@ export class ManagedUserLayer extends RefCounted {
       for (const {layerManager} of this.manager.root.subsets) {
         if (layerManager.has(this)) continue;
         layerManager.addManagedLayer(this.addRef());
+        ObjectTracker_IMP.getInstance().makeColourBoxes();
       }
       this.archived = false;
     }

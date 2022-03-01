@@ -255,7 +255,7 @@ export class ObjectTracker_IMP {
         this.firstRun = false;
         this.state.reset()
         this.state.restoreState(result2)
-
+        this.makeColourBoxes();
 
 
     }
@@ -275,7 +275,7 @@ export class ObjectTracker_IMP {
     public makeColourBoxes() {
 
         let elements = document.getElementsByClassName("neuroglancer-layer-item-label") as HTMLCollection;
-        //console.log(elements)
+        console.log(elements)
         //console.log(this.nameColorMap)
         for (var i = 0; i < elements.length; i++) {
             var div = elements[i]

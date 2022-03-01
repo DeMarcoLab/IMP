@@ -253,3 +253,9 @@ element.style {
   border-right:1px solid #222;
   border-bottom:none;
 }
+
+html, body, #neuroglancer-container{
+  background-color: #aaa !important;
+  font-size: smaller;
+  color: #222 !important;
+}

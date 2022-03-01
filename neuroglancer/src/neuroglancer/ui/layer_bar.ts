@@ -32,6 +32,7 @@ import {makeCloseButton} from 'neuroglancer/widget/close_button';
 import {makeDeleteButton} from 'neuroglancer/widget/delete_button';
 import {makeIcon} from 'neuroglancer/widget/icon';
 import {PositionWidget} from 'neuroglancer/widget/position_widget';
+import { ObjectTracker_IMP } from '../ObjectTracker_IMP';
 
 
 class LayerWidget extends RefCounted {
@@ -302,6 +303,7 @@ export class LayerBar extends RefCounted {
       }
       widget.valueElement.textContent = text;
     }
+    ObjectTracker_IMP.getInstance().makeColourBoxes();
   }
 
   private updateChunkStatistics() {
