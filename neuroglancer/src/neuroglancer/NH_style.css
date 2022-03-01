@@ -264,3 +264,8 @@ html, body, #neuroglancer-container{
   z-index:1000;
   position:absolute;
 }
+#imp-color-by-div {
+  color:black;
+  align-items: center;
+
+}

@@ -743,6 +743,7 @@ export class AnnotationLayerView extends Tab {
     });
 
     element.addEventListener('action:move-to-annotation', event => {
+      //NH: Click in Annotation menu on a annotation row
       event.stopPropagation();
       event.preventDefault();
       const {layerRank} = chunkTransform;
@@ -753,6 +754,8 @@ export class AnnotationLayerView extends Tab {
           layerPosition, chunkTransform.chunkToLayerTransform, layerRank + 1, chunkPosition,
           layerRank);
       setLayerPosition(this.layer, chunkTransform, layerPosition);
+
+      //console.log(annotation.id)
     });
 
     const selectionState = this.selectedAnnotationState.value;

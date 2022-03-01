@@ -99,6 +99,7 @@ export class PickIDManager {
       if (DEBUG_PICKING) {
         console.log(
             `Picked value=${pickedValue}, offset=${pickedOffset}, data=${this.pickData[lower]}`);
+        
       }
       pickedRenderLayer.updateMouseState(mouseState, pickedValue, pickedOffset, data);
     }

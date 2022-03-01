@@ -512,6 +512,7 @@ export abstract class RenderedDataPanel extends RenderedPanel {
       const {mouseState} = this.viewer;
       if (mouseState.updateUnconditionally()) {
         this.navigationState.position.value = mouseState.position;
+       
       }
     });
 

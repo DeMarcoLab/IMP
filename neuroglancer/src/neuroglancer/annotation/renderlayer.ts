@@ -465,6 +465,7 @@ function AnnotationRenderLayer<TBase extends AnyConstructor<VisibilityTrackedRen
               selectedIndex = index * handler.pickIdsPerInstance;
               // If we wanted to include the partIndex, we would add:
               // selectedIndex += hoverValue.partIndex;
+        
             }
           }
           count = Math.round(count * drawFraction);

@@ -11,7 +11,7 @@ export class ObjectTracker_IMP {
     private static instance: ObjectTracker_IMP;
     private visibleSegments: string[];
     //private annotArray: string[]
-    private state: any;
+    
     //private stateJson: any;
 
     private availableLayers: AvailableLayers;
@@ -191,20 +191,20 @@ export class ObjectTracker_IMP {
             if (togglingSegment !== "") {
                 let layerName = this.idNameMap.get(togglingSegment);
                 if (layer.type == "segmentation" && layer.name.split("_")[0] == layerName) {
-                    if(layer["archived"]){
-                        layer["segments"]=[togglingSegment];
-                        layer["archived"]=false;
+                    if (layer["archived"]) {
+                        layer["segments"] = [togglingSegment];
+                        layer["archived"] = false;
                     } else {
-                    if (layer["segments"]) {
-                        if (layer["segments"].indexOf(togglingSegment) >= 0) {
-                            layer["segments"].splice(layer["segments"].indexOf(togglingSegment), 1)
+                        if (layer["segments"]) {
+                            if (layer["segments"].indexOf(togglingSegment) >= 0) {
+                                layer["segments"].splice(layer["segments"].indexOf(togglingSegment), 1)
+                            } else {
+                                layer["segments"].push(togglingSegment);
+                            }
                         } else {
-                            layer["segments"].push(togglingSegment);
+                            layer["segments"] = [togglingSegment]
                         }
-                    } else {
-                        layer["segments"] = [togglingSegment]
-                    }
-                    break;
+                        break;
                     }
                 }
             }
@@ -215,23 +215,23 @@ export class ObjectTracker_IMP {
                     layer["segmentColors"][highlightSegment.id] = highlightSegment.color == layer["segmentColors"][highlightSegment.id] ? layer["segmentDefaultColor"] : highlightSegment.color;
 
                 }
-                if(layer.type == "annotation" && layer.name == layerName){
-                    
+                if (layer.type == "annotation" && layer.name == layerName) {
+
                     for (const annotation of layer.annotations) {
                         //layer["segmentColors"][annotation["id"]] = this.colorStorage[annotation["id"]][this.currColorBy];
-                        if(annotation.id===highlightSegment.id){
+                        if (annotation.id === highlightSegment.id) {
                             annotation["props"][this.currColorBy] = highlightSegment.color;
                         }
-                        
+
                         //function evaluate_cmap(x, name, reverse) {
                         //update annotation colour ball
 
-                        
+
                     }
                 }
             }
         }
-        console.log(this.normalisedFields);
+        // console.log(this.normalisedFields);
         //console.log(layer_res)
         //add new active layers to the state, remove others
         let result2 = {
@@ -260,54 +260,58 @@ export class ObjectTracker_IMP {
 
     }
 
-  
+
     public isSegmentVisible(id: string) {
         return this.visibleSegments.indexOf(id) > -1;
     }
 
     public updateColormap(cmap_id: string) {
-        console.log(cmap_id);
+        //console.log(cmap_id);
         this.currColorMap = cmap_id;
         this.makeStateJSON(false, "", false, true);
     }
 
-    public doClickReaction(clickType:string,event: MouseEvent){
+    public doClickReaction(clickType: string, event: MouseEvent) {
         //doClickReactions are called in mouse_bindings.ts as reactions on click. that is where default reactions can be disabled as well.
-        switch(clickType){
+        switch (clickType) {
             case 'dblClick':
                 console.log("dblClick");
                 const allActiveLayers = document.getElementsByClassName('neuroglancer-layer-item-value');
-                for(let i = 0; i < allActiveLayers.length; i++){
-                    if(allActiveLayers[i].textContent!.indexOf("#")<0 && allActiveLayers[i].textContent!.indexOf(".")<0 && allActiveLayers[i].textContent! !==""){
+                for (let i = 0; i < allActiveLayers.length; i++) {
+                    if (allActiveLayers[i].textContent!.indexOf("#") < 0 && allActiveLayers[i].textContent!.indexOf(".") < 0 && allActiveLayers[i].textContent! !== "") {
                         //mesh was double clicked
                         //make colour picker
                         let id = allActiveLayers[i].textContent;
                         let colorpickerDiv = document.createElement('div');
                         colorpickerDiv.className = 'imp-color-picker-container';
-                        
+
                         let colorpicker = document.createElement('input');
                         colorpicker.type = 'color';
                         console.log(event.pageX);
-                        colorpickerDiv.setAttribute("style", "left:"+event.pageX+"px; top:"+event.pageY+"px;")//  style.left=event.pageX +'';
+                        colorpickerDiv.setAttribute("style", "left:" + event.pageX + "px; top:" + event.pageY + "px;")//  style.left=event.pageX +'';
                         //colorpickerDiv.style.top = event.pageY + '';
                         colorpickerDiv.appendChild(colorpicker);
                         let closeButton = document.createElement('button');
-                        closeButton.textContent="X";
-                        closeButton.addEventListener("click", ()=> {
+                        closeButton.textContent = "X";
+                        closeButton.addEventListener("click", () => {
                             //console.log("...")
-                            this.changeSegmentColor(colorpicker.value,id);
-                            colorpickerDiv.textContent='';
+                            this.changeSegmentColor(colorpicker.value, id);
+                            colorpickerDiv.textContent = '';
                         })
 
                         colorpickerDiv.appendChild(closeButton);
                         document.getElementById("neuroglancer-container")!.appendChild(colorpickerDiv);
-                        
+
                     }
-      }
+                }
+
+                this.state
+                break;
+   
         }
     }
 
-    public getColormapKeys(){
+    public getColormapKeys() {
         return Object.keys(cmapData);
     }
     public makeColourBoxes() {
@@ -321,11 +325,11 @@ export class ObjectTracker_IMP {
             if (div.innerHTML.indexOf("mesh") > 0) {
                 name = div.innerHTML.split("_")[0]
             }
-            if(this.nameColorMap.get(name)!==undefined){
-            div.setAttribute("style", "background:" + this.nameColorMap.get(name))
+            if (this.nameColorMap.get(name) !== undefined) {
+                div.setAttribute("style", "background:" + this.nameColorMap.get(name))
             } else {
-                div.setAttribute("style","color:#aaa");
-                
+                div.setAttribute("style", "color:#aaa");
+
             }
             //element.style.background = // element.innerHTML + "<div className='colorSquare' style='background:"+ this.nameColorMap.get(element.innerHTML)+";' />";
         }

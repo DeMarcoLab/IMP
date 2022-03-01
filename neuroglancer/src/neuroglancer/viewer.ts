@@ -729,10 +729,19 @@ export class Viewer extends RefCounted implements ViewerState {
       this.bindAction(action, () => {
         this.mouseState.updateUnconditionally();
         this.layerManager.invokeAction(action);
-      });
-    }
 
-    this.bindAction('help', () => this.toggleHelpPanel());
+
+      });
+      }
+      
+    this.bindAction('move-to-mouse-position', ()=>   {
+      //console.log(this.mouseState.pickedAnnotationId)
+      if(this.mouseState.pickedAnnotationId){
+       ObjectTracker_IMP.getInstance().toggleSegment(this.mouseState.pickedAnnotationId)
+      }
+    });
+
+    this.bindAction('help', () => {this.toggleHelpPanel(); console.log("help panelh") });
 
     for (let i = 1; i <= 9; ++i) {
       this.bindAction(`toggle-layer-${i}`, () => {
@@ -991,6 +1000,21 @@ export class Viewer extends RefCounted implements ViewerState {
                label.innerHTML = columns[i]
                document.getElementById('imp-color-by-div')?.appendChild(label)
                document.getElementById('imp-color-by-div')?.appendChild(option)
+               //add a list of colormaps
+               let selectEl = document.createElement("select");
+               let colorMaps = ObjectTracker_IMP.getInstance().getColormapKeys();
+               console.log(colorMaps)
+               for(let i =0; i< colorMaps.length; i++){
+                 let opt = document.createElement('option');
+                 if(colorMaps[i] ==="jet"){ opt.selected = true}
+                 opt.value = colorMaps[i];
+                 opt.textContent=colorMaps[i]
+                 selectEl.appendChild(opt);
+               }
+               document.getElementById('imp-color-by-div')?.appendChild(selectEl)
+               selectEl.addEventListener('change', () => {
+                 ObjectTracker_IMP.getInstance().updateColormap(selectEl.value)
+               })
               }
               //fetch each layer
               for (let sublayer of sublayers) {

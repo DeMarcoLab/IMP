@@ -36,6 +36,7 @@ export class MouseEventBinder<EventMap extends EventActionMapInterface> extends 
     });
     this.registerEventListener(target, 'click', (event: MouseEvent) => {
       if (commonHandler !== undefined) commonHandler(event);
+     
       this.dispatch(`click${event.button}`, event);
     });
     this.registerEventListener(target, 'dblclick', (event: MouseEvent) => {
@@ -47,6 +48,7 @@ export class MouseEventBinder<EventMap extends EventActionMapInterface> extends 
     this.registerEventListener(target, 'mousedown', (event: MouseEvent) => {
       if (commonHandler !== undefined) commonHandler(event);
       let button = event.button;
+
       // Under Firefox on macOS, pressing the left mouse button while holding
       // control results in a mouse event with `button` set to 2 (incorrectly
       // indicating the right mouse button) but `buttons` set to 1 (correctly
