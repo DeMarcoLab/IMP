@@ -260,9 +260,7 @@ export class ObjectTracker_IMP {
 
     }
 
-    public getColormapKeys() {
-        return Object.keys(cmapData);
-    }
+  
     public isSegmentVisible(id: string) {
         return this.visibleSegments.indexOf(id) > -1;
     }
@@ -272,10 +270,50 @@ export class ObjectTracker_IMP {
         this.currColorMap = cmap_id;
         this.makeStateJSON(false, "", false, true);
     }
+
+    public doClickReaction(clickType:string,event: MouseEvent){
+        //doClickReactions are called in mouse_bindings.ts as reactions on click. that is where default reactions can be disabled as well.
+        switch(clickType){
+            case 'dblClick':
+                console.log("dblClick");
+                const allActiveLayers = document.getElementsByClassName('neuroglancer-layer-item-value');
+                for(let i = 0; i < allActiveLayers.length; i++){
+                    if(allActiveLayers[i].textContent!.indexOf("#")<0 && allActiveLayers[i].textContent!.indexOf(".")<0 && allActiveLayers[i].textContent! !==""){
+                        //mesh was double clicked
+                        //make colour picker
+                        let id = allActiveLayers[i].textContent;
+                        let colorpickerDiv = document.createElement('div');
+                        colorpickerDiv.className = 'imp-color-picker-container';
+                        
+                        let colorpicker = document.createElement('input');
+                        colorpicker.type = 'color';
+                        console.log(event.pageX);
+                        colorpickerDiv.setAttribute("style", "left:"+event.pageX+"px; top:"+event.pageY+"px;")//  style.left=event.pageX +'';
+                        //colorpickerDiv.style.top = event.pageY + '';
+                        colorpickerDiv.appendChild(colorpicker);
+                        let closeButton = document.createElement('button');
+                        closeButton.textContent="X";
+                        closeButton.addEventListener("click", ()=> {
+                            //console.log("...")
+                            this.changeSegmentColor(colorpicker.value,id);
+                            colorpickerDiv.textContent='';
+                        })
+
+                        colorpickerDiv.appendChild(closeButton);
+                        document.getElementById("neuroglancer-container")!.appendChild(colorpickerDiv);
+                        
+                    }
+      }
+        }
+    }
+
+    public getColormapKeys(){
+        return Object.keys(cmapData);
+    }
     public makeColourBoxes() {
 
         let elements = document.getElementsByClassName("neuroglancer-layer-item-label") as HTMLCollection;
-        console.log(elements)
+        //console.log(elements)
         //console.log(this.nameColorMap)
         for (var i = 0; i < elements.length; i++) {
             var div = elements[i]

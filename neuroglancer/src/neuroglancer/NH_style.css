@@ -259,3 +259,8 @@ html, body, #neuroglancer-container{
   font-size: smaller;
   color: #222 !important;
 }
+
+.imp-color-picker-container{
+  z-index:1000;
+  position:absolute;
+}
