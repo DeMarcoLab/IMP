@@ -20,7 +20,6 @@
 
 import {RefCounted} from 'neuroglancer/util/disposable';
 import {ActionEvent, dispatchEventWithModifiers, EventActionMap, EventActionMapInterface, registerActionListener} from 'neuroglancer/util/event_action_map';
-import { ObjectTracker_IMP } from '../ObjectTracker_IMP';
 
 export class MouseEventBinder<EventMap extends EventActionMapInterface> extends RefCounted {
   private dispatch(baseIdentifier: string, event: MouseEvent) {
@@ -40,9 +39,8 @@ export class MouseEventBinder<EventMap extends EventActionMapInterface> extends 
       this.dispatch(`click${event.button}`, event);
     });
     this.registerEventListener(target, 'dblclick', (event: MouseEvent) => {
-      //if (commonHandler !== undefined) commonHandler(event);
-      //this.dispatch(`dblclick${event.button}`, event);
-      ObjectTracker_IMP.getInstance().doClickReaction('dblClick',event);
+      if (commonHandler !== undefined) commonHandler(event);
+      this.dispatch(`dblclick${event.button}`, event);
       
     });
     this.registerEventListener(target, 'mousedown', (event: MouseEvent) => {

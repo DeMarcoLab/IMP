@@ -52,6 +52,7 @@ export interface SliceViewViewerState {
 export class InputEventBindings {
   perspectiveView = new EventActionMap();
   sliceView = new EventActionMap();
+  imp = new EventActionMap();
 }
 
 export interface ViewerUIState extends SliceViewViewerState, VisibilityPrioritySpecification {

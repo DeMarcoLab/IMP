@@ -1,3 +1,18 @@
+:root {
+  --main-bg-color: #fff;
+  --main-color: #1b1c1b;
+  --highlight-info-color:  #f77031;
+  --friendly-border-color: #b7bdb7;
+  --hatch-secondary-color: #d7d7de;
+  --friendly-selected-border-color: #79b37e;
+  --friendly-blue: #4f5bc9;
+  --friendly-icon: #b4b4b8;
+
+  --select-border: #777;
+  --select-focus: var(--friendly-blue);
+  --select-arrow: var(--select-border);
+}
+
 
 .imp-label-colour-square{
     width:15px;
@@ -10,7 +25,7 @@
     padding: 0;
     margin: 0;
     list-style: none;
-    background-color: #ccc;
+    background-color: var(--main-bg-color);
   }
   
   .db_li {
@@ -21,16 +36,16 @@
     height:25px;
     line-height: 25px;
     margin: 5px;
-    border: 1px solid #aaa;
+    border: 1px solid var( --main-bg-color);
     border-radius: 8px;
-    background: #cccccc; /* Old browsers */
-  background: -moz-linear-gradient(top, #cccccc 0%, #ffffff 25%, #ffffff 75%, #cccccc 100%); /* FF3.6+ */
-  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#cccccc), color-stop(25%,#ffffff), color-stop(75%,#ffffff), color-stop(100%,#cccccc)); /* Chrome,Safari4+ */
-  background: -webkit-linear-gradient(top, #cccccc 0%,#ffffff 25%,#ffffff 75%,#cccccc 100%); /* Chrome10+,Safari5.1+ */
-  background: -o-linear-gradient(top, #cccccc 0%,#ffffff 25%,#ffffff 75%,#cccccc 100%); /* Opera 11.10+ */
-  background: -ms-linear-gradient(top, #cccccc 0%,#ffffff 25%,#ffffff 75%,#cccccc 100%); /* IE10+ */
-  background: linear-gradient(to bottom, #cccccc 0%,#ffffff 25%,#ffffff 75%,#cccccc 100%); /* W3C */
-  filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#cccccc', endColorstr='#cccccc',GradientType=0 ); /* IE6-9 */
+    background: var( --main-bg-color); /* Old browsers */
+  background: -moz-linear-gradient(top, var( --main-bg-color)ccc 0%, #ffffff 25%, #ffffff 75%, var( --main-bg-color)ccc 100%); /* FF3.6+ */
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,var( --main-bg-color)ccc), color-stop(25%,#ffffff), color-stop(75%,#ffffff), color-stop(100%,var( --main-bg-color)ccc)); /* Chrome,Safari4+ */
+  background: -webkit-linear-gradient(top, var( --main-bg-color)ccc 0%,#ffffff 25%,#ffffff 75%,var( --main-bg-color)ccc 100%); /* Chrome10+,Safari5.1+ */
+  background: -o-linear-gradient(top, var( --main-bg-color)ccc 0%,#ffffff 25%,#ffffff 75%,var( --main-bg-color)ccc 100%); /* Opera 11.10+ */
+  background: -ms-linear-gradient(top, var( --main-bg-color)ccc 0%,#ffffff 25%,#ffffff 75%,var( --main-bg-color)ccc 100%); /* IE10+ */
+  background: linear-gradient(to bottom, var( --main-bg-color)ccc 0%,#ffffff 25%,#ffffff 75%,var( --main-bg-color)ccc 100%); /* W3C */
+  filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='var( --main-bg-color)ccc', endColorstr='var( --main-bg-color)ccc',GradientType=0 ); /* IE6-9 */
     cursor: pointer;
     color: black;
     box-shadow: 2px 2px 3px #666;
@@ -76,7 +91,7 @@
     height: 20px;
     line-height: 20px;
     margin: 5px;
-    border: 1px solid #aaa;
+    border: 1px solid var( --main-bg-color);
     border-radius: 8px;
     width: 50px;
 
@@ -86,13 +101,13 @@
     user-select: none;
   }
   .ngDefault {
-    background: #cccccc; /* Old browsers */
-    background: -moz-linear-gradient(top, #cccccc 0%, #ffffff 25%, #ffffff 75%, #cccccc 100%); /* FF3.6+ */
-    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#cccccc), color-stop(25%,#ffffff), color-stop(75%,#ffffff), color-stop(100%,#cccccc)); /* Chrome,Safari4+ */
-    background: -webkit-linear-gradient(top, #cccccc 0%,#ffffff 25%,#ffffff 75%,#cccccc 100%); /* Chrome10+,Safari5.1+ */
-    background: -o-linear-gradient(top, #cccccc 0%,#ffffff 25%,#ffffff 75%,#cccccc 100%); /* Opera 11.10+ */
-    background: -ms-linear-gradient(top, #cccccc 0%,#ffffff 25%,#ffffff 75%,#cccccc 100%); /* IE10+ */
-    background: linear-gradient(to bottom, #cccccc 0%,#ffffff 25%,#ffffff 75%,#cccccc 100%); /* W3C */
+    background: var( --main-bg-color); /* Old browsers */
+    background: -moz-linear-gradient(top, var( --main-bg-color)ccc 0%, #ffffff 25%, #ffffff 75%, var( --main-bg-color)ccc 100%); /* FF3.6+ */
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,var( --main-bg-color)ccc), color-stop(25%,#ffffff), color-stop(75%,#ffffff), color-stop(100%,var( --main-bg-color)ccc)); /* Chrome,Safari4+ */
+    background: -webkit-linear-gradient(top, var( --main-bg-color)ccc 0%,#ffffff 25%,#ffffff 75%,var( --main-bg-color)ccc 100%); /* Chrome10+,Safari5.1+ */
+    background: -o-linear-gradient(top, var( --main-bg-color)ccc 0%,#ffffff 25%,#ffffff 75%,var( --main-bg-color)ccc 100%); /* Opera 11.10+ */
+    background: -ms-linear-gradient(top, var( --main-bg-color)ccc 0%,#ffffff 25%,#ffffff 75%,var( --main-bg-color)ccc 100%); /* IE10+ */
+    background: linear-gradient(to bottom, var( --main-bg-color)ccc 0%,#ffffff 25%,#ffffff 75%,var( --main-bg-color)ccc 100%); /* W3C */
     
   }
   
@@ -128,30 +143,37 @@
   }
   
   #db_panel {
-    background:#ccc;
+    background:var( --main-bg-color);
     border: 1px solid lightgrey;
     width: 200px;
+    position:absolute;
+    z-index:4000;
+    overflow-y: scroll;
+    max-height:80vh;
+    margin-top:25px;
+    right:2px;
+    padding-bottom:5px;
   }
   
   .imp-menu {
     width:230px;
-    background:#ccc;
+    background:var( --main-bg-color);
     z-index: 1000;
-    color:#222;
+    color:var( --main-color);
     margin-right:10px;
     height: 100vh;
     overflow-y: scroll;
   }
   
 html body {
-  background: #ccc !important;
-  color: #222 !important;
+  background: var( --main-bg-color) !important;
+  color: var( --main-color) !important;
   font-family: 'Roboto', sans-serif !important;
   font-size:x-small !important;
 }  
 
 .neuroglancer-side-panel{
-  background-color: #aaa !important
+  background-color: var( --main-bg-color) !important
 }
 
 .neuroglancer-layer-list-panel-item[data-archived=true] 
@@ -162,20 +184,34 @@ html body {
 }
 
 .neuroglancer-tab-view-bar {
-  background-color: #aaa;
-  color: #222;
+  background-color: var( --main-bg-color);
+  color: var( --main-color);
+  height:25px;
 }
 
 .neuroglancer-tab-label.neuroglancer-selected-tab-label {
-  background-color: #aaa;
-  color: black;
+  background-color: var( --main-bg-color);
+  color: var(--main-color);
+
+  border: 1px solid var(--friendly-border-color);
   border-bottom: none;
 }
 
 .neuroglancer-tab-label{
-  border-radius: 1.5pt;
+  border-bottom: 1px solid var(--friendly-border-color);
+  background-color: var(--friendly-border-color);
+  height:100%;
+  line-height:25px;
+  margin-right:0px;
+  margin-left:-1px;
+  padding: 0 4px 0 4px
 }
 
+.neuroglancer-layer-control-container {
+
+  font-family: 'Roboto' sans-serif;
+  font-size: small;
+}
 .neuroglancer-position-dimension-coordinate, .neuroglancer-position-dimension-name, .neuroglancer-position-dimension-scale {
 font-size: small;
 }
@@ -190,7 +226,7 @@ font-size: small;
 }
 
 .neuroglancer-layer-item-label {
-  color: #222;
+  color: var( --main-color);
 }
 
 .neuroglancer-layer-item {
@@ -215,9 +251,14 @@ element.style {
  
 }
 
+.neuroglancer-icon {
+  background-color: var(--friendly-icon)
+}
 .neuroglancer-viewer-top-row {
-  background: #aaa;
-  color:#222 !important;
+  background: var( --main-bg-color);
+  color:var( --main-color) !important;
+  height:25px;
+  margin-bottom:-1px;
 }
 
 .neuroglancer-position-dimension-scale-container[data-is-empty=false]::before,
@@ -226,7 +267,7 @@ element.style {
 }
 
 .neuroglancer-position-dimension-scale {
-  color: #222;
+  color: var( --main-color);
 }
 
 .neuroglancer-invlerp-widget-bound, 
@@ -236,28 +277,28 @@ element.style {
 }
 
 .neuroglancer-position-dimension-dropdown {
-  background-color: #aaa;
-  color: #222;
-  border-bottom: 1px solid #222;
-  border-left: 1px solid #222;
-  border-right:1px solid #222;
+  background-color: var( --main-bg-color);
+  color: var( --main-color);
+  border-bottom: 1px solid var( --friendly-border-color);
+  border-left: 1px solid var(--friendly-border-color);
+  border-right:1px solid var( --friendly-border-color);
   border-top:none;
   border-radius: 2pt;
 }
 
 .neuroglancer-position-dimension[data-dropdown-visible=true] {
-  background-color: #aaa;
-  color:#222;
-  border-top: 1px solid #222;
-  border-left: 1px solid #222;
-  border-right:1px solid #222;
+  background-color: var( --main-bg-color);
+  color:var( --main-color);
+  /*border-top: 1px solid var( --friendly-border-color);*/
+  border-left: 1px solid var(  --friendly-border-color);
+  border-right:1px solid var( --friendly-border-color);
   border-bottom:none;
 }
 
 html, body, #neuroglancer-container{
-  background-color: #aaa !important;
+  background-color: var(--main-bg-color) !important;
   font-size: smaller;
-  color: #222 !important;
+  color: var( --main-color) !important;
 }
 
 .imp-color-picker-container{
@@ -265,7 +306,142 @@ html, body, #neuroglancer-container{
   position:absolute;
 }
 #imp-color-by-div {
-  color:black;
+  color: var( --main-color) ;
   align-items: center;
+  margin-left:10px;
 
+}
+
+.neuroglancer-help-body {
+  margin-left:10px;
+  font-size: small;
+}
+
+.neuroglancer-position-dimension-coordinate {
+  color: var(--main-color);
+}
+
+.neuroglancer-position-dimension-name {
+  color: var(--highlight-info-color);
+  padding-left: 2px;
+}
+
+.neuroglancer-layer-list-panel-item[data-archived=true] {
+  border-color: var(--friendly-border-color) !important;
+}
+
+.neuroglancer-layer-list-panel-item {
+
+  border-radius:2pt;
+  box-shadow: 1px 1px 1px #666;
+}
+.neuroglancer-layer-list-panel-item[data-archived=false] {
+  border-color: var(--friendly-selected-border-color);
+  color: var(--main-color);
+  background-color: var(--friendly-selected-border-color);
+}
+
+
+
+.neuroglancer-side-panel-titlebar {
+  background-color: var(--friendly-blue) !important; 
+  padding-right: 5px;
+  height:25px;
+  color: var(--main-bg-color) !important;
+}
+
+
+.neuroglancer-layer-item {
+  background-color: var(--main-bg-color) !important;
+  color: var(--main-color) !important;
+  border-radius:2px;
+}
+
+
+
+.neuroglancer-layer-panel {
+  background-color: var(--main-bg-color) !important;
+  margin-left:0 !important; 
+}
+
+.neuroglancer-layer-item-label {
+  display: inline-block;
+  position: relative;
+  /*background-color: #222;*/
+  padding-right: 3px;
+  padding-left:3px;
+  height:25px;
+  line-height:25px;
+  color: var(--main-color);
+  background-color: inherit !important;
+}
+
+.neuroglancer-show-panel-borders .neuroglancer-panel {
+  border-color: var(--main-color) !important;
+}
+
+.neuroglancer-panel:focus-within {
+  border-color: var(--friendly-border-color) !important;
+}
+select {
+  
+  width: 150px;
+  padding-left:10px;
+  font-size: small;
+  border: 1px solid var(--friendly-border-color);
+  height: 20px;
+  border-radius:1.5px;
+  background-color: var(--main-bg-color);
+
+}
+
+
+.neuroglancer-segment-list-query {
+  background-color: var(--main-bg-color);
+  color: var(--main-color);
+  font-family: ‘Roboto’ sans-serif;
+  font-size: small;
+height:25px;
+}
+
+.neuroglancer-segment-list-status {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  background-color: var(--main-bg-color);
+color: var(--main-color);
+height: 25px;
+}
+
+.neuroglancer-segment-list-entry {
+  display: flex;
+  flex-direction: row;
+  width: min-content;
+  min-width: 100%;
+  background-color: var(--main-bg-color);
+  align-items: start;
+color: var(--main-color);
+height:25px;
+}
+
+.neuroglancer-annotation-toolbox {
+	height:25px;
+}
+
+.neuroglancer-annotations-view-dimension-name {
+   color:var(--highlight-info-color);
+
+
+}
+.neuroglancer-resize-gutter-horizontal {
+  width:8px;
+  padding: 0 0 0 0;
+  background:repeating-linear-gradient(
+  45deg,
+  var(--hatch-secondary-color),
+  var(--hatch-secondary-color) 10px,
+  var(--friendly-border-color)  10px,
+  var(--friendly-border-color)  20px
+);
+  background-color: var(--main-bg-color);
 }

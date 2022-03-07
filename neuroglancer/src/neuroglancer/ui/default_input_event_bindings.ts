@@ -14,15 +14,34 @@
  * limitations under the License.
  */
 
+import { map } from 'lodash';
 import {EventActionMap} from 'neuroglancer/util/event_action_map';
 import {InputEventBindings} from 'neuroglancer/viewer';
 
 let defaultGlobalBindings: EventActionMap|undefined;
 
+let impRenderBindings:EventActionMap|undefined;
+export function getIMPBindings() {
+  if (impRenderBindings === undefined) {
+    impRenderBindings = EventActionMap.fromObject(
+        
+          {
+            'at:mousedown2': 'toggle-mesh',
+            'at:touchhold1': 'toggle-mesh',
+            'at:touchtap1x2': 'color-picker',
+            'at:dblClick': 'color-picker'
+          },
+          {
+          label: 'IMP specific Bindings',
+          parents: [[getDefaultSelectBindings(), 0]],
+        });
+  }
+  return impRenderBindings;
+}
 export function getDefaultGlobalBindings() {
   if (defaultGlobalBindings === undefined) {
     const map = new EventActionMap();
-    map.set('keyl', 'recolor');
+    //map.set('keyl', 'recolor');
     map.set('keyx', 'clear-segments');
     map.set('keys', 'toggle-show-slices');
     map.set('keyb', 'toggle-scale-bar');
@@ -30,17 +49,17 @@ export function getDefaultGlobalBindings() {
     map.set('keya', 'toggle-axis-lines');
     map.set('keyo', 'toggle-orthographic-projection');
 
-    for (let i = 1; i <= 9; ++i) {
+ /*  for (let i = 1; i <= 9; ++i) {
       map.set('digit' + i, 'toggle-layer-' + i);
       map.set('control+digit' + i, 'select-layer-' + i);
       map.set('alt+digit' + i, 'toggle-pick-layer-' + i);
     }
-
-    for (let i = 0; i < 26; ++i) {
-      const lowercase = String.fromCharCode(97 + i);
-      const uppercase = String.fromCharCode(65 + i);
-      map.set(`alt?+control?+shift+key${lowercase}`, `tool-${uppercase}`);
-    }
+*/
+   // for (let i = 0; i < 26; ++i) {
+   //   const lowercase = String.fromCharCode(97 + i);
+   //   const uppercase = String.fromCharCode(65 + i);
+   //   map.set(`alt?+control?+shift+key${lowercase}`, `tool-${uppercase}`);
+   // }
 
     map.set('keyn', 'add-layer');
     map.set('keyh', 'help');
@@ -85,15 +104,16 @@ export function getDefaultRenderedDataPanelBindings() {
           'arrowdown': 'y+',
           'comma': 'z-',
           'period': 'z+',
-          'bracketleft': 't-',
-          'bracketright': 't+',
+        //  'bracketleft': 't-',
+        //  'bracketright': 't+',
           'keyz': 'snap',
-          'control+equal': 'zoom-in',
-          'alt+equal': 'depth-range-decrease',
-          'control+shift+equal': 'zoom-in',
-          'alt+shift+equal': 'depth-range-decrease',
-          'control+minus': 'zoom-out',
-          'alt+minus': 'depth-range-increase',
+         // 'control+equal': 'zoom-in',
+        //  'alt+equal': 'depth-range-decrease',
+         // 'control+shift+equal': 'zoom-in',
+          //'alt+shift+equal': 'depth-range-decrease',
+        //  'control+minus': 'zoom-out',
+          //'alt+minus': 'depth-range-increase',
+          
           'keyr': 'rotate-relative-z-',
           'keye': 'rotate-relative-z+',
           'shift+arrowdown': 'rotate-relative-x-',
@@ -104,16 +124,16 @@ export function getDefaultRenderedDataPanelBindings() {
           'alt+wheel': {action: 'adjust-depth-range-via-wheel', preventDefault: true},
           'at:wheel': {action: 'z+1-via-wheel', preventDefault: true},
           'at:shift+wheel': {action: 'z+10-via-wheel', preventDefault: true},
-          'at:dblclick0': 'select',
+          'at:dblclick0': 'color-picker',
           'at:control+mousedown0': 'annotate',
-          'at:mousedown2': 'move-to-mouse-position',
-          'at:alt+mousedown0': 'move-annotation',
+        
+         //r 'at:alt+mousedown0': 'move-annotation',
           'at:control+alt+mousedown2': 'delete-annotation',
           'at:touchpinch': 'zoom-via-touchpinch',
           'at:touchrotate': 'rotate-in-plane-via-touchrotate',
           'at:touchtranslate2': 'translate-in-plane-via-touchtranslate',
-          'at:touchhold1': 'move-to-mouse-position',
-          'at:touchtap1x2': 'select',
+         
+
           'at:touchtap2x3': 'snap',
         },
         {
@@ -153,6 +173,7 @@ export function getDefaultSliceViewPanelBindings() {
 }
 
 export function setDefaultInputEventBindings(inputEventBindings: InputEventBindings) {
+  inputEventBindings.imp.addParent(getIMPBindings(), Number.NEGATIVE_INFINITY);
   inputEventBindings.global.addParent(getDefaultGlobalBindings(), Number.NEGATIVE_INFINITY);
   inputEventBindings.sliceView.addParent(
       getDefaultSliceViewPanelBindings(), Number.NEGATIVE_INFINITY);

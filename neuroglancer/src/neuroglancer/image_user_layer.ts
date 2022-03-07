@@ -303,11 +303,11 @@ const LAYER_CONTROLS: LayerControlDefinition<ImageUserLayer>[] = [
     toolJson: BLEND_JSON_KEY,
     ...enumLayerControl(layer => layer.blendMode),
   },
-  {
+ /* {
     label: 'Volume rendering (experimental)',
     toolJson: VOLUME_RENDERING_JSON_KEY,
     ...checkboxLayerControl(layer => layer.volumeRendering),
-  },
+  },*/
   {
     label: 'Resolution (3d)',
     toolJson: VOLUME_RENDER_SCALE_JSON_KEY,

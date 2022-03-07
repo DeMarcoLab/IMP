@@ -13,7 +13,7 @@ export class ObjectTracker_IMP {
     //private annotArray: string[]
     
     //private stateJson: any;
-
+    private state: any;
     private availableLayers: AvailableLayers;
 
     private colorStorage: any;
@@ -126,11 +126,15 @@ export class ObjectTracker_IMP {
                 archivedLayer["archived"] = true
                 layer_res.push(archivedLayer)
             }
+
+            
             let tempEntry = this.normalisedFields.entries().next().value;
             //console.log(tempEntry[1])
-            for (let i = 0; i < Object.keys(tempEntry[1]).length; i++) {
-                //console.log(Object.keys(tempEntry[1])[i])
-                this.colorByStrings.push(Object.keys(tempEntry[1])[i]);
+            if(tempEntry){
+                for (let i = 0; i < Object.keys(tempEntry[1]).length; i++) {
+                    //console.log(Object.keys(tempEntry[1])[i])
+                    this.colorByStrings.push(Object.keys(tempEntry[1])[i]);
+                }
             }
         } else {
             layer_res = result.layers;
@@ -271,7 +275,7 @@ export class ObjectTracker_IMP {
         this.makeStateJSON(false, "", false, true);
     }
 
-    public doClickReaction(clickType: string, event: MouseEvent) {
+    public doClickReaction(clickType: string, mouseX:number, mouseY:number) {
         //doClickReactions are called in mouse_bindings.ts as reactions on click. that is where default reactions can be disabled as well.
         switch (clickType) {
             case 'dblClick':
@@ -287,15 +291,15 @@ export class ObjectTracker_IMP {
 
                         let colorpicker = document.createElement('input');
                         colorpicker.type = 'color';
-                        console.log(event.pageX);
-                        colorpickerDiv.setAttribute("style", "left:" + event.pageX + "px; top:" + event.pageY + "px;")//  style.left=event.pageX +'';
+                        //console.log(event.pageX);
+                        colorpickerDiv.setAttribute("style", "left:"+mouseX+"px; top:"+mouseY+"px;")//  style.left=event.pageX +'';
                         //colorpickerDiv.style.top = event.pageY + '';
                         colorpickerDiv.appendChild(colorpicker);
                         let closeButton = document.createElement('button');
                         closeButton.textContent = "X";
                         closeButton.addEventListener("click", () => {
                             //console.log("...")
-                            this.changeSegmentColor(colorpicker.value, id);
+                            this.changeSegmentColor(colorpicker.value, id!);
                             colorpickerDiv.textContent = '';
                         })
 
@@ -326,7 +330,7 @@ export class ObjectTracker_IMP {
                 name = div.innerHTML.split("_")[0]
             }
             if (this.nameColorMap.get(name) !== undefined) {
-                div.setAttribute("style", "background:" + this.nameColorMap.get(name))
+                div.parentElement!.setAttribute("style", "background:" + this.nameColorMap.get(name)+" !important")
             } else {
                 div.setAttribute("style", "color:#aaa");
 

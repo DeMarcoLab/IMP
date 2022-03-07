@@ -506,7 +506,7 @@ export class AnnotationUserLayer extends Base {
           }
         }));
     tab.element.insertBefore(renderScaleControls.element, tab.element.firstChild);
-    {
+   /* {
       const checkbox = tab.registerDisposer(
           new TrackableBooleanCheckbox(this.annotationDisplayState.ignoreNullSegmentFilter));
       const label = document.createElement('label');
@@ -518,7 +518,7 @@ export class AnnotationUserLayer extends Base {
     }
     tab.element.appendChild(
         tab.registerDisposer(new LinkedSegmentationLayersWidget(this.linkedSegmentationLayers))
-            .element);
+            .element);*/
   }
 
   toJSON() {

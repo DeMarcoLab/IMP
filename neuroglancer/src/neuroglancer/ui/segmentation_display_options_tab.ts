@@ -40,7 +40,7 @@ export class DisplayOptionsTab extends Tab {
     element.classList.add('neuroglancer-segmentation-rendering-tab');
 
     // Linked segmentation control
-    {
+  /*  {
       const widget = this.registerDisposer(
           new LinkedLayerGroupWidget(layer.displayState.linkedSegmentationGroup));
       widget.label.textContent = 'Linked to: ';
@@ -53,7 +53,7 @@ export class DisplayOptionsTab extends Tab {
           new LinkedLayerGroupWidget(layer.displayState.linkedSegmentationColorGroup));
       widget.label.textContent = 'Colors linked to: ';
       element.appendChild(widget.element);
-    }
+    }*/
 
     for (const control of LAYER_CONTROLS) {
       element.appendChild(addLayerControlToOptionsTab(this, layer, this.visibility, control));

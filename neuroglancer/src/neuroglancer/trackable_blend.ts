@@ -38,6 +38,6 @@ export const BLEND_FUNCTIONS = new Map([
 
 export type TrackableBlendModeValue = TrackableEnum<BLEND_MODES>;
 
-export function trackableBlendModeValue(initialValue = BLEND_MODES.DEFAULT) {
+export function trackableBlendModeValue(initialValue = BLEND_MODES.ADDITIVE) {
   return new TrackableEnum(BLEND_MODES, initialValue);
 }
