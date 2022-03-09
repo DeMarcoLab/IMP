@@ -34,7 +34,6 @@ import {makeDeleteButton} from 'neuroglancer/widget/delete_button';
 import {makeIcon} from 'neuroglancer/widget/icon';
 
 import {CheckboxIcon} from '../widget/checkbox_icon';
-import { ObjectTracker_IMP } from '../ObjectTracker_IMP';
 
 const DEFAULT_LAYER_LIST_PANEL_LOCATION: SidePanelLocation = {
   ...DEFAULT_SIDE_PANEL_LOCATION,

@@ -40,6 +40,7 @@ export class ObjectTracker_IMP {
         this.idNameMap = new Map<string, string>();
         this.normalisedFields = new Map<string, any>();
         this.currColorMap = "jet";
+        this.dimensions = [];
     }
 
 
@@ -105,7 +106,9 @@ export class ObjectTracker_IMP {
     public getLayers() {
         return this.availableLayers;
     }
-
+    public getPosition(){
+        return this.position;
+    }
     public setPosAndDim(position: any, dimensions: any) {
         this.position = position;
         this.dimensions = dimensions;
@@ -123,7 +126,7 @@ export class ObjectTracker_IMP {
 
                 //the available layer is not yet in the state. add it to the layers.
                 let archivedLayer = this.availableLayers[key].layer
-                archivedLayer["archived"] = true
+                archivedLayer["archived"] = archivedLayer.type==="image" ? false : true
                 layer_res.push(archivedLayer)
             }
 
@@ -368,6 +371,16 @@ export class ObjectTracker_IMP {
         if (this.state) {
             this.state.reset();
         }
+        this.colorStorage = {};
+        this.currColorBy = 0;
+        this.colorByStrings = [];
+        this.colorByStrings.push('type');
+        this.firstRun = true;
+        this.showsLicense = false;
+        this.nameColorMap = new Map<string, string>();
+        this.idNameMap = new Map<string, string>();
+        this.normalisedFields = new Map<string, any>();
+        this.currColorMap = "jet";
     }
 
     public setState(state: any) {

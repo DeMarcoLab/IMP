@@ -36,8 +36,8 @@
     height:25px;
     line-height: 25px;
     margin: 5px;
-    border: 1px solid var( --main-bg-color);
-    border-radius: 8px;
+    border: 1px solid var( --friendly-border-color);
+    border-radius: 1.5px;
     background: var( --main-bg-color); /* Old browsers */
   background: -moz-linear-gradient(top, var( --main-bg-color)ccc 0%, #ffffff 25%, #ffffff 75%, var( --main-bg-color)ccc 100%); /* FF3.6+ */
   background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,var( --main-bg-color)ccc), color-stop(25%,#ffffff), color-stop(75%,#ffffff), color-stop(100%,var( --main-bg-color)ccc)); /* Chrome,Safari4+ */
@@ -47,8 +47,8 @@
   background: linear-gradient(to bottom, var( --main-bg-color)ccc 0%,#ffffff 25%,#ffffff 75%,var( --main-bg-color)ccc 100%); /* W3C */
   filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='var( --main-bg-color)ccc', endColorstr='var( --main-bg-color)ccc',GradientType=0 ); /* IE6-9 */
     cursor: pointer;
-    color: black;
-    box-shadow: 2px 2px 3px #666;
+    color: var(--main-color);
+    box-shadow: 1px 1px 1px #666;
     user-select: none;
   }
   
@@ -64,11 +64,24 @@
     border-bottom: 10px solid transparent;
   }
   
-  .db_li:hover {
-    border-color: #777;
-    box-shadow: 3px 3px 5px #333;
+  .neuroglancer-layer-list-panel-item:hover {
+    border-color: var(--friendly-border-color);
+    box-shadow: 1px 1px 1px #666;
     
-    background: #eee; /* Old browsers */
+    background: var(--main-bg-color); /* Old browsers */
+  background: -moz-linear-gradient(top, #dddddd 0%, #ffffff 25%, #ffffff 75%, #dddddd 100%); /* FF3.6+ */
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#dddddd), color-stop(25%,#ffffff), color-stop(75%,#ffffff), color-stop(100%,#dddddd)); /* Chrome,Safari4+ */
+  background: -webkit-linear-gradient(top, #dddddd 0%,#ffffff 25%,#ffffff 75%,#dddddd 100%); /* Chrome10+,Safari5.1+ */
+  background: -o-linear-gradient(top, #dddddd 0%,#ffffff 25%,#ffffff 75%,#dddddd 100%); /* Opera 11.10+ */
+  background: -ms-linear-gradient(top, #dddddd 0%,#ffffff 25%,#ffffff 75%,#dddddd 100%); /* IE10+ */
+  background: linear-gradient(to bottom, #dddddd 0%,#ffffff 25%,#ffffff 75%,#dddddd 100%); /* W3C */
+  filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#eeeeee', endColorstr='#dddddd',GradientType=0 ); /* IE6-9 */
+  }
+  .db_li:hover {
+    border-color: var(--friendly-border-color);
+    box-shadow: 1px 1px 1px #666;
+    
+    background: var(--main-bg-color); /* Old browsers */
   background: -moz-linear-gradient(top, #dddddd 0%, #ffffff 25%, #ffffff 75%, #dddddd 100%); /* FF3.6+ */
   background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#dddddd), color-stop(25%,#ffffff), color-stop(75%,#ffffff), color-stop(100%,#dddddd)); /* Chrome,Safari4+ */
   background: -webkit-linear-gradient(top, #dddddd 0%,#ffffff 25%,#ffffff 75%,#dddddd 100%); /* Chrome10+,Safari5.1+ */
@@ -92,7 +105,7 @@
     line-height: 20px;
     margin: 5px;
     border: 1px solid var( --main-bg-color);
-    border-radius: 8px;
+    border-radius: 1.5px;
     width: 50px;
 
     cursor: pointer;
@@ -144,7 +157,7 @@
   
   #db_panel {
     background:var( --main-bg-color);
-    border: 1px solid lightgrey;
+    border: 1px solid var(--friendly-border-color);
     width: 200px;
     position:absolute;
     z-index:4000;
@@ -153,6 +166,7 @@
     margin-top:25px;
     right:2px;
     padding-bottom:5px;
+    border-radius: 1.5px;
   }
   
   .imp-menu {
@@ -207,6 +221,9 @@ html body {
   padding: 0 4px 0 4px
 }
 
+.neuroglancer-checkbox-icon.dark-background[data-checked=true] {
+  background-color: var(--friendly-selected-border-color)
+}
 .neuroglancer-layer-control-container {
 
   font-family: 'Roboto' sans-serif;
@@ -444,4 +461,5 @@ height:25px;
   var(--friendly-border-color)  20px
 );
   background-color: var(--main-bg-color);
+  border-radius: 1.5px;
 }

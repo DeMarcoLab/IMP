@@ -292,8 +292,8 @@ export class Viewer extends RefCounted implements ViewerState {
   showPerspectiveSliceViews = new TrackableBoolean(true, true);
   visibleLayerRoles = allRenderLayerRoles();
   showDefaultAnnotations = new TrackableBoolean(true, true);
-  crossSectionBackgroundColor = new TrackableRGB(vec3.fromValues(0.5, 0.5, 0.5));
-  perspectiveViewBackgroundColor = new TrackableRGB(vec3.fromValues(0, 0, 0));
+  crossSectionBackgroundColor = new TrackableRGB(vec3.fromValues(1, 1, 1));
+  perspectiveViewBackgroundColor = new TrackableRGB(vec3.fromValues(1, 1, 1));
   scaleBarOptions = new TrackableScaleBarOptions();
   partialViewport = new TrackableWindowedViewport();
   statisticsDisplayState = new StatisticsDisplayState();
@@ -796,6 +796,10 @@ export class Viewer extends RefCounted implements ViewerState {
       userLayer.tool.value.trigger(this.mouseState);
     });
 
+    this.bindAction('select-area-mode', () => {
+      console.log('select Area Mode On/Off');
+    });
+
     this.bindAction('toggle-axis-lines', () => this.showAxisLines.toggle());
     this.bindAction('toggle-scale-bar', () => this.showScaleBar.toggle());
     this.bindAction('toggle-default-annotations', () => this.showDefaultAnnotations.toggle());
@@ -907,9 +911,9 @@ export class Viewer extends RefCounted implements ViewerState {
       this.perspectiveNavigationState.pose.orientation.reset();
       this.perspectiveNavigationState.zoomFactor.reset();
       this.resetInitiated.dispatch();
-      if (!overlaysOpen && this.showLayerDialog && this.visibility.visible) {
-        addNewLayer(this.layerSpecification, this.selectedLayer);
-      }//reset state and load new one
+      //if (!overlaysOpen && this.showLayerDialog && this.visibility.visible) {
+      //  addNewLayer(this.layerSpecification, this.selectedLayer);
+      //}//reset state and load new one
 
       //get the header information
       const response = await fetch(dataset.image + "/" + dataset.name + ".json", { method: "GET" });
@@ -920,10 +924,10 @@ export class Viewer extends RefCounted implements ViewerState {
         //if a header json exists, the correct posistion for the normalized brightness/contrast value is used. if no file is present, best guess defaults are used, which
         //are likely not great.
         const headerdata = await (response.json());
-        //console.log(headerdata)
-        //if (!(headerdata.mean === 0 && headerdata.min === 0 && headerdata.max === 0 || headerdata.max < headerdata.min)) {
-          //shaderstring = '#uicontrol invlerp normalized(range=[' +(headerdata.min - headerdata.max) + ',' + (headerdata.max + headerdata.min)+ '], window=[' + headerdata.min  + ',' + headerdata.max + '])';
-          
+        console.log(headerdata)
+        if (!(headerdata.mean === 0 && headerdata.min === 0 && headerdata.max === 0 || headerdata.max < headerdata.min)) {
+          shaderstring = '#uicontrol invlerp normalized(range=[' + (headerdata.min - headerdata.max) + ',' + (headerdata.max + headerdata.min) + '], window=[' + (headerdata.min - headerdata.max) + ',' + (headerdata.max + headerdata.min)+'])';
+        }
         //}
         position = [headerdata.x / 2, headerdata.y / 2, headerdata.z / 2];
 
@@ -1015,7 +1019,7 @@ export class Viewer extends RefCounted implements ViewerState {
               //add a list of colormaps
               let selectEl = document.createElement("select");
               let colorMaps = ObjectTracker_IMP.getInstance().getColormapKeys();
-              console.log(colorMaps)
+              //console.log(colorMaps)
               for (let i = 0; i < colorMaps.length; i++) {
                 let opt = document.createElement('option');
                 if (colorMaps[i] === "jet") { opt.selected = true }
@@ -1271,9 +1275,9 @@ export class Viewer extends RefCounted implements ViewerState {
 
         el.onclick = (ev) => {
           //delete list of elemets
-          let elList = document.getElementById("imp-avail-layers-list");
+          this.state.reset();
           ObjectTracker_IMP.getInstance().reset();
-          elList !== null ? elList.innerHTML = "" : "";
+
           var element = ev.target as HTMLLIElement
           if (element.textContent) {
             //console.log(element.textConten)

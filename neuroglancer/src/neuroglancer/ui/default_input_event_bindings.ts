@@ -48,7 +48,7 @@ export function getDefaultGlobalBindings() {
     map.set('keyv', 'toggle-default-annotations');
     map.set('keya', 'toggle-axis-lines');
     map.set('keyo', 'toggle-orthographic-projection');
-
+    
  /*  for (let i = 1; i <= 9; ++i) {
       map.set('digit' + i, 'toggle-layer-' + i);
       map.set('control+digit' + i, 'select-layer-' + i);
@@ -126,7 +126,7 @@ export function getDefaultRenderedDataPanelBindings() {
           'at:shift+wheel': {action: 'z+10-via-wheel', preventDefault: true},
           'at:dblclick0': 'color-picker',
           'at:control+mousedown0': 'annotate',
-        
+          'at:keym': 'select-area-mode',
          //r 'at:alt+mousedown0': 'move-annotation',
           'at:control+alt+mousedown2': 'delete-annotation',
           'at:touchpinch': 'zoom-via-touchpinch',

@@ -508,14 +508,6 @@ export abstract class RenderedDataPanel extends RenderedPanel {
       });
     }
 
- /*imp NH disable   registerActionListener(element, 'move-to-mouse-position', () => {
-      const {mouseState} = this.viewer;
-      if (mouseState.updateUnconditionally()) {
-        this.navigationState.position.value = mouseState.position;
-       
-      }
-    }); */
-
     registerActionListener(element, 'snap', () => this.navigationState.pose.snap());
 
     registerActionListener(element, 'move-annotation', (e: ActionEvent<MouseEvent>) => {
