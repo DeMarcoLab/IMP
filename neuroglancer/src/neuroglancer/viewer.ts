@@ -69,6 +69,7 @@ import { TrackableScaleBarOptions } from 'neuroglancer/widget/scale_bar';
 import { RPC } from 'neuroglancer/worker_rpc';
 import { cancellableFetchOk, responseJson } from './util/http_request';
 import { ObjectTracker_IMP } from './ObjectTracker_IMP';
+import { PlaceBoundingBoxTool } from './ui/annotations';
 
 declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 
@@ -676,7 +677,7 @@ export class Viewer extends RefCounted implements ViewerState {
           this.sidePanelManager,
           this.helpPanelState,
           [
-            ['IMP specific Bindings',inputEventBindings.imp],
+            ['IMP specific Bindings', inputEventBindings.imp],
             ['Global', inputEventBindings.global],
             ['Cross section view', inputEventBindings.sliceView],
             ['3-D projection view', inputEventBindings.perspectiveView]
@@ -727,22 +728,22 @@ export class Viewer extends RefCounted implements ViewerState {
       });
     }
 
-   /* for (const action of ['select']) {
-      this.bindAction(action, () => {
-         if(action==="select"){
-          
-         } else {
-        this.mouseState.updateUnconditionally();
-        this.layerManager.invokeAction(action);
-        }
+    /* for (const action of ['select']) {
+       this.bindAction(action, () => {
+          if(action==="select"){
+           
+          } else {
+         this.mouseState.updateUnconditionally();
+         this.layerManager.invokeAction(action);
+         }
+ 
+ 
+ 
+       });
+     }*/
 
-
-
-      });
-    }*/
-
-    this.bindAction('color-picker', ()=> {
-      ObjectTracker_IMP.getInstance().doClickReaction('dblClick', this.mouseState.pageX,this.mouseState.pageY);
+    this.bindAction('color-picker', () => {
+      ObjectTracker_IMP.getInstance().doClickReaction('dblClick', this.mouseState.pageX, this.mouseState.pageY);
     })
     this.bindAction('toggle-mesh', () => {
       //console.log(this.mouseState.pickedAnnotationId)
@@ -751,7 +752,7 @@ export class Viewer extends RefCounted implements ViewerState {
       }
     });
 
-    this.bindAction('help', () => { this.toggleHelpPanel();  });
+    this.bindAction('help', () => { this.toggleHelpPanel(); });
 
     for (let i = 1; i <= 9; ++i) {
       this.bindAction(`toggle-layer-${i}`, () => {
@@ -782,23 +783,41 @@ export class Viewer extends RefCounted implements ViewerState {
       });
     }
 
+  
+
+    //this.bindAction('zoom-via-wheel', () => {
+    //    ObjectTracker_IMP.getInstance().updateScale();
+    //})
     this.bindAction('annotate', () => {
-      const selectedLayer = this.selectedLayer.layer;
-      if (selectedLayer === undefined) {
-        StatusMessage.showTemporaryMessage('The annotate command requires a layer to be selected.');
-        return;
-      }
-      const userLayer = selectedLayer.layer;
-      if (userLayer === null || userLayer.tool.value === undefined) {
-        StatusMessage.showTemporaryMessage(`The selected layer (${JSON.stringify(selectedLayer.name)}) does not have an active annotation tool.`);
-        return;
-      }
-      userLayer.tool.value.trigger(this.mouseState);
+      
+        const selectedLayer = this.selectedLayer.layer;
+        
+        if (selectedLayer === undefined) {
+          StatusMessage.showTemporaryMessage('The annotate command requires a layer to be selected.');
+          return;
+        }
+        const userLayer = selectedLayer.layer;
+        console.log(userLayer)
+        if (userLayer === null || userLayer.tool.value === undefined) {
+          StatusMessage.showTemporaryMessage(`The selected layer (${JSON.stringify(selectedLayer.name)}) does not have an active annotation tool.`);
+          return;
+        }
+       
+        userLayer.tool.value.trigger(this.mouseState);
+        
+        if(ObjectTracker_IMP.getInstance().isAreaMode()) {
+          console.log(userLayer.tool.value.mouseState);
+          ObjectTracker_IMP.getInstance().setCornerDrawing(userLayer.tool.value.mouseState.position);
+        }
     });
 
     this.bindAction('select-area-mode', () => {
       console.log('select Area Mode On/Off');
+      ObjectTracker_IMP.getInstance().toggleAreaMode();
+      //ObjectTracker_IMP.getInstance().makeSelectionAnnotationLayer();
+      console.log("Created selection layer. ")
     });
+
 
     this.bindAction('toggle-axis-lines', () => this.showAxisLines.toggle());
     this.bindAction('toggle-scale-bar', () => this.showScaleBar.toggle());
@@ -926,7 +945,7 @@ export class Viewer extends RefCounted implements ViewerState {
         const headerdata = await (response.json());
         console.log(headerdata)
         if (!(headerdata.mean === 0 && headerdata.min === 0 && headerdata.max === 0 || headerdata.max < headerdata.min)) {
-          shaderstring = '#uicontrol invlerp normalized(range=[' + (headerdata.min - headerdata.max) + ',' + (headerdata.max + headerdata.min) + '], window=[' + (headerdata.min - headerdata.max) + ',' + (headerdata.max + headerdata.min)+'])';
+          shaderstring = '#uicontrol invlerp normalized(range=[' + (headerdata.min - headerdata.max) + ',' + (headerdata.max + headerdata.min) + '], window=[' + (headerdata.min - headerdata.max) + ',' + (headerdata.max + headerdata.min) + '])';
         }
         //}
         position = [headerdata.x / 2, headerdata.y / 2, headerdata.z / 2];
@@ -1247,7 +1266,7 @@ export class Viewer extends RefCounted implements ViewerState {
       db_panel.style.display = "block"
     } else {
       db_panel = document.createElement('div');
-     
+
       db_panel.id = "db_panel";
       const closeButton = document.createElement('button');
       closeButton.textContent = "X";

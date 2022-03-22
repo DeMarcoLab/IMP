@@ -11,7 +11,7 @@ export class ObjectTracker_IMP {
     private static instance: ObjectTracker_IMP;
     private visibleSegments: string[];
     //private annotArray: string[]
-    
+
     //private stateJson: any;
     private state: any;
     private availableLayers: AvailableLayers;
@@ -25,8 +25,12 @@ export class ObjectTracker_IMP {
 
     private nameColorMap: Map<string, string>;
     private idNameMap: Map<string, string>;
+    private idPositionMap: Map<string, number[]>;
     private normalisedFields: Map<string, any>;
     private currColorMap = "";
+
+    private areaModeOn: boolean;
+    private drawingCoordinates: any[]
 
     private constructor() {
         this.availableLayers = {};
@@ -39,8 +43,88 @@ export class ObjectTracker_IMP {
         this.nameColorMap = new Map<string, string>();
         this.idNameMap = new Map<string, string>();
         this.normalisedFields = new Map<string, any>();
+        this.idPositionMap = new Map<string, number[]>();
         this.currColorMap = "jet";
         this.dimensions = [];
+        this.areaModeOn = false;
+        this.drawingCoordinates = [[], []];
+
+    }
+
+    public toggleAreaMode() {
+        this.areaModeOn = !this.areaModeOn;
+        console.log("areaModeOn: " + this.areaModeOn);
+        if (this.areaModeOn) this.makeStateJSON(false, "", null, false, [], true);
+    }
+    public isAreaMode() {
+        return this.areaModeOn;
+    }
+    public setCornerDrawing(position: Float32Array) {
+        console.log(position)
+        if (this.drawingCoordinates[0].length === 0) {
+            this.drawingCoordinates[0] = [position[0], position[1], position[2]];
+        } else {
+            this.drawingCoordinates[1] = [position[0], position[1], position[2]];
+            this.showMeshesInBox();
+            this.drawingCoordinates = [[], []];
+            // this.areaModeOn = false;
+
+
+        }
+    }
+
+
+
+    public updateScale() {
+        let result = this.state.toJSON();
+        console.log(result["crossSectionScale"]);
+        let str = result["crossSectionScale"] + ""
+        let num;
+        num = str === "1" ? 9 : parseInt(str.charAt(2));
+        console.log(num)
+
+        console.log("New size: " + 1024 * (10 - (num % 2 === 0 ? num - 1 : num)))
+        let newsize = 1024 * (10 - (num % 2 === 0 ? num - 1 : num))
+        if (newsize === result["layout"]["crossSections"]["a"]["height"]) {
+            console.log("no change")
+            return;
+        }
+        result["layout"] = {
+            "type": result["layout"]["type"],
+            "crossSections": {
+                "a":
+                    { "height": newsize, "width": newsize },
+
+                "b":
+                    { "height": newsize, "width": newsize },
+
+                "c":
+                    { "height": newsize, "width": newsize }
+            }
+        }
+
+        this.state.reset();
+        this.state.restoreState(result);
+    }
+    private showMeshesInBox() {
+        //console.log(this.drawingCoordinates);
+        let group = []
+        console.log(this.idPositionMap.size)
+        let minX = this.drawingCoordinates[0][0] < this.drawingCoordinates[1][0] ? this.drawingCoordinates[0][0] : this.drawingCoordinates[1][0];
+        let minY = this.drawingCoordinates[0][1] < this.drawingCoordinates[1][1] ? this.drawingCoordinates[0][1] : this.drawingCoordinates[1][1];
+        let minZ = this.drawingCoordinates[0][2] < this.drawingCoordinates[1][2] ? this.drawingCoordinates[0][2] : this.drawingCoordinates[1][2];
+        let maxX = this.drawingCoordinates[0][0] > this.drawingCoordinates[1][0] ? this.drawingCoordinates[0][0] : this.drawingCoordinates[1][0];
+        let maxY = this.drawingCoordinates[0][1] > this.drawingCoordinates[1][1] ? this.drawingCoordinates[0][1] : this.drawingCoordinates[1][1];
+        let maxZ = this.drawingCoordinates[0][2] > this.drawingCoordinates[1][2] ? this.drawingCoordinates[0][2] : this.drawingCoordinates[1][2];
+        for (let [key, value] of this.idPositionMap.entries()) {
+            if (value[0] >= minX && value[0] <= maxX && value[1] >= minY && value[1] <= maxY && value[2] >= minZ && value[2] <= maxZ) {
+                //console.log(key);
+                group.push(key)
+
+            }
+        }
+        console.log(group.length);
+        this.makeStateJSON(false, "", null, false, group);
     }
 
 
@@ -70,7 +154,7 @@ export class ObjectTracker_IMP {
                 //         console.log(annotation["props"])
                 this.colorStorage[annotation["id"]] = annotation["props"];
                 this.normalisedFields.set(annotation["id"], annotation["fields"])
-
+                this.idPositionMap.set(annotation["id"], annotation["point"]);
             }
             if (!this.nameColorMap.has(layer['name'])) {
                 this.nameColorMap.set(layer['name'], layer.annotations[0].props[0])
@@ -106,14 +190,14 @@ export class ObjectTracker_IMP {
     public getLayers() {
         return this.availableLayers;
     }
-    public getPosition(){
+    public getPosition() {
         return this.position;
     }
     public setPosAndDim(position: any, dimensions: any) {
         this.position = position;
         this.dimensions = dimensions;
     }
-    public makeStateJSON(colorByChanged: boolean = false, togglingSegment: string = "", highlightSegment: any = null, colorMapChanged: boolean = false) {
+    public makeStateJSON(colorByChanged: boolean = false, togglingSegment: string = "", highlightSegment: any = null, colorMapChanged: boolean = false, togglingGroup: string[] = [], selectionMode: boolean = false) {
         //console.log(this.availableLayers)
         //create layers array:
         let result = this.state.toJSON() //copy current state
@@ -126,33 +210,39 @@ export class ObjectTracker_IMP {
 
                 //the available layer is not yet in the state. add it to the layers.
                 let archivedLayer = this.availableLayers[key].layer
-                archivedLayer["archived"] = archivedLayer.type==="image" ? false : true
+                archivedLayer["archived"] = archivedLayer.type === "image" ? false : true
                 layer_res.push(archivedLayer)
             }
 
-            
+
             let tempEntry = this.normalisedFields.entries().next().value;
             //console.log(tempEntry[1])
-            if(tempEntry){
+            if (tempEntry) {
                 for (let i = 0; i < Object.keys(tempEntry[1]).length; i++) {
                     //console.log(Object.keys(tempEntry[1])[i])
                     this.colorByStrings.push(Object.keys(tempEntry[1])[i]);
                 }
             }
+            //selection layer to display meshes within a drawn box.
+            layer_res.push({
+                "type": "annotation", "source": "local://annotations", "tab": "annotations", "name": "selections",
+                "archived": false,
+                "tool": "annotateBoundingBox",
+            });
         } else {
             layer_res = result.layers;
         }
-        //match segment colours with annotation colours
+
         for (let layer of layer_res) {
 
-            if (layer.type == "annotation") {
+            if (layer.type === "annotation") {
                 layer["shaderControls"] = {
                     "colour_by": this.currColorBy
                 }
             }
             if (colorByChanged || colorMapChanged) {
 
-                if (layer.type == "segmentation") {
+                if (layer.type === "segmentation") {
                     let annotLayer = this.availableLayers[layer.name.split("_")[0]]
                     if (annotLayer) {
 
@@ -215,7 +305,34 @@ export class ObjectTracker_IMP {
                     }
                 }
             }
+            if (togglingGroup != []) {
+                if (layer.name === "selections") {
+                    //remove the box annotation from the view.
+                    layer.annotations = [];
+                }
+                console.log(togglingGroup)
+                for (let i = 0; i < togglingGroup.length; i++) {
+                    let segm = togglingGroup[i];
+                    console.log(segm)
+                    let layerName = this.idNameMap.get(segm);
+                    if (layer.type === "segmentation" && layer.name.split("_")[0] === layerName) {
+                        if (layer["archived"]) {
+                            layer["archived"] = false;
+                            //if it was archived, this has not been selected before, so we delete all the segments and only toggle the desired ones.
+                            layer["segments"] = [];
 
+                            //TODO: discuss what to do if it is already visible - do we remove the segments around the selected area?
+                        }
+                        if (layer["segments"]) {
+                            if (layer["segments"].indexOf(segm) < 0) {
+                                layer["segments"].push(segm);
+                            }
+                        } else {
+                            layer["segments"] = [segm]
+                        }
+                    }
+                }
+            }
             if (highlightSegment !== null) {
                 let layerName = this.idNameMap.get(highlightSegment.id);
                 if (layer.type == "segmentation" && layer.name.split("_")[0] == layerName) {
@@ -237,10 +354,13 @@ export class ObjectTracker_IMP {
                     }
                 }
             }
+
         }
+
         // console.log(this.normalisedFields);
         //console.log(layer_res)
         //add new active layers to the state, remove others
+
         let result2 = {
             "dimensions": this.firstRun ? this.dimensions : result["dimensions"],
             "position": this.firstRun ? this.position : result["position"],
@@ -248,8 +368,18 @@ export class ObjectTracker_IMP {
             "projectionOrientation": result["projectionOrientation"],
             "projectionScale": result["projectionScale"],
             "layers": layer_res,
-            "selectedLayer": result["selectedLayer"],
-            "layout": result["layout"],
+            "selectedLayer": selectionMode ? {
+                "visible": true,
+                "layer": "selections"
+            } : result["selectedLayer"],
+            "layout": {
+                "type": result["layout"]["type"] ? result["layout"]["type"] : "4panel", "crossSections": {
+                    "a": {
+                        "width": 2048,
+                        "height": 2048
+                    }
+                }
+            },
             "partialViewport": result["partialViewport"],
             "layerListPanel": this.firstRun ? {
                 "visible": true
@@ -259,9 +389,15 @@ export class ObjectTracker_IMP {
 
 
         }
+
         this.firstRun = false;
+        //try {
         this.state.reset()
         this.state.restoreState(result2)
+        //  } finally {
+        //    this.state.dispose();
+        //  }
+
         this.makeColourBoxes();
 
 
@@ -278,7 +414,7 @@ export class ObjectTracker_IMP {
         this.makeStateJSON(false, "", false, true);
     }
 
-    public doClickReaction(clickType: string, mouseX:number, mouseY:number) {
+    public doClickReaction(clickType: string, mouseX: number, mouseY: number) {
         //doClickReactions are called in mouse_bindings.ts as reactions on click. that is where default reactions can be disabled as well.
         switch (clickType) {
             case 'dblClick':
@@ -295,7 +431,7 @@ export class ObjectTracker_IMP {
                         let colorpicker = document.createElement('input');
                         colorpicker.type = 'color';
                         //console.log(event.pageX);
-                        colorpickerDiv.setAttribute("style", "left:"+mouseX+"px; top:"+mouseY+"px;")//  style.left=event.pageX +'';
+                        colorpickerDiv.setAttribute("style", "left:" + mouseX + "px; top:" + mouseY + "px;")//  style.left=event.pageX +'';
                         //colorpickerDiv.style.top = event.pageY + '';
                         colorpickerDiv.appendChild(colorpicker);
                         let closeButton = document.createElement('button');
@@ -314,7 +450,7 @@ export class ObjectTracker_IMP {
 
                 this.state
                 break;
-   
+
         }
     }
 
@@ -333,7 +469,7 @@ export class ObjectTracker_IMP {
                 name = div.innerHTML.split("_")[0]
             }
             if (this.nameColorMap.get(name) !== undefined) {
-                div.parentElement!.setAttribute("style", "background:" + this.nameColorMap.get(name)+" !important")
+                div.parentElement!.setAttribute("style", "background:" + this.nameColorMap.get(name) + " !important")
             } else {
                 div.setAttribute("style", "color:#aaa");
 

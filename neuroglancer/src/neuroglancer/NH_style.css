@@ -48,7 +48,7 @@
   filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='var( --main-bg-color)ccc', endColorstr='var( --main-bg-color)ccc',GradientType=0 ); /* IE6-9 */
     cursor: pointer;
     color: var(--main-color);
-    box-shadow: 1px 1px 1px #666;
+
     user-select: none;
   }
   
@@ -64,10 +64,42 @@
     border-bottom: 10px solid transparent;
   }
   
-  .neuroglancer-layer-list-panel-item:hover {
+
+.neuroglancer-layer-list-panel-item[data-archived=true] 
+.neuroglancer-layer-side-panel-name, 
+.neuroglancer-layer-list-panel-item[data-archived=true] .neuroglancer-icon svg {
+  color: #56595e !important;
+  stroke: #56595e !important;
+}
+
+
+.neuroglancer-layer-list-panel-item[data-archived=true] {
+  border-color: var(--friendly-border-color) !important;
+}
+
+.neuroglancer-layer-list-panel-item {
+  border: none !important;
+  border-radius:1.5pt;
+
+}
+.neuroglancer-layer-list-panel-item[data-archived=false] {
+  color: var(--main-color) !important;
+  background-color: var(--friendly-selected-border-color);
+}
+
+.neuroglancer-layer-list-panel-item[data-archived=false]:hover {
+  border-color: var(--friendly-selected-border-color);
+  background: var(--main-bg-color); /* Old browsers */
+background: -moz-linear-gradient(top, #dddddd 0%, var(--friendly-selected-border-color) 25%, var(--friendly-selected-border-color) 75%, #dddddd 100%); /* FF3.6+ */
+background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#dddddd), color-stop(25%,var(--friendly-selected-border-color) ), color-stop(75%,var(--friendly-selected-border-color) ), color-stop(100%,#dddddd)); /* Chrome,Safari4+ */
+background: -webkit-linear-gradient(top, #dddddd 0%,var(--friendly-selected-border-color) 25%,var(--friendly-selected-border-color)  75%,#dddddd 100%); /* Chrome10+,Safari5.1+ */
+background: -o-linear-gradient(top, #dddddd 0%,var(--friendly-selected-border-color)  25%,var(--friendly-selected-border-color)  75%,#dddddd 100%); /* Opera 11.10+ */
+background: -ms-linear-gradient(top, #dddddd 0%,var(--friendly-selected-border-color) 25%,var(--friendly-selected-border-color)  75%,#dddddd 100%); /* IE10+ */
+background: linear-gradient(to bottom, #dddddd 0%,var(--friendly-selected-border-color)  25%,var(--friendly-selected-border-color)  75%,#dddddd 100%); /* W3C */
+filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#eeeeee', endColorstr='#dddddd',GradientType=0 ); /* IE6-9 */
+}
+  .neuroglancer-layer-list-panel-item[data-archived=true]:hover {
     border-color: var(--friendly-border-color);
-    box-shadow: 1px 1px 1px #666;
-    
     background: var(--main-bg-color); /* Old browsers */
   background: -moz-linear-gradient(top, #dddddd 0%, #ffffff 25%, #ffffff 75%, #dddddd 100%); /* FF3.6+ */
   background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#dddddd), color-stop(25%,#ffffff), color-stop(75%,#ffffff), color-stop(100%,#dddddd)); /* Chrome,Safari4+ */
@@ -79,7 +111,7 @@
   }
   .db_li:hover {
     border-color: var(--friendly-border-color);
-    box-shadow: 1px 1px 1px #666;
+
     
     background: var(--main-bg-color); /* Old browsers */
   background: -moz-linear-gradient(top, #dddddd 0%, #ffffff 25%, #ffffff 75%, #dddddd 100%); /* FF3.6+ */
@@ -97,7 +129,7 @@
   
   .db_li:active {
     background: #eee;
-    box-shadow: inset 0 1px 1px #666;
+
   }
   
   .db_btn {
@@ -110,7 +142,6 @@
 
     cursor: pointer;
     
-    box-shadow: 2px 2px 3px #666;
     user-select: none;
   }
   .ngDefault {
@@ -190,12 +221,6 @@ html body {
   background-color: var( --main-bg-color) !important
 }
 
-.neuroglancer-layer-list-panel-item[data-archived=true] 
-.neuroglancer-layer-side-panel-name, 
-.neuroglancer-layer-list-panel-item[data-archived=true] .neuroglancer-icon svg {
-  color: #56595e !important;
-  stroke: #56595e !important;
-}
 
 .neuroglancer-tab-view-bar {
   background-color: var( --main-bg-color);
@@ -235,7 +260,7 @@ font-size: small;
 
 .neuroglancer-layer-list-panel-item-number {
   width: 14px !important;
-  border-radius: 1pt;
+  border-radius: 1.5pt;
   line-height:8pt;
   font-size:8px;
   margin: auto;
@@ -300,7 +325,7 @@ element.style {
   border-left: 1px solid var(--friendly-border-color);
   border-right:1px solid var( --friendly-border-color);
   border-top:none;
-  border-radius: 2pt;
+  border-radius: 1.5pt;
 }
 
 .neuroglancer-position-dimension[data-dropdown-visible=true] {
@@ -341,21 +366,6 @@ html, body, #neuroglancer-container{
 .neuroglancer-position-dimension-name {
   color: var(--highlight-info-color);
   padding-left: 2px;
-}
-
-.neuroglancer-layer-list-panel-item[data-archived=true] {
-  border-color: var(--friendly-border-color) !important;
-}
-
-.neuroglancer-layer-list-panel-item {
-
-  border-radius:2pt;
-  box-shadow: 1px 1px 1px #666;
-}
-.neuroglancer-layer-list-panel-item[data-archived=false] {
-  border-color: var(--friendly-selected-border-color);
-  color: var(--main-color);
-  background-color: var(--friendly-selected-border-color);
 }
 
 
@@ -462,4 +472,8 @@ height:25px;
 );
   background-color: var(--main-bg-color);
   border-radius: 1.5px;
+}
+
+.neuroglancer-display-dimensions-widget{
+  font-size:small !important;
 }
