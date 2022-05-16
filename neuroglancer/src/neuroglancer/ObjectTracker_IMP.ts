@@ -5,7 +5,7 @@ interface AvailableLayers {
     [key: string]: any
 }
 export class ObjectTracker_IMP {
-
+    
     private currColorBy: number;
     private colorByStrings: string[]
     private static instance: ObjectTracker_IMP;
@@ -32,6 +32,25 @@ export class ObjectTracker_IMP {
     private areaModeOn: boolean;
     private drawingCoordinates: any[]
 
+    private isDrawingMode: boolean;
+    private isGroupingMode: boolean;
+    private currGroup: string[];
+    private layerToBeAdded: any;
+    private annotationShaderString: string;
+
+ //  private segmentationDisplayState: SegmentationDisplayState;
+    private lastColorId: any[];
+    /*private xDrawings: Map<string, Drawing>;
+    private yDrawings: Map<string, Drawing>;
+    private zDrawings: Map<string, Drawing>;
+
+    private currZDrawing: Drawing;
+    private currYDrawing: Drawing;
+    private currZDrawing:Drawing;
+
+    private xCanvas: HTMLCanvasElement;
+    private yCanvas: HTMLCanvasElement;
+    private zCanvas: HTMLCanvasElement;*/
     private constructor() {
         this.availableLayers = {};
         this.colorStorage = {};
@@ -48,9 +67,54 @@ export class ObjectTracker_IMP {
         this.dimensions = [];
         this.areaModeOn = false;
         this.drawingCoordinates = [[], []];
-
+        this.isDrawingMode = false;
+        this.isGroupingMode = false;
+        this.currGroup = [];
+        this.layerToBeAdded = null;
+        this.annotationShaderString= "";
+        this.lastColorId = []
+        /*  this.xDrawings = new Map<string, Drawing>();
+          this.yDrawings = new Map<string, Drawing>();
+          this.zDrawings = new Map<string, Drawing>();
+  
+          this.xCanvas = document.createElement("canvas");
+          this.yCanvas = document.createElement("canvas");
+          this.zCanvas = document.createElement("canvas");
+          this.xCanvas.id = "yz_canv";
+          this.yCanvas.id = "xz_canv";
+          this.zCanvas.id = "xy_canv";
+  
+          this.xCanvas.style.pointerEvents = "none";
+          this.yCanvas.style.pointerEvents = "none";
+          this.zCanvas.style.pointerEvents = "none";
+          document.getElementById("neuroglancer-container")?.appendChild(this.xCanvas);
+          document.getElementById("neuroglancer-container")?.appendChild(this.yCanvas);
+          document.getElementById("neuroglancer-container")?.appendChild(this.zCanvas);*/
     }
 
+    /*private activateCanvas(dim: string){
+       switch(dim){
+           case "x":
+               break;
+            case "y":
+                break;
+            case "z":
+                break;
+            default:
+       }
+        
+    }*/
+
+  
+  
+    public getIsDrawingMode() {
+        return this.isDrawingMode;
+    }
+    public toggleIsDrawingMode() {
+        this.isDrawingMode = !this.isDrawingMode;
+        
+        console.log("is Drawing mode: " + this.isDrawingMode)
+    }
     public toggleAreaMode() {
         this.areaModeOn = !this.areaModeOn;
         console.log("areaModeOn: " + this.areaModeOn);
@@ -159,6 +223,9 @@ export class ObjectTracker_IMP {
             if (!this.nameColorMap.has(layer['name'])) {
                 this.nameColorMap.set(layer['name'], layer.annotations[0].props[0])
             }
+            if(this.annotationShaderString===""){
+                this.annotationShaderString = layer.shader;
+            }
 
         }
         //colour the segmentation the same as annotation.
@@ -174,6 +241,7 @@ export class ObjectTracker_IMP {
             }
             //         console.log(layer)
         }
+        console.log(layer)
         this.availableLayers[layer.name] = { "layer": layer, "archived": archived }
         //  console.log(this.colorStorage)
     }
@@ -211,6 +279,16 @@ export class ObjectTracker_IMP {
                 //the available layer is not yet in the state. add it to the layers.
                 let archivedLayer = this.availableLayers[key].layer
                 archivedLayer["archived"] = archivedLayer.type === "image" ? false : true
+
+                if(archivedLayer.type==="annotation"){
+                    archivedLayer["annotation_relationships"]=[archivedLayer["name"]+"_mesh"];
+                   //archivedLayer["linked_segmentation_layer"]={archivedLayer.name+"_mesh": 'skeletons'};
+                    //archivedLayer["filter_by_segmentation"]=[archivedLayer["name"]+"_mesh"];
+                    //for(let l = 0; l < archivedLayer.annotations.length;l++){
+                    //    archivedLayer.annotations[l]["segments"] = [[archivedLayer.annotations[l].id]]
+                    //}
+                }
+                console.log(archivedLayer)
                 layer_res.push(archivedLayer)
             }
 
@@ -232,7 +310,9 @@ export class ObjectTracker_IMP {
         } else {
             layer_res = result.layers;
         }
-
+        if(this.layerToBeAdded !== null){
+            layer_res.push(this.layerToBeAdded);
+        }
         for (let layer of layer_res) {
 
             if (layer.type === "annotation") {
@@ -243,6 +323,7 @@ export class ObjectTracker_IMP {
             if (colorByChanged || colorMapChanged) {
 
                 if (layer.type === "segmentation") {
+                    if(layer.hasAnnoConnection){
                     let annotLayer = this.availableLayers[layer.name.split("_")[0]]
                     if (annotLayer) {
 
@@ -264,6 +345,7 @@ export class ObjectTracker_IMP {
                         }
 
                     }
+                }
                     //console.log(layer)
                 }
 
@@ -285,6 +367,19 @@ export class ObjectTracker_IMP {
                 }
 
             }
+            let toggling_group: string[] = [];
+            if(layer.imp_type ==="group"){
+                //this is an annotation layer, and we always want to display all corresponding meshes.
+                for(let i =0; i < layer.annotations.length; i++){
+                    /*let annot = {
+                    "point": this.idPositionMap.get(this.currGroup[i]),
+                    "type": "point",
+                    "id": this.currGroup[i],
+                    "description": this.currGroup[i],
+                    "prop*/
+                    toggling_group.push(layer.annotations[i].id);
+                }
+            }
             if (togglingSegment !== "") {
                 let layerName = this.idNameMap.get(togglingSegment);
                 if (layer.type == "segmentation" && layer.name.split("_")[0] == layerName) {
@@ -305,14 +400,20 @@ export class ObjectTracker_IMP {
                     }
                 }
             }
-            if (togglingGroup != []) {
+            if (togglingGroup.toString() !== "" || toggling_group.toString()  !== "") {
+                let  groupToUse = []
+                if(togglingGroup.toString() !== "" ) {
+                    groupToUse = togglingGroup;
+                } else {
+                    groupToUse = toggling_group;
+                }
                 if (layer.name === "selections") {
                     //remove the box annotation from the view.
                     layer.annotations = [];
                 }
-                console.log(togglingGroup)
-                for (let i = 0; i < togglingGroup.length; i++) {
-                    let segm = togglingGroup[i];
+                console.log(groupToUse.toString())
+                for (let i = 0; i < groupToUse.length; i++) {
+                    let segm = groupToUse[i];
                     console.log(segm)
                     let layerName = this.idNameMap.get(segm);
                     if (layer.type === "segmentation" && layer.name.split("_")[0] === layerName) {
@@ -357,8 +458,10 @@ export class ObjectTracker_IMP {
 
         }
 
+
+    
         // console.log(this.normalisedFields);
-        //console.log(layer_res)
+        console.log(layer_res)
         //add new active layers to the state, remove others
 
         let result2 = {
@@ -414,42 +517,50 @@ export class ObjectTracker_IMP {
         this.makeStateJSON(false, "", false, true);
     }
 
+   // public hoverSegment(id_in:string, goIn:boolean){
+
+   // }
+    private getMeshIDFromElement() {
+        const allActiveLayers = document.getElementsByClassName('neuroglancer-layer-item-value');
+        for (let i = 0; i < allActiveLayers.length; i++) {
+            if (allActiveLayers[i].textContent!.indexOf("#") < 0 && allActiveLayers[i].textContent!.indexOf(".") < 0 && allActiveLayers[i].textContent! !== "") {
+                //mesh was double clicked
+                //make colour picker
+                return (allActiveLayers[i].textContent);
+            }
+        }
+        return null;
+    }
     public doClickReaction(clickType: string, mouseX: number, mouseY: number) {
         //doClickReactions are called in mouse_bindings.ts as reactions on click. that is where default reactions can be disabled as well.
         switch (clickType) {
             case 'dblClick':
-                console.log("dblClick");
-                const allActiveLayers = document.getElementsByClassName('neuroglancer-layer-item-value');
-                for (let i = 0; i < allActiveLayers.length; i++) {
-                    if (allActiveLayers[i].textContent!.indexOf("#") < 0 && allActiveLayers[i].textContent!.indexOf(".") < 0 && allActiveLayers[i].textContent! !== "") {
-                        //mesh was double clicked
-                        //make colour picker
-                        let id = allActiveLayers[i].textContent;
-                        let colorpickerDiv = document.createElement('div');
-                        colorpickerDiv.className = 'imp-color-picker-container';
-
-                        let colorpicker = document.createElement('input');
-                        colorpicker.type = 'color';
-                        //console.log(event.pageX);
-                        colorpickerDiv.setAttribute("style", "left:" + mouseX + "px; top:" + mouseY + "px;")//  style.left=event.pageX +'';
-                        //colorpickerDiv.style.top = event.pageY + '';
-                        colorpickerDiv.appendChild(colorpicker);
-                        let closeButton = document.createElement('button');
-                        closeButton.textContent = "X";
-                        closeButton.addEventListener("click", () => {
-                            //console.log("...")
-                            this.changeSegmentColor(colorpicker.value, id!);
-                            colorpickerDiv.textContent = '';
-                        })
-
-                        colorpickerDiv.appendChild(closeButton);
-                        document.getElementById("neuroglancer-container")!.appendChild(colorpickerDiv);
-
-                    }
+                //console.log("dblClick");
+                //mesh was double clicked
+                //make colour picker
+                let id = this.getMeshIDFromElement();
+                if (id == null) {
+                    return;
                 }
+                let colorpickerDiv = document.createElement('div');
+                colorpickerDiv.className = 'imp-color-picker-container';
 
-                this.state
-                break;
+                let colorpicker = document.createElement('input');
+                colorpicker.type = 'color';
+                //console.log(event.pageX);
+                colorpickerDiv.setAttribute("style", "left:" + mouseX + "px; top:" + mouseY + "px;")//  style.left=event.pageX +'';
+                //colorpickerDiv.style.top = event.pageY + '';
+                colorpickerDiv.appendChild(colorpicker);
+                let closeButton = document.createElement('button');
+                closeButton.textContent = "X";
+                closeButton.addEventListener("click", () => {
+                    //console.log("...")
+                    this.changeSegmentColor(colorpicker.value, id!);
+                    colorpickerDiv.textContent = '';
+                })
+
+                colorpickerDiv.appendChild(closeButton);
+                document.getElementById("neuroglancer-container")!.appendChild(colorpickerDiv);
 
         }
     }
@@ -486,14 +597,27 @@ export class ObjectTracker_IMP {
         // console.log(this.visibleSegments)
     }
     public toggleSegment(id: string) {
-
+        console.log(id);
         //console.log(this.visibleSegments)
         this.makeStateJSON(false, id)
     }
 
     public changeSegmentColor(color: string, id: string) {
         // console.log(color + " - " + id)
-        this.makeStateJSON(false, "", { "color": color, "id": id })
+        var tinycolor = require("tinycolor2");
+        if(color===this.lastColorId[0] && id === this.lastColorId[1]) return;
+            
+        if(color==="highlight"){
+            let newColor = tinycolor(this.getColorForId(id)).brighten(20).toString();
+            this.makeStateJSON(false, "", { "color": newColor, "id": id })
+            this.lastColorId[0]=color;
+            this.lastColorId[1]=id;
+        } else {
+            this.makeStateJSON(false, "", { "color": color, "id": id })
+            this.lastColorId[0]=color;
+            this.lastColorId[1]=id;
+        }
+       
     }
     public updateAttribute(value: number) {
         //finds the current colour of the annotation
@@ -529,4 +653,142 @@ export class ObjectTracker_IMP {
     public setLicense(license: boolean) {
         this.showsLicense = license;
     }
+
+   // public updateSlice(dim: string) {
+        /*     let els = document.getElementsByClassName("neuroglancer-position-dimension-coordinate");
+             let el;
+             let map;
+             let canvas;
+             switch (dim) {
+                 case "x":
+                     el = els[0] as HTMLInputElement;
+                     map = this.xDrawings;
+                     canvas = this.xCanvas;
+                     can
+                     break;
+                 case "y":
+                     el = els[1] as HTMLInputElement;
+                     map = this.yDrawings;
+                     canvas = this.yCanvas;
+                     break;
+                 case "z":
+                     el = els[2] as HTMLInputElement;
+                     map = this.zDrawings;
+                     break;
+                 default:
+                     el = null;
+                     map = null;
+                     canvas = this.zCanvas;
+                     console.log(dim + " not valid. ")
+             }
+             if(map?.has(el!.value)){
+                 console.log("We have a drawing at " + el!.value);
+                 map.get(el!.value)?.show();
+             }*/
+  //  }
+
+    public getColorForId(id:string){
+        return this.colorStorage[id][this.currColorBy];
+    }
+    public toggleGroupingMode() {
+        this.isGroupingMode = !this.isGroupingMode;
+        console.log("Grouping mode : " + this.isGroupingMode)
+        if (!this.isGroupingMode && this.currGroup.length > 0) {
+            //build an annotation layer with the selected ids
+          
+            let annotArr: any[] = [];
+            for (let i = 0; i < this.currGroup.length; i++) {
+                let annot = {
+                    "point": this.idPositionMap.get(this.currGroup[i]),
+                    "type": "point",
+                    "id": this.currGroup[i],
+                    "description": this.currGroup[i] + " - " + this.idNameMap.get(this.currGroup[i]),
+                    "props": this.colorStorage[this.currGroup[i]]
+                };
+                
+                annotArr.push(annot);
+            }
+
+             this.layerToBeAdded= {
+                "type": "annotation",
+                "imp_type": "group",
+                "source": "local://annotations",
+                "tab": "annotations",
+                "annotationProperties":     [  {
+                    "id": "color",
+                    "type": "rgb",
+                    "default": "#ff0000"
+                  },
+                  {
+                    "id": "cc",
+                    "type": "rgb",
+                    "default": "#ffff00"
+                  }],
+                "shader":this.annotationShaderString,
+                "name": "Group",
+                "visible": true,
+                "annotations": annotArr
+            };
+            this.makeStateJSON(true,"",null,false,[],false);
+            this.layerToBeAdded = null;
+            this.currGroup = [];
+        }
+    }
+
+    public tryAddToGroup() {
+        let id = this.getMeshIDFromElement();
+        if(id===null){
+            return;
+        }
+        if (this.currGroup.indexOf(id) >= 0) {
+            this.currGroup.splice(this.currGroup.indexOf(id), 1)
+        } else if(id.length>1) {
+            this.currGroup.push(id);
+        }
+        console.log(this.currGroup);
+    }
+    public isGrouping() {
+        return this.isGroupingMode;
+    }
+ //   public addDrawing(axis: string) {
+        /*   console.log("adding drawing on axis: " + axis);
+           console.log("Dim Value: ");
+           let dimVal = "";
+           let els = document.getElementsByClassName("neuroglancer-position-dimension-coordinate");
+           let el;
+           let map;
+           switch (axis) {
+               case "xy":
+                   el = els[2] as HTMLInputElement;
+                   map = this.zDrawings;
+                   break;
+               case "xz":
+                   el = els[1] as HTMLInputElement;
+                   map = this.yDrawings;
+                   break;
+               case "yz":
+                   el = els[0] as HTMLInputElement;
+                   map = this.xDrawings;
+                   break;
+               default:
+                   el = null;
+                   map = null;
+                   console.log(axis + " not valid. ")
+           }
+           if (el !== null) {
+               dimVal = el.value.toString();
+           } else {
+               return;
+           }
+           if (map !== null) {
+               if (map.has(dimVal)) {
+                   map.get(dimVal)!.show();
+               } else {
+                   let drawing = new Drawing(document.getElementsByTagName("canvas")[0], document.getElementById(axis)!, axis, dimVal);
+                   map.set(dimVal, drawing);
+               }
+           }
+   
+           console.log(map)*/
+  //  }
 }

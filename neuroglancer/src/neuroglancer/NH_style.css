@@ -28,27 +28,17 @@
     background-color: var(--main-bg-color);
   }
   
-  .db_li {
+  .db-li {
     position: relative;
     padding-left: 15px;
-    width: 80%;
-    font-size: small;
+    width: 85%;
+    font-size: x-small;
     height:25px;
     line-height: 25px;
-    margin: 5px;
-    border: 1px solid var( --friendly-border-color);
+    margin-top: 5px;
+    margin-left: 2px;
     border-radius: 1.5px;
-    background: var( --main-bg-color); /* Old browsers */
-  background: -moz-linear-gradient(top, var( --main-bg-color)ccc 0%, #ffffff 25%, #ffffff 75%, var( --main-bg-color)ccc 100%); /* FF3.6+ */
-  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,var( --main-bg-color)ccc), color-stop(25%,#ffffff), color-stop(75%,#ffffff), color-stop(100%,var( --main-bg-color)ccc)); /* Chrome,Safari4+ */
-  background: -webkit-linear-gradient(top, var( --main-bg-color)ccc 0%,#ffffff 25%,#ffffff 75%,var( --main-bg-color)ccc 100%); /* Chrome10+,Safari5.1+ */
-  background: -o-linear-gradient(top, var( --main-bg-color)ccc 0%,#ffffff 25%,#ffffff 75%,var( --main-bg-color)ccc 100%); /* Opera 11.10+ */
-  background: -ms-linear-gradient(top, var( --main-bg-color)ccc 0%,#ffffff 25%,#ffffff 75%,var( --main-bg-color)ccc 100%); /* IE10+ */
-  background: linear-gradient(to bottom, var( --main-bg-color)ccc 0%,#ffffff 25%,#ffffff 75%,var( --main-bg-color)ccc 100%); /* W3C */
-  filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='var( --main-bg-color)ccc', endColorstr='var( --main-bg-color)ccc',GradientType=0 ); /* IE6-9 */
     cursor: pointer;
-    color: var(--main-color);
-
     user-select: none;
   }
   
@@ -108,28 +98,6 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#eeeeee', end
   background: -ms-linear-gradient(top, #dddddd 0%,#ffffff 25%,#ffffff 75%,#dddddd 100%); /* IE10+ */
   background: linear-gradient(to bottom, #dddddd 0%,#ffffff 25%,#ffffff 75%,#dddddd 100%); /* W3C */
   filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#eeeeee', endColorstr='#dddddd',GradientType=0 ); /* IE6-9 */
-  }
-  .db_li:hover {
-    border-color: var(--friendly-border-color);
-
-    
-    background: var(--main-bg-color); /* Old browsers */
-  background: -moz-linear-gradient(top, #dddddd 0%, #ffffff 25%, #ffffff 75%, #dddddd 100%); /* FF3.6+ */
-  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#dddddd), color-stop(25%,#ffffff), color-stop(75%,#ffffff), color-stop(100%,#dddddd)); /* Chrome,Safari4+ */
-  background: -webkit-linear-gradient(top, #dddddd 0%,#ffffff 25%,#ffffff 75%,#dddddd 100%); /* Chrome10+,Safari5.1+ */
-  background: -o-linear-gradient(top, #dddddd 0%,#ffffff 25%,#ffffff 75%,#dddddd 100%); /* Opera 11.10+ */
-  background: -ms-linear-gradient(top, #dddddd 0%,#ffffff 25%,#ffffff 75%,#dddddd 100%); /* IE10+ */
-  background: linear-gradient(to bottom, #dddddd 0%,#ffffff 25%,#ffffff 75%,#dddddd 100%); /* W3C */
-  filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#eeeeee', endColorstr='#dddddd',GradientType=0 ); /* IE6-9 */
-  }
-  
-  .db_li:hover:before {
-    border-left-color: #777;
-  }
-  
-  .db_li:active {
-    background: #eee;
-
   }
   
   .db_btn {
@@ -194,8 +162,8 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#eeeeee', end
     z-index:4000;
     overflow-y: scroll;
     max-height:80vh;
-    margin-top:25px;
-    right:2px;
+    margin-top:24px;
+    right:0;
     padding-bottom:5px;
     border-radius: 1.5px;
   }
@@ -476,4 +444,70 @@ height:25px;
 
 .neuroglancer-display-dimensions-widget{
   font-size:small !important;
+}
+
+.draw-btn {
+  height:25px !important; 
+  width: 25px !important;
+  font-size: xx-small !important;
+}
+
+.neuroglancer-annotation-list-entry {
+  border: 1px solid var(--friendly-border-color);
+}
+.neuroglancer-annotation-hover {
+  border-color: var(--friendly-blue) !important
+}
+
+.neuroglancer-annotation-selected {
+  border-color:var(--friendly-selected-border-color)
+}
+
+.neuroglancer-annotation-hover.neuroglancer-annotation-selected {
+  border-color: var(--friendly-selected-border-color)
+}
+
+.btn-group {
+  border-radius:2pt !important;
+}
+
+.neuroglancer-help-scroll-container .dt {
+  color: var(--highlight-info-color) !important;
+}
+
+.neuroglancer-help-scroll-container h2 {
+  background-color: var(--friendly-selected-border-color) !important;
+  border-radius: 1px;
+}
+
+
+/*proteomics*/
+.proteomics-table {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  /*grid-auto-columns: 150px;*/
+  border-color: var(--friendly-blue);
+  border-radius: 1pt;
+  overflow-y: scroll;
+  column-gap: 2px;
+  height:100%;
+  row-gap: 1px;
+}
+
+.proteomics-table > div {
+  word-wrap: break-word;
+  min-width: 0;
+  /*width:160px;*/
+  background-color: var(--hatch-secondary-color);
+  padding:3px;
+}
+
+#cloned-proteomics-content {
+  padding:5px 5px 5px 5px;
+  height: 100%;
+  background-color: var(--main-bg-color);
+}
+
+.proteomics-table-head-item{
+  border-bottom: 1px solid var(--friendly-blue);
 }

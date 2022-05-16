@@ -69,7 +69,7 @@ import { TrackableScaleBarOptions } from 'neuroglancer/widget/scale_bar';
 import { RPC } from 'neuroglancer/worker_rpc';
 import { cancellableFetchOk, responseJson } from './util/http_request';
 import { ObjectTracker_IMP } from './ObjectTracker_IMP';
-import { PlaceBoundingBoxTool } from './ui/annotations';
+
 
 declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 
@@ -356,6 +356,7 @@ export class Viewer extends RefCounted implements ViewerState {
   constructor(public display: DisplayContext, options: Partial<ViewerOptions> = {}) {
     super();
 
+
     const {
       dataContext = new DataManagementContext(display.gl, display, options.bundleRoot),
       visibility = new WatchableVisibilityPriority(WatchableVisibilityPriority.VISIBLE),
@@ -461,6 +462,7 @@ export class Viewer extends RefCounted implements ViewerState {
     this.registerDisposer(setupPositionDropHandlers(element, this.navigationState.position));
 
     this.state = new TrackableViewerState(this);
+ 
   }
 
   private updateShowBorders() {
@@ -498,11 +500,28 @@ export class Viewer extends RefCounted implements ViewerState {
     colorByDiv.id = "imp-color-by-div";
     colorByDiv.style.display = "flex";
     //colorByDiv.style.alignItems='stretch';
-    topRow.appendChild(colorByDiv)
+    topRow.appendChild(colorByDiv);
+
+    //create a "group" button, which will enable grouping of segments in a new layer.
+    let button = document.createElement("div");
+    button.className = "btn-group neuroglancer-icon";
+    button.innerText = "Create Group...";
+    button.title = "Toggle Group mode. When toggled on, CTRL+Click to (de)select meshes. Click button again to add group to a new layer.";
+    button.onclick = () => {
+      ObjectTracker_IMP.getInstance().toggleGroupingMode();
+      console.log(ObjectTracker_IMP.getInstance().isGrouping());
+      if (ObjectTracker_IMP.getInstance().isGrouping()) {
+        button.innerText = "Finished creating group";
+      } else {
+        button.innerText = "Create Group...";
+      }
+    }
+    topRow.appendChild(button);
 
     const mousePositionWidget = this.registerDisposer(new MousePositionWidget(
       document.createElement('div'), this.mouseState, this.navigationState.coordinateSpace));
     mousePositionWidget.element.style.flex = '1';
+
     mousePositionWidget.element.style.alignSelf = 'center';
     this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
       this.uiControlVisibility.showLocation, mousePositionWidget.element));
@@ -703,6 +722,9 @@ export class Viewer extends RefCounted implements ViewerState {
     };
     updateVisibility();
     this.registerDisposer(this.visibility.changed.add(updateVisibility));
+
+
+ 
   }
 
   /**
@@ -742,11 +764,12 @@ export class Viewer extends RefCounted implements ViewerState {
        });
      }*/
 
+
     this.bindAction('color-picker', () => {
+      
       ObjectTracker_IMP.getInstance().doClickReaction('dblClick', this.mouseState.pageX, this.mouseState.pageY);
     })
     this.bindAction('toggle-mesh', () => {
-      //console.log(this.mouseState.pickedAnnotationId)
       if (this.mouseState.pickedAnnotationId) {
         ObjectTracker_IMP.getInstance().toggleSegment(this.mouseState.pickedAnnotationId)
       }
@@ -783,15 +806,28 @@ export class Viewer extends RefCounted implements ViewerState {
       });
     }
 
-  
 
-    //this.bindAction('zoom-via-wheel', () => {
-    //    ObjectTracker_IMP.getInstance().updateScale();
-    //})
+    /*this.bindAction('z+1-via-wheel', () => {
+      ObjectTracker_IMP.getInstance().updateSlice("z");
+    })
+
+    this.bindAction('y+1-via-wheel', () => {
+      ObjectTracker_IMP.getInstance().updateSlice("y");
+    })
+
+    this.bindAction('x+1-via-wheel', () => {
+      ObjectTracker_IMP.getInstance().updateSlice("x");
+    })*/
+
     this.bindAction('annotate', () => {
-      
+
+      if (ObjectTracker_IMP.getInstance().getIsDrawingMode()) {
+        console.log("should draw")
+      } else if(ObjectTracker_IMP.getInstance().isGrouping()){
+        ObjectTracker_IMP.getInstance().tryAddToGroup()
+      }else{
         const selectedLayer = this.selectedLayer.layer;
-        
+
         if (selectedLayer === undefined) {
           StatusMessage.showTemporaryMessage('The annotate command requires a layer to be selected.');
           return;
@@ -802,13 +838,14 @@ export class Viewer extends RefCounted implements ViewerState {
           StatusMessage.showTemporaryMessage(`The selected layer (${JSON.stringify(selectedLayer.name)}) does not have an active annotation tool.`);
           return;
         }
-       
+
         userLayer.tool.value.trigger(this.mouseState);
-        
-        if(ObjectTracker_IMP.getInstance().isAreaMode()) {
+
+        if (ObjectTracker_IMP.getInstance().isAreaMode()) {
           console.log(userLayer.tool.value.mouseState);
           ObjectTracker_IMP.getInstance().setCornerDrawing(userLayer.tool.value.mouseState.position);
         }
+      }
     });
 
     this.bindAction('select-area-mode', () => {
@@ -909,7 +946,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
   async loadDBsetIntoNeuroglancer(dataset: any) {
     if (dataset.stateFile.exists) {
-      console.log("Has state file")
+      //console.log("Has state file")
       let path = dataset.stateFile.path;
       StatusMessage
         .forPromise(
@@ -943,7 +980,7 @@ export class Viewer extends RefCounted implements ViewerState {
         //if a header json exists, the correct posistion for the normalized brightness/contrast value is used. if no file is present, best guess defaults are used, which
         //are likely not great.
         const headerdata = await (response.json());
-        console.log(headerdata)
+        //console.log(headerdata)
         if (!(headerdata.mean === 0 && headerdata.min === 0 && headerdata.max === 0 || headerdata.max < headerdata.min)) {
           shaderstring = '#uicontrol invlerp normalized(range=[' + (headerdata.min - headerdata.max) + ',' + (headerdata.max + headerdata.min) + '], window=[' + (headerdata.min - headerdata.max) + ',' + (headerdata.max + headerdata.min) + '])';
         }
@@ -970,8 +1007,10 @@ export class Viewer extends RefCounted implements ViewerState {
       let names = []
       let colours = []
       if (dataset.layers) {
+        //console.log(dataset.layers)
         for (let layer of dataset.layers) {
-          if (layer) {
+          console.log(layer)
+          if (layer && layer.type =="all") {
 
             //fetch the json for the annotations 
             const response = await fetch(layer.path, { method: "GET" });
@@ -982,11 +1021,11 @@ export class Viewer extends RefCounted implements ViewerState {
             }
 
             let resText = await (response.text())
-
-            let re = new RegExp('(?<=\>)(.*?)(.json)', 'g');  //parses the resulting page for the file names present in that folder, format is a href="...."
+            console.log(resText)
+            let re = new RegExp('(?<=\>)(.*?)(.json)', 'g');  //parses the resulting page for the file names present in that folder
 
             let sublayers = [...resText.matchAll(re)]
-
+            console.log(sublayers)
             let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
             let meshes = [...resText.matchAll(re1)]
             //console.log(meshes)
@@ -1051,6 +1090,9 @@ export class Viewer extends RefCounted implements ViewerState {
                 ObjectTracker_IMP.getInstance().updateColormap(selectEl.value)
               })
             }
+
+
+
             //fetch each layer
             for (let sublayer of sublayers) {
               let colour = ""
@@ -1082,7 +1124,7 @@ export class Viewer extends RefCounted implements ViewerState {
                 }
                 shaderstring += "\n}"
                 const newLayer = {
-                  "type": layer.type, "source": "local://annotations", "tab": "annotations", "name": sublayer[0].split(".json")[0],
+                  "type": "annotation", "source": "local://annotations", "tab": "annotations", "name": sublayer[0].split(".json")[0],
                   "shader": shaderstring,
                   "annotationProperties": annotationProperties,
                   "annotations": annots,
@@ -1096,17 +1138,23 @@ export class Viewer extends RefCounted implements ViewerState {
                 //console.log(newLayer)
                 //ObjectTracker_IMP.getInstance().addNameID(sublayer[0].split(".json")[0],annots[0].id) //TODO: Make_better!
                 ObjectTracker_IMP.getInstance().addLayer(newLayer, false)
-
               }
-
-
 
               /*try to load the mesh layer if available */
               for (let mesh of meshes) {
+    
                 if (mesh[1] === sublayer[0].split(".json")[0]) {
                   const meshlayer = {
                     "type": "segmentation",
-                    "source": "precomputed://" + layer.path + mesh[0],
+                    "hasAnnoConnection": true,
+                    "source": {
+                      "url": "precomputed://" + layer.path + mesh[0],
+                      "transform": {
+                        "outputDimensions":dimensions,
+                      
+                        "inputDimensions":dimensions
+                      }
+                      },
                     "tab": "segments",
                     "segments": [],
                     "segmentDefaultColor": colour,
@@ -1120,6 +1168,42 @@ export class Viewer extends RefCounted implements ViewerState {
             }
             //console.log(ObjectTracker_IMP.getInstance().getLayers())
 
+          } else {
+            //layer type segment. this can be done better.
+            const response = await fetch(layer.path, { method: "GET" });
+
+            if (!response.ok) {
+              console.log("Response is not ok: " + response.json());
+              continue;
+            }
+
+            let resText = await (response.text())
+            //console.log(resText)
+            let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
+            let meshes = [...resText.matchAll(re1)]
+            for (let mesh of meshes) {   
+                const meshlayer = {
+                  "type": "segmentation",
+                  "hasAnnoConnection": false,
+                  "source": {
+                    "url": "precomputed://" + layer.path + mesh[0],
+                    "transform": {
+                      "outputDimensions":dimensions,
+                    
+                      "inputDimensions":dimensions
+                    }
+                    },
+                  "tab": "rendering",
+                  "saturation": 0.7,
+                  "segments": [],
+                  "segmentDefaultColor": "darkblue",
+                  "name": mesh[0],
+                  "visible": true
+                };
+                ObjectTracker_IMP.getInstance().addLayer(meshlayer, false)
+
+              
+            }
           }
         }
       }
@@ -1153,45 +1237,34 @@ export class Viewer extends RefCounted implements ViewerState {
 
       if (dataset.proteomics.path) {
         let protTable = document.createElement("table")
-        protTable.id = "proteomics-table"
-
+        protTable.className = "proteomics-table"
+        
         responseElement.append(protTable)
 
-        let tableHead = document.createElement("thead")
 
-        let trEl_head = document.createElement("tr")
-        trEl_head.className = "proteomics-row"
-        trEl_head.id = "protTableHeadRow"
-        tableHead.append(trEl_head)
-        protTable.append(tableHead)
-        //table body
-        let tbodyEl = document.createElement("tbody")
-        tbodyEl.id = "protTableBody"
-        protTable.append(tbodyEl)
+        let hasHead = false;
         const response = await fetch(dataset.proteomics.path, { method: "GET" });
         const res = await response.json();
 
         const keys = []
         for (const item of res) {
           //fill the header row with the keys in the table
-          if (trEl_head !== null && trEl_head.childElementCount == 0) {
-            trEl_head.innerHTML = ''; //reset table
+          if (!hasHead) {
+            //trEl_head.innerHTML = ''; //reset table
             for (const key of Object.keys(item)) {
-              let tdEl = document.createElement("td")
+              let tdEl = document.createElement("div")
               tdEl.textContent = key
-              trEl_head.append(tdEl)
+              tdEl.className="proteomics-table-head-item"
+              protTable.append(tdEl)
               keys.push(key)
             }
+            hasHead =true;
           }
-          let rowEl = document.createElement("tr")
           for (const key of keys) {
-            let tdEl1_ = document.createElement("td")
+            let tdEl1_ = document.createElement("div")
             tdEl1_.textContent = item[key]
-            rowEl.append(tdEl1_)
-          }
-
-          if (tbodyEl !== null) {
-            tbodyEl.append(rowEl)
+            tdEl1_.title = item[key];
+            protTable.append(tdEl1_)
           }
         }
 
@@ -1270,7 +1343,7 @@ export class Viewer extends RefCounted implements ViewerState {
       db_panel.id = "db_panel";
       const closeButton = document.createElement('button');
       closeButton.textContent = "X";
-      closeButton.className = "db_btn";
+      closeButton.className = "neuroglancer-icon btn-group db_btn";
       closeButton.onclick = () => {
         if (db_panel !== null) {
           db_panel.style.display = "none"
@@ -1287,7 +1360,7 @@ export class Viewer extends RefCounted implements ViewerState {
       resultList.className = "db_ul";
       for (var i = 0; i < this.datasets.length; i++) {
         var el = document.createElement('li')
-        el.className = "db_li";
+        el.className = "neuroglancer-icon btn-group db-li";
         el.textContent = this.datasets[i].name;
 
 
