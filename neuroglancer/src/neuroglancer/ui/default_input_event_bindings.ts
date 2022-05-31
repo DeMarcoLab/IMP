@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import { map } from 'lodash';
 import {EventActionMap} from 'neuroglancer/util/event_action_map';
 import {InputEventBindings} from 'neuroglancer/viewer';
 
@@ -60,7 +59,6 @@ export function getDefaultGlobalBindings() {
    //   const uppercase = String.fromCharCode(65 + i);
    //   map.set(`alt?+control?+shift+key${lowercase}`, `tool-${uppercase}`);
    // }
-
     map.set('keyn', 'add-layer');
     map.set('keyh', 'help');
 
@@ -86,7 +84,7 @@ export function getDefaultAnnotationListBindings() {
     defaultAnnotationListBindings = EventActionMap.fromObject(
         {
           'click0': 'pin-annotation',
-          'mousedown2': 'move-to-annotation',
+         // 'mousedown2': 'move-to-annotation',
         },
         {parents: [[getDefaultSelectBindings(), 0]]});
   }
@@ -127,13 +125,13 @@ export function getDefaultRenderedDataPanelBindings() {
           'at:dblclick0': 'color-picker',
           'at:control+mousedown0': 'annotate',
           'at:keym': 'select-area-mode',
-          
+         // 'at:controlmousedown0': 'draw',
          //r 'at:alt+mousedown0': 'move-annotation',
           'at:control+alt+mousedown2': 'delete-annotation',
           'at:touchpinch': 'zoom-via-touchpinch',
           'at:touchrotate': 'rotate-in-plane-via-touchrotate',
           'at:touchtranslate2': 'translate-in-plane-via-touchtranslate',
-         
+           'at:mousedown2': 'toggle-mesh',
 
           'at:touchtap2x3': 'snap',
         },

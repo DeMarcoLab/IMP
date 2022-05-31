@@ -202,6 +202,7 @@ export class ObjectTracker_IMP {
 
     public addIdName(id: string, name: string) {
         this.idNameMap.set(id, name);
+   
     }
     public addNameColour(name: string, colour: string) {
 
@@ -240,8 +241,11 @@ export class ObjectTracker_IMP {
                 }
             }
             //         console.log(layer)
+            if (!this.nameColorMap.has(layer['name'])) {
+                this.nameColorMap.set(layer['name'], layer.segmentDefaultColor)
+            }
         }
-        console.log(layer)
+        //console.log(layer)
         this.availableLayers[layer.name] = { "layer": layer, "archived": archived }
         //  console.log(this.colorStorage)
     }

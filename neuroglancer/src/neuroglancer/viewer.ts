@@ -462,7 +462,7 @@ export class Viewer extends RefCounted implements ViewerState {
     this.registerDisposer(setupPositionDropHandlers(element, this.navigationState.position));
 
     this.state = new TrackableViewerState(this);
- 
+
   }
 
   private updateShowBorders() {
@@ -724,7 +724,7 @@ export class Viewer extends RefCounted implements ViewerState {
     this.registerDisposer(this.visibility.changed.add(updateVisibility));
 
 
- 
+
   }
 
   /**
@@ -766,7 +766,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
 
     this.bindAction('color-picker', () => {
-      
+
       ObjectTracker_IMP.getInstance().doClickReaction('dblClick', this.mouseState.pageX, this.mouseState.pageY);
     })
     this.bindAction('toggle-mesh', () => {
@@ -823,9 +823,9 @@ export class Viewer extends RefCounted implements ViewerState {
 
       if (ObjectTracker_IMP.getInstance().getIsDrawingMode()) {
         console.log("should draw")
-      } else if(ObjectTracker_IMP.getInstance().isGrouping()){
+      } else if (ObjectTracker_IMP.getInstance().isGrouping()) {
         ObjectTracker_IMP.getInstance().tryAddToGroup()
-      }else{
+      } else {
         const selectedLayer = this.selectedLayer.layer;
 
         if (selectedLayer === undefined) {
@@ -999,19 +999,20 @@ export class Viewer extends RefCounted implements ViewerState {
       shaderstring += '\n#uicontrol vec3 color color(default="white")';
       shaderstring += '\n float inverter(float val, int invert) {return 0.5 + ((2.0 * (-float(invert) + 0.5)) * (val - 0.5));}';
       shaderstring += '\nvoid main() {\n   emitRGB(color * inverter(normalized(), invertColormap));\n}\n';
-      const imgLayer = { "type": "image", "visible": true, "source": "precomputed://" + dataset.image, "tab": "rendering", "name": dataset.name, "shader": shaderstring };
+      const imgLayer = { "type": "image", "visible": true, "source": "precomputed://" + dataset.image + "/image", "tab": "rendering", "name": dataset.name, "shader": shaderstring };
 
       ObjectTracker_IMP.getInstance().addLayer(imgLayer, true)
       // ObjectTracker_IMP.getInstance().setActiveLayerName(dataset.name)
 
       let names = []
       let colours = []
+      let hasAnnotations = true;
       if (dataset.layers) {
         //console.log(dataset.layers)
         for (let layer of dataset.layers) {
           console.log(layer)
-          if (layer && layer.type =="all") {
-
+          if (layer && layer.type == "all") {
+            console.log("all")
             //fetch the json for the annotations 
             const response = await fetch(layer.path, { method: "GET" });
 
@@ -1026,72 +1027,78 @@ export class Viewer extends RefCounted implements ViewerState {
 
             let sublayers = [...resText.matchAll(re)]
             console.log(sublayers)
+          
             let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
             let meshes = [...resText.matchAll(re1)]
             //console.log(meshes)
             let a = await fetch(layer.path + "columns.json", { method: "GET" })
             let columns = await (a.json());
-            //console.log(columns)
-            let option = document.createElement("input");
-            option.type = "radio";
-            option.id = "color-by-type";
-            option.className = "imp-radio";
-            option.name = "colorBy";
-            option.value = "type";
-            option.checked = true;
-            option.addEventListener('change', () => {
-              ObjectTracker_IMP.getInstance().updateAttribute(0);
-            });
-            //option.onclick = (ev) => {
-            //  ObjectTracker_IMP.getInstance().updateAttribute("colorBy","type",ev)
-            //}
-            let label = document.createElement("label");
-            label.className = "imp-option-label";
-            label.htmlFor = "color-by-type";
-            label.innerHTML = "type";
 
-            //label for div:
-            let labDiv = document.createElement("div")
-            labDiv.innerText = "Colour by:  ";
-            document.getElementById('imp-color-by-div')?.appendChild(labDiv)
-            document.getElementById('imp-color-by-div')?.appendChild(label);
-            document.getElementById('imp-color-by-div')?.appendChild(option);
-
-            for (let i = 0; i < columns.length; i++) {
-              let option = document.createElement("input")
-              option.type = "radio"
-              option.id = columns[i]
-              option.name = "colorBy"
+            try {
+             
+              console.log(columns)
+              let option = document.createElement("input");
+              option.type = "radio";
+              option.id = "color-by-type";
               option.className = "imp-radio";
-              option.value = columns[i]
+              option.name = "colorBy";
+              option.value = "type";
+              option.checked = true;
               option.addEventListener('change', () => {
-                ObjectTracker_IMP.getInstance().updateAttribute(i + 1);
+                ObjectTracker_IMP.getInstance().updateAttribute(0);
               });
-
+              //option.onclick = (ev) => {
+              //  ObjectTracker_IMP.getInstance().updateAttribute("colorBy","type",ev)
+              //}
               let label = document.createElement("label");
               label.className = "imp-option-label";
-              label.htmlFor = columns[i]
-              label.innerHTML = columns[i]
-              document.getElementById('imp-color-by-div')?.appendChild(label)
-              document.getElementById('imp-color-by-div')?.appendChild(option)
-              //add a list of colormaps
-              let selectEl = document.createElement("select");
-              let colorMaps = ObjectTracker_IMP.getInstance().getColormapKeys();
-              //console.log(colorMaps)
-              for (let i = 0; i < colorMaps.length; i++) {
-                let opt = document.createElement('option');
-                if (colorMaps[i] === "jet") { opt.selected = true }
-                opt.value = colorMaps[i];
-                opt.textContent = colorMaps[i]
-                selectEl.appendChild(opt);
+              label.htmlFor = "color-by-type";
+              label.innerHTML = "type";
+
+              //label for div:
+              let labDiv = document.createElement("div")
+              labDiv.innerText = "Colour by:  ";
+              document.getElementById('imp-color-by-div')?.appendChild(labDiv)
+              document.getElementById('imp-color-by-div')?.appendChild(label);
+              document.getElementById('imp-color-by-div')?.appendChild(option);
+
+              for (let i = 0; i < columns.length; i++) {
+                let option = document.createElement("input")
+                option.type = "radio"
+                option.id = columns[i]
+                option.name = "colorBy"
+                option.className = "imp-radio";
+                option.value = columns[i]
+                option.addEventListener('change', () => {
+                  ObjectTracker_IMP.getInstance().updateAttribute(i + 1);
+                });
+
+                let label = document.createElement("label");
+                label.className = "imp-option-label";
+                label.htmlFor = columns[i]
+                label.innerHTML = columns[i]
+                document.getElementById('imp-color-by-div')?.appendChild(label)
+                document.getElementById('imp-color-by-div')?.appendChild(option)
+                //add a list of colormaps
+                let selectEl = document.createElement("select");
+                let colorMaps = ObjectTracker_IMP.getInstance().getColormapKeys();
+                //console.log(colorMaps)
+                for (let i = 0; i < colorMaps.length; i++) {
+                  let opt = document.createElement('option');
+                  if (colorMaps[i] === "jet") { opt.selected = true }
+                  opt.value = colorMaps[i];
+                  opt.textContent = colorMaps[i]
+                  selectEl.appendChild(opt);
+                }
+                document.getElementById('imp-color-by-div')?.appendChild(selectEl)
+                selectEl.addEventListener('change', () => {
+                  ObjectTracker_IMP.getInstance().updateColormap(selectEl.value)
+                })
               }
-              document.getElementById('imp-color-by-div')?.appendChild(selectEl)
-              selectEl.addEventListener('change', () => {
-                ObjectTracker_IMP.getInstance().updateColormap(selectEl.value)
-              })
+
+            } catch (e) {
+              console.log("Couldn't process a column file.")
             }
-
-
 
             //fetch each layer
             for (let sublayer of sublayers) {
@@ -1142,7 +1149,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
               /*try to load the mesh layer if available */
               for (let mesh of meshes) {
-    
+
                 if (mesh[1] === sublayer[0].split(".json")[0]) {
                   const meshlayer = {
                     "type": "segmentation",
@@ -1150,11 +1157,11 @@ export class Viewer extends RefCounted implements ViewerState {
                     "source": {
                       "url": "precomputed://" + layer.path + mesh[0],
                       "transform": {
-                        "outputDimensions":dimensions,
-                      
-                        "inputDimensions":dimensions
+                        "outputDimensions": dimensions,
+
+                        "inputDimensions": dimensions
                       }
-                      },
+                    },
                     "tab": "segments",
                     "segments": [],
                     "segmentDefaultColor": colour,
@@ -1169,8 +1176,10 @@ export class Viewer extends RefCounted implements ViewerState {
             //console.log(ObjectTracker_IMP.getInstance().getLayers())
 
           } else {
-            //layer type segment. this can be done better.
             const response = await fetch(layer.path, { method: "GET" });
+
+            //layer type segment. this can be done better.
+
 
             if (!response.ok) {
               console.log("Response is not ok: " + response.json());
@@ -1181,29 +1190,66 @@ export class Viewer extends RefCounted implements ViewerState {
             //console.log(resText)
             let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
             let meshes = [...resText.matchAll(re1)]
-            for (let mesh of meshes) {   
-                const meshlayer = {
-                  "type": "segmentation",
-                  "hasAnnoConnection": false,
-                  "source": {
-                    "url": "precomputed://" + layer.path + mesh[0],
-                    "transform": {
-                      "outputDimensions":dimensions,
-                    
-                      "inputDimensions":dimensions
-                    }
-                    },
-                  "tab": "rendering",
-                  "saturation": 0.7,
-                  "segments": [],
-                  "segmentDefaultColor": "darkblue",
-                  "name": mesh[0],
-                  "visible": true
-                };
-                ObjectTracker_IMP.getInstance().addLayer(meshlayer, false)
 
-              
+            let re2 = new RegExp('(?<=(f="))(.+)(?=(\/"))', 'g')
+            let segmentationLayers = [...resText.matchAll(re2)]
+
+            //console.log(segmentationLayers)
+            //define some colours for up to 30 layers
+            const colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000']
+            let counter = 0;
+            for (const el of segmentationLayers) {
+
+              if (el[0] === "..") {
+                continue;
+              }
+              //console.log(el[0])
+              const segmentationlayer = {
+                "type": "segmentation",
+                "source": {
+                  "url": "precomputed://" + layer.path + "/" + el[0],
+                  "transform": {
+                    "outputDimensions": dimensions,
+
+                    "inputDimensions": dimensions
+                  }
+                },
+                "tab": "rendering",
+                "saturation": 0.7,
+                "name": el[0],
+                "segmentDefaultColor": colors[counter],
+                "visible": true
+              }
+              counter++;
+              //console.log(segmentationlayer)
+              ObjectTracker_IMP.getInstance().addLayer(segmentationlayer, false)
             }
+
+            //console.log(segmentationLayers)
+            for (let mesh of meshes) {
+              const meshlayer = {
+                "type": "segmentation",
+                //"hasAnnoConnection": false,
+                "source": {
+                  "url": "precomputed://" + layer.path + mesh[0],
+                  "transform": {
+                    "outputDimensions": dimensions,
+
+                    "inputDimensions": dimensions
+                  }
+                },
+                "tab": "rendering",
+                "saturation": 0.7,
+                "segments": [],
+                "segmentDefaultColor": "darkblue",
+                "name": mesh[0],
+                "visible": true
+              };
+              ObjectTracker_IMP.getInstance().addLayer(meshlayer, false)
+
+
+            }
+
           }
         }
       }
@@ -1238,7 +1284,7 @@ export class Viewer extends RefCounted implements ViewerState {
       if (dataset.proteomics.path) {
         let protTable = document.createElement("table")
         protTable.className = "proteomics-table"
-        
+
         responseElement.append(protTable)
 
 
@@ -1254,11 +1300,11 @@ export class Viewer extends RefCounted implements ViewerState {
             for (const key of Object.keys(item)) {
               let tdEl = document.createElement("div")
               tdEl.textContent = key
-              tdEl.className="proteomics-table-head-item"
+              tdEl.className = "proteomics-table-head-item"
               protTable.append(tdEl)
               keys.push(key)
             }
-            hasHead =true;
+            hasHead = true;
           }
           for (const key of keys) {
             let tdEl1_ = document.createElement("div")

@@ -1053,6 +1053,7 @@ export class SegmentDisplayTab extends Tab {
                     listSource.segmentWidgetFactory = new SegmentWidgetWithExtraColumnsFactory(
                         listSource.segmentationDisplayState, listSource.parentElement,
                         property => queryIncludesColumn(queryResult?.query, property.id));
+                    
                     list.scrollToTop();
                     removeChildren(list.header);
                     if (segmentPropertyMap !== undefined) {
@@ -1082,6 +1083,7 @@ export class SegmentDisplayTab extends Tab {
                       queryStatisticsSeparator.style.display = '';
                     }
                   }, listSource.queryResult);
+                
                   parent.appendChild(list.element);
                 }))
             .element);

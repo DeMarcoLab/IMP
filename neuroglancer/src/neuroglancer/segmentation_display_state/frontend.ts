@@ -204,6 +204,7 @@ export function maybeAugmentSegmentId(
   if (label === undefined && mapped == undefined) {
     return id;
   }
+
   return new Uint64MapEntry(id, mapped, label);
 }
 
@@ -334,6 +335,7 @@ function makeRegisterSegmentWidgetEventHandlers(displayState: SegmentationDispla
     const idString = entryElement.dataset.id!;
     const id = tempStatedColor;
     id.tryParseString(idString);
+    console.log(id);
     displayState.segmentSelectionState.set(id);
     if (!isWithinSelectionPanel(entryElement)) {
       displayState.selectSegment(id, false);

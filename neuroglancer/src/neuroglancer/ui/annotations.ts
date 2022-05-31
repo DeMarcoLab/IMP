@@ -60,6 +60,8 @@ import {makeIcon} from 'neuroglancer/widget/icon';
 import {makeMoveToButton} from 'neuroglancer/widget/move_to_button';
 import {Tab} from 'neuroglancer/widget/tab_view';
 import {VirtualList, VirtualListSource} from 'neuroglancer/widget/virtual_list';
+import { ObjectTracker_IMP } from '../ObjectTracker_IMP';
+
 
 export class MergedAnnotationStates extends RefCounted implements
     WatchableValueInterface<readonly AnnotationLayerState[]> {
@@ -654,6 +656,15 @@ export class AnnotationLayerView extends Tab {
     const chunkTransform = state.chunkTransform.value as ChunkTransformParameters;
     const element = document.createElement('div');
     element.classList.add('neuroglancer-annotation-list-entry');
+
+    element.style.backgroundColor = ObjectTracker_IMP.getInstance().getColorForId(annotation.id);
+  /*  element.onmouseenter = () => {
+      ObjectTracker_IMP.getInstance().hoverSegment(annotation.id,true);
+    }
+    element.onmouseleave = () => {
+      ObjectTracker_IMP.getInstance().hoverSegment(annotation.id,false);
+    }*/
+
     element.style.gridTemplateColumns = this.gridTemplate;
     const icon = document.createElement('div');
     icon.className = 'neuroglancer-annotation-icon';
@@ -1209,6 +1220,7 @@ function makeRelatedSegmentList(
         for (const id of segments) {
           const row = segmentWidgetFactory.get(id);
           rows.push(row);
+          row.id = id.toString();
           if (mutate !== undefined) {
             const deleteButton = makeDeleteButton({
               title: 'Remove ID',

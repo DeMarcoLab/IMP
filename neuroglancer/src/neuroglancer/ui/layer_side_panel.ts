@@ -241,7 +241,10 @@ class LayerSidePanel extends SidePanel {
     this.tabView.element.style.position = 'relative';
     this.tabView.element.appendChild(this.makeTabDropZone());
     this.addBody(this.tabView.element);
-
+    
+    let el = document.createElement("div");
+    el.innerHTML = '<a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/"><img alt="Creative Commons Licence" style="border-width:0" src="https://i.creativecommons.org/l/by-nc/4.0/80x15.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 International License</a>'
+    this.tabView.element.appendChild(el)
     // Hide panel automatically if there are no tabs to display (because they have all been moved to
     // another panel).
     this.registerDisposer(panelState.tabsChanged.add(() => {

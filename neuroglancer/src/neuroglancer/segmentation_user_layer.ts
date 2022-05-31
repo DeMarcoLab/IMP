@@ -60,6 +60,7 @@ import {renderScaleLayerControl} from 'neuroglancer/widget/render_scale_widget';
 import {colorSeedLayerControl, fixedColorLayerControl} from 'neuroglancer/widget/segmentation_color_mode';
 import {registerLayerShaderControlsTool} from 'neuroglancer/widget/shader_controls';
 import {registerSegmentSelectTools} from 'neuroglancer/ui/segment_select_tools';
+//import { ObjectTracker_IMP } from './ObjectTracker_IMP';
 
 const SELECTED_ALPHA_JSON_KEY = 'selectedAlpha';
 const NOT_SELECTED_ALPHA_JSON_KEY = 'notSelectedAlpha';
@@ -400,6 +401,8 @@ export class SegmentationUserLayer extends Base {
     this.tabs.add(
         'segments', {label: 'Seg.', order: -50, getter: () => new SegmentDisplayTab(this)});
     this.tabs.default = 'rendering';
+
+    //ObjectTracker_IMP.getInstance().setSegmentationDisplayState(this.displayState);
   }
 
   get volumeOptions() {
@@ -646,6 +649,7 @@ export class SegmentationUserLayer extends Base {
       }
       case 'select': {
         if (!this.pick.value) break;
+        console.log("...");
         const {segmentSelectionState} = this.displayState;
         if (segmentSelectionState.hasSelectedSegment) {
           const segment = segmentSelectionState.selectedSegment;

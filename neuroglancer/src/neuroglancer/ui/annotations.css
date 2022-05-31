@@ -85,7 +85,7 @@
 .neuroglancer-annotation-list-entry:hover > .neuroglancer-annotation-list-entry-delete {
   visibility: visible;
 }
-
+/*
 .neuroglancer-annotation-hover {
   background-color: #333;
 }
@@ -97,7 +97,7 @@
 .neuroglancer-annotation-hover.neuroglancer-annotation-selected {
   background-color: #969;
 }
-
+*/
 .neuroglancer-tab-content.neuroglancer-annotation-details {
   flex: 0 0 auto;
   align-self: stretch;

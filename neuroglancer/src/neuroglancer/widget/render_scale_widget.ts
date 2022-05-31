@@ -147,6 +147,7 @@ export class RenderScaleWidget extends RefCounted {
     const targetValue = this.target.value;
     const hoverValue = this.hoverTarget.value;
 
+
     {
       const {legendRenderScale} = this;
       const value = hoverValue === undefined ? targetValue : hoverValue[0];

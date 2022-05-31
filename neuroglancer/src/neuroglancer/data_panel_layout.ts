@@ -17,30 +17,32 @@
 import 'neuroglancer/data_panel_layout.css';
 
 import debounce from 'lodash/debounce';
-import {ChunkManager} from 'neuroglancer/chunk_manager/frontend';
-import {DisplayContext} from 'neuroglancer/display_context';
-import {LayerManager, MouseSelectionState, SelectedLayerState, TrackableDataSelectionState} from 'neuroglancer/layer';
+import { ChunkManager } from 'neuroglancer/chunk_manager/frontend';
+import { DisplayContext } from 'neuroglancer/display_context';
+import { LayerManager, MouseSelectionState, SelectedLayerState, TrackableDataSelectionState } from 'neuroglancer/layer';
 import * as L from 'neuroglancer/layout';
-import {DisplayPose, LinkedOrientationState, LinkedPosition, linkedStateLegacyJsonView, LinkedZoomState, NavigationState, OrientationState, TrackableZoomInterface} from 'neuroglancer/navigation_state';
-import {PerspectivePanel} from 'neuroglancer/perspective_view/panel';
-import {RenderedDataPanel} from 'neuroglancer/rendered_data_panel';
-import {RenderLayerRole} from 'neuroglancer/renderlayer';
-import {SliceView} from 'neuroglancer/sliceview/frontend';
-import {SliceViewerState, SliceViewPanel} from 'neuroglancer/sliceview/panel';
-import {TrackableBoolean} from 'neuroglancer/trackable_boolean';
-import {TrackableValue, WatchableSet, WatchableValueInterface} from 'neuroglancer/trackable_value';
-import {TrackableRGB} from 'neuroglancer/util/color';
-import {Borrowed, Owned, RefCounted} from 'neuroglancer/util/disposable';
-import {removeChildren, removeFromParent} from 'neuroglancer/util/dom';
-import {EventActionMap, registerActionListener} from 'neuroglancer/util/event_action_map';
-import {quat} from 'neuroglancer/util/geom';
-import {verifyObject, verifyObjectProperty, verifyPositiveInt} from 'neuroglancer/util/json';
-import {NullarySignal} from 'neuroglancer/util/signal';
-import {optionallyRestoreFromJsonMember, Trackable} from 'neuroglancer/util/trackable';
-import {WatchableMap} from 'neuroglancer/util/watchable_map';
-import {VisibilityPrioritySpecification} from 'neuroglancer/viewer_state';
-import {DisplayDimensionsWidget} from 'neuroglancer/widget/display_dimensions_widget';
-import {ScaleBarOptions} from 'neuroglancer/widget/scale_bar';
+import { DisplayPose, LinkedOrientationState, LinkedPosition, linkedStateLegacyJsonView, LinkedZoomState, NavigationState, OrientationState, TrackableZoomInterface } from 'neuroglancer/navigation_state';
+import { PerspectivePanel } from 'neuroglancer/perspective_view/panel';
+import { RenderedDataPanel } from 'neuroglancer/rendered_data_panel';
+import { RenderLayerRole } from 'neuroglancer/renderlayer';
+import { SliceView } from 'neuroglancer/sliceview/frontend';
+import { SliceViewerState, SliceViewPanel } from 'neuroglancer/sliceview/panel';
+import { TrackableBoolean } from 'neuroglancer/trackable_boolean';
+import { TrackableValue, WatchableSet, WatchableValueInterface } from 'neuroglancer/trackable_value';
+import { TrackableRGB } from 'neuroglancer/util/color';
+import { Borrowed, Owned, RefCounted } from 'neuroglancer/util/disposable';
+import { removeChildren, removeFromParent } from 'neuroglancer/util/dom';
+import { EventActionMap, registerActionListener } from 'neuroglancer/util/event_action_map';
+import { quat } from 'neuroglancer/util/geom';
+import { verifyObject, verifyObjectProperty, verifyPositiveInt } from 'neuroglancer/util/json';
+import { NullarySignal } from 'neuroglancer/util/signal';
+import { optionallyRestoreFromJsonMember, Trackable } from 'neuroglancer/util/trackable';
+import { WatchableMap } from 'neuroglancer/util/watchable_map';
+import { VisibilityPrioritySpecification } from 'neuroglancer/viewer_state';
+import { DisplayDimensionsWidget } from 'neuroglancer/widget/display_dimensions_widget';
+import { ScaleBarOptions } from 'neuroglancer/widget/scale_bar';
+//import { ObjectTracker_IMP } from './ObjectTracker_IMP';
+//import { Drawing } from './Drawing';
 
 export interface SliceViewViewerState {
   chunkManager: ChunkManager;
@@ -77,9 +79,9 @@ export interface DataDisplayLayout extends RefCounted {
   container: DataPanelLayoutContainer;
 }
 
-type NamedAxes = 'xy'|'xz'|'yz';
+type NamedAxes = 'xy' | 'xz' | 'yz';
 
-const AXES_RELATIVE_ORIENTATION = new Map<NamedAxes, quat|undefined>([
+const AXES_RELATIVE_ORIENTATION = new Map<NamedAxes, quat | undefined>([
   ['xy', undefined],
   ['xz', quat.rotateX(quat.create(), quat.create(), Math.PI / 2)],
   ['yz', quat.rotateY(quat.create(), quat.create(), Math.PI / 2)],
@@ -98,16 +100,16 @@ export function makeSliceView(viewerState: SliceViewViewerState, baseToSelf?: qu
     navigationState = viewerState.navigationState.addRef();
   } else {
     navigationState = new NavigationState(
-        new DisplayPose(
-            viewerState.navigationState.pose.position.addRef(),
-            viewerState.navigationState.pose.displayDimensionRenderInfo.addRef(),
-            OrientationState.makeRelative(
-                viewerState.navigationState.pose.orientation, baseToSelf)),
-        viewerState.navigationState.zoomFactor.addRef(),
-        viewerState.navigationState.depthRange.addRef());
+      new DisplayPose(
+        viewerState.navigationState.pose.position.addRef(),
+        viewerState.navigationState.pose.displayDimensionRenderInfo.addRef(),
+        OrientationState.makeRelative(
+          viewerState.navigationState.pose.orientation, baseToSelf)),
+      viewerState.navigationState.zoomFactor.addRef(),
+      viewerState.navigationState.depthRange.addRef());
   }
   return new SliceView(
-      viewerState.chunkManager, viewerState.layerManager, navigationState, viewerState.wireFrame);
+    viewerState.chunkManager, viewerState.layerManager, navigationState, viewerState.wireFrame);
 }
 
 export function makeNamedSliceView(viewerState: SliceViewViewerState, axes: NamedAxes) {
@@ -139,7 +141,7 @@ export function getCommonViewerState(viewer: ViewerUIState) {
 }
 
 function getCommonPerspectiveViewerState(container: DataPanelLayoutContainer) {
-  const {viewer} = container;
+  const { viewer } = container;
   return {
     ...getCommonViewerState(viewer),
     navigationState: viewer.perspectiveNavigationState,
@@ -159,28 +161,44 @@ function getCommonSliceViewerState(viewer: ViewerUIState) {
 }
 
 function addDisplayDimensionsWidget(layout: DataDisplayLayout, panel: RenderedDataPanel) {
-  const {navigationState} = panel;
+  const { navigationState } = panel;
   panel.element.appendChild(
-      layout
-          .registerDisposer(new DisplayDimensionsWidget(
-              navigationState.pose.displayDimensionRenderInfo.addRef(), navigationState.zoomFactor,
-              navigationState.depthRange.addRef(), (panel instanceof SliceViewPanel) ? 'px' : 'vh'))
-          .element);
+    layout
+      .registerDisposer(new DisplayDimensionsWidget(
+        navigationState.pose.displayDimensionRenderInfo.addRef(), navigationState.zoomFactor,
+        navigationState.depthRange.addRef(), (panel instanceof SliceViewPanel) ? 'px' : 'vh'))
+      .element);
 }
 
 function registerRelatedLayouts(
-    layout: DataDisplayLayout, panel: RenderedDataPanel, relatedLayouts: string[]) {
+  layout: DataDisplayLayout, panel: RenderedDataPanel, relatedLayouts: string[]) {
   const controls = document.createElement('div');
   controls.className = 'neuroglancer-data-panel-layout-controls';
   layout.registerDisposer(() => removeFromParent(controls));
   for (let i = 0; i < 2; ++i) {
     const relatedLayout = relatedLayouts[Math.min(relatedLayouts.length - 1, i)];
     layout.registerDisposer(registerActionListener(
-        panel.element, i === 0 ? 'toggle-layout' : 'toggle-layout-alternative', (event: Event) => {
-          layout.container.name = relatedLayout;
-          event.stopPropagation();
-        }));
+      panel.element, i === 0 ? 'toggle-layout' : 'toggle-layout-alternative', (event: Event) => {
+        layout.container.name = relatedLayout;
+        event.stopPropagation();
+      }));
   }
+  //NH for IMP project - need reference to the axis of the panel, storing in id of element.
+  panel.element.id = relatedLayouts[0].toString();
+  //create drawing button
+  //button for drawing function
+  /*if (relatedLayouts[0].toString() !== "3d") {
+    let drawingButton = document.createElement("button");
+    drawingButton.innerText = "Draw " + relatedLayouts[0].toString();
+    drawingButton.className = "draw-btn"
+    drawingButton.onclick = () => {
+      //ObjectTracker_IMP.getInstance().toggleIsDrawingMode();
+      ObjectTracker_IMP.getInstance().addDrawing(relatedLayouts[0].toString())
+    }
+    //create a separate canvas for fabricJS to use
+   
+    controls.appendChild(drawingButton);
+  }*/
   for (const relatedLayout of relatedLayouts) {
     const button = document.createElement('button');
     const innerDiv = document.createElement('div');
@@ -196,12 +214,12 @@ function registerRelatedLayouts(
 }
 
 function makeSliceViewFromSpecification(
-    viewer: SliceViewViewerState, specification: Borrowed<CrossSectionSpecification>) {
+  viewer: SliceViewViewerState, specification: Borrowed<CrossSectionSpecification>) {
   const sliceView = new SliceView(
-      viewer.chunkManager, viewer.layerManager, specification.navigationState.addRef(),
-      viewer.wireFrame);
+    viewer.chunkManager, viewer.layerManager, specification.navigationState.addRef(),
+    viewer.wireFrame);
   const updateViewportSize = () => {
-    const {width: {value: width}, height: {value: height}} = specification;
+    const { width: { value: width }, height: { value: height } } = specification;
     sliceView.projectionParameters.setViewport({
       width,
       height,
@@ -220,8 +238,8 @@ function makeSliceViewFromSpecification(
 }
 
 function addUnconditionalSliceViews(
-    viewer: SliceViewViewerState, panel: PerspectivePanel,
-    crossSections: Borrowed<CrossSectionSpecificationMap>) {
+  viewer: SliceViewViewerState, panel: PerspectivePanel,
+  crossSections: Borrowed<CrossSectionSpecificationMap>) {
   const previouslyAdded = new Map<Borrowed<CrossSectionSpecification>, Borrowed<SliceView>>();
   const update = () => {
     const currentCrossSections = new Set<Borrowed<CrossSectionSpecification>>();
@@ -248,12 +266,12 @@ function addUnconditionalSliceViews(
 
 export class FourPanelLayout extends RefCounted {
   constructor(
-      public container: DataPanelLayoutContainer, public rootElement: HTMLElement,
-      public viewer: ViewerUIState, crossSections: Borrowed<CrossSectionSpecificationMap>) {
+    public container: DataPanelLayoutContainer, public rootElement: HTMLElement,
+    public viewer: ViewerUIState, crossSections: Borrowed<CrossSectionSpecificationMap>) {
     super();
 
     let sliceViews = makeOrthogonalSliceViews(viewer);
-    let {display} = viewer;
+    let { display } = viewer;
 
     const perspectiveViewerState = {
       ...getCommonPerspectiveViewerState(container),
@@ -272,16 +290,18 @@ export class FourPanelLayout extends RefCounted {
     };
 
     const makeSliceViewPanel =
-        (axes: NamedAxes, element: HTMLElement, state: SliceViewerState,
-         displayDimensionsWidget: boolean) => {
-          const panel = this.registerDisposer(
-              new SliceViewPanel(display, element, sliceViews.get(axes)!, state));
-          if (displayDimensionsWidget) {
-            addDisplayDimensionsWidget(this, panel);
-          }
-          registerRelatedLayouts(this, panel, [axes, `${axes}-3d`]);
-          return panel;
-        };
+      (axes: NamedAxes, element: HTMLElement, state: SliceViewerState,
+        displayDimensionsWidget: boolean) => {
+        element.id = axes.toString();
+
+        const panel = this.registerDisposer(
+          new SliceViewPanel(display, element, sliceViews.get(axes)!, state));
+        if (displayDimensionsWidget) {
+          addDisplayDimensionsWidget(this, panel);
+        }
+        registerRelatedLayouts(this, panel, [axes, `${axes}-3d`]);
+        return panel;
+      };
     let mainDisplayContents = [
       L.withFlex(1, L.box('column', [
         L.withFlex(1, L.box('row', [
@@ -295,7 +315,7 @@ export class FourPanelLayout extends RefCounted {
         L.withFlex(1, L.box('row', [
           L.withFlex(1, element => {
             let panel = this.registerDisposer(
-                new PerspectivePanel(display, element, perspectiveViewerState));
+              new PerspectivePanel(display, element, perspectiveViewerState));
             for (let sliceView of sliceViews.values()) {
               panel.sliceViews.set(sliceView.addRef(), false);
             }
@@ -320,13 +340,13 @@ export class FourPanelLayout extends RefCounted {
 
 export class SliceViewPerspectiveTwoPanelLayout extends RefCounted {
   constructor(
-      public container: DataPanelLayoutContainer, public rootElement: HTMLElement,
-      public viewer: ViewerUIState, public direction: 'row'|'column', axes: NamedAxes,
-      crossSections: Borrowed<CrossSectionSpecificationMap>) {
+    public container: DataPanelLayoutContainer, public rootElement: HTMLElement,
+    public viewer: ViewerUIState, public direction: 'row' | 'column', axes: NamedAxes,
+    crossSections: Borrowed<CrossSectionSpecificationMap>) {
     super();
 
     let sliceView = makeNamedSliceView(viewer, axes);
-    let {display} = viewer;
+    let { display } = viewer;
 
     const perspectiveViewerState = {
       ...getCommonPerspectiveViewerState(container),
@@ -341,23 +361,24 @@ export class SliceViewPerspectiveTwoPanelLayout extends RefCounted {
 
     L.withFlex(1, L.box(direction, [
       L.withFlex(
-          1,
-          element => {
-            const panel = this.registerDisposer(
-                new SliceViewPanel(display, element, sliceView, sliceViewerState));
-            addDisplayDimensionsWidget(this, panel);
-            registerRelatedLayouts(this, panel, [axes, '4panel']);
-          }),
+        1,
+        element => {
+
+          const panel = this.registerDisposer(
+            new SliceViewPanel(display, element, sliceView, sliceViewerState));
+          addDisplayDimensionsWidget(this, panel);
+          registerRelatedLayouts(this, panel, [axes, '4panel']);
+        }),
       L.withFlex(
-          1,
-          element => {
-            let panel = this.registerDisposer(
-                new PerspectivePanel(display, element, perspectiveViewerState));
-            panel.sliceViews.set(sliceView.addRef(), false);
-            addUnconditionalSliceViews(viewer, panel, crossSections);
-            addDisplayDimensionsWidget(this, panel);
-            registerRelatedLayouts(this, panel, ['3d', '4panel']);
-          }),
+        1,
+        element => {
+          let panel = this.registerDisposer(
+            new PerspectivePanel(display, element, perspectiveViewerState));
+          panel.sliceViews.set(sliceView.addRef(), false);
+          addUnconditionalSliceViews(viewer, panel, crossSections);
+          addDisplayDimensionsWidget(this, panel);
+          registerRelatedLayouts(this, panel, ['3d', '4panel']);
+        }),
     ]))(rootElement);
   }
 
@@ -369,8 +390,8 @@ export class SliceViewPerspectiveTwoPanelLayout extends RefCounted {
 
 export class SinglePanelLayout extends RefCounted {
   constructor(
-      public container: DataPanelLayoutContainer, public rootElement: HTMLElement,
-      public viewer: ViewerUIState, axes: NamedAxes) {
+    public container: DataPanelLayoutContainer, public rootElement: HTMLElement,
+    public viewer: ViewerUIState, axes: NamedAxes) {
     super();
     let sliceView = makeNamedSliceView(viewer, axes);
     const sliceViewerState = {
@@ -379,11 +400,11 @@ export class SinglePanelLayout extends RefCounted {
     };
 
     L.box('row', [L.withFlex(1, element => {
-            const panel = this.registerDisposer(
-                new SliceViewPanel(viewer.display, element, sliceView, sliceViewerState));
-            addDisplayDimensionsWidget(this, panel);
-            registerRelatedLayouts(this, panel, ['4panel', `${axes}-3d`]);
-          })])(rootElement);
+      const panel = this.registerDisposer(
+        new SliceViewPanel(viewer.display, element, sliceView, sliceViewerState));
+      addDisplayDimensionsWidget(this, panel);
+      registerRelatedLayouts(this, panel, ['4panel', `${axes}-3d`]);
+    })])(rootElement);
   }
 
   disposed() {
@@ -394,8 +415,8 @@ export class SinglePanelLayout extends RefCounted {
 
 export class SinglePerspectiveLayout extends RefCounted {
   constructor(
-      public container: DataPanelLayoutContainer, public rootElement: HTMLElement,
-      public viewer: ViewerUIState, crossSections: Borrowed<CrossSectionSpecificationMap>) {
+    public container: DataPanelLayoutContainer, public rootElement: HTMLElement,
+    public viewer: ViewerUIState, crossSections: Borrowed<CrossSectionSpecificationMap>) {
     super();
     let perspectiveViewerState = {
       ...getCommonPerspectiveViewerState(container),
@@ -404,12 +425,12 @@ export class SinglePerspectiveLayout extends RefCounted {
 
 
     L.box('row', [L.withFlex(1, element => {
-            const panel = this.registerDisposer(
-                new PerspectivePanel(viewer.display, element, perspectiveViewerState));
-            addUnconditionalSliceViews(viewer, panel, crossSections);
-            addDisplayDimensionsWidget(this, panel);
-            registerRelatedLayouts(this, panel, ['4panel']);
-          })])(rootElement);
+      const panel = this.registerDisposer(
+        new PerspectivePanel(viewer.display, element, perspectiveViewerState));
+      addUnconditionalSliceViews(viewer, panel, crossSections);
+      addDisplayDimensionsWidget(this, panel);
+      registerRelatedLayouts(this, panel, ['4panel']);
+    })])(rootElement);
   }
 
   disposed() {
@@ -420,36 +441,36 @@ export class SinglePerspectiveLayout extends RefCounted {
 
 export const LAYOUTS = new Map<string, {
   factory:
-      (container: DataPanelLayoutContainer, element: HTMLElement, viewer: ViewerUIState,
-       crossSections: Borrowed<CrossSectionSpecificationMap>) => DataDisplayLayout
+  (container: DataPanelLayoutContainer, element: HTMLElement, viewer: ViewerUIState,
+    crossSections: Borrowed<CrossSectionSpecificationMap>) => DataDisplayLayout
 }>(
+  [
     [
-      [
-        '4panel', {
-          factory: (container, element, viewer, crossSections) =>
-              new FourPanelLayout(container, element, viewer, crossSections)
-        }
-      ],
-      [
-        '3d', {
-          factory: (container, element, viewer, crossSections) =>
-              new SinglePerspectiveLayout(container, element, viewer, crossSections)
-        }
-      ],
+      '4panel', {
+        factory: (container, element, viewer, crossSections) =>
+          new FourPanelLayout(container, element, viewer, crossSections)
+      }
     ],
+    [
+      '3d', {
+        factory: (container, element, viewer, crossSections) =>
+          new SinglePerspectiveLayout(container, element, viewer, crossSections)
+      }
+    ],
+  ],
 );
 
 for (const axes of AXES_RELATIVE_ORIENTATION.keys()) {
   LAYOUTS.set(axes, {
     factory: (container, element, viewer) =>
-        new SinglePanelLayout(container, element, viewer, <NamedAxes>axes)
+      new SinglePanelLayout(container, element, viewer, <NamedAxes>axes)
   });
   const splitLayout = `${axes}-3d`;
   LAYOUT_SYMBOLS.set(axes, oneSquareSymbol);
   LAYOUT_SYMBOLS.set(splitLayout, '◫');
   LAYOUTS.set(splitLayout, {
     factory: (container, element, viewer, crossSections) => new SliceViewPerspectiveTwoPanelLayout(
-        container, element, viewer, 'row', <NamedAxes>axes, crossSections)
+      container, element, viewer, 'row', <NamedAxes>axes, crossSections)
   });
 }
 
@@ -483,13 +504,13 @@ export class CrossSectionSpecification extends RefCounted implements Trackable {
     this.width.changed.add(this.changed.dispatch);
     this.height.changed.add(this.changed.dispatch);
     this.scale = new LinkedZoomState(
-        parent.zoomFactor.addRef(), parent.zoomFactor.displayDimensionRenderInfo.addRef());
+      parent.zoomFactor.addRef(), parent.zoomFactor.displayDimensionRenderInfo.addRef());
     this.scale.changed.add(this.changed.dispatch);
     this.navigationState = this.registerDisposer(new NavigationState(
-        new DisplayPose(
-            this.position.value, parent.pose.displayDimensionRenderInfo.addRef(),
-            this.orientation.value),
-        this.scale.value, parent.depthRange.addRef()));
+      new DisplayPose(
+        this.position.value, parent.pose.displayDimensionRenderInfo.addRef(),
+        this.orientation.value),
+      this.scale.value, parent.depthRange.addRef()));
   }
 
   restoreState(obj: any) {
@@ -524,8 +545,8 @@ export class CrossSectionSpecification extends RefCounted implements Trackable {
 export class CrossSectionSpecificationMap extends WatchableMap<string, CrossSectionSpecification> {
   constructor(private parentNavigationState: Owned<NavigationState>) {
     super(
-        (context, spec) => context.registerDisposer(
-            context.registerDisposer(spec).changed.add(this.changed.dispatch)),
+      (context, spec) => context.registerDisposer(
+        context.registerDisposer(spec).changed.add(this.changed.dispatch)),
     );
     this.registerDisposer(parentNavigationState);
   }
@@ -549,7 +570,7 @@ export class CrossSectionSpecificationMap extends WatchableMap<string, CrossSect
 
   toJSON() {
     if (this.size === 0) return undefined;
-    const obj: {[key: string]: any} = {};
+    const obj: { [key: string]: any } = {};
     for (const [k, v] of this) {
       obj[k] = v.toJSON();
     }
@@ -568,7 +589,7 @@ export class DataPanelLayoutSpecification extends RefCounted implements Trackabl
     this.type = new TrackableValue<string>(defaultLayout, validateLayoutName);
     this.type.changed.add(this.changed.dispatch);
     this.crossSections =
-        this.registerDisposer(new CrossSectionSpecificationMap(parentNavigationState.addRef()));
+      this.registerDisposer(new CrossSectionSpecificationMap(parentNavigationState.addRef()));
     this.crossSections.changed.add(this.changed.dispatch);
     this.orthographicProjection.changed.add(this.changed.dispatch);
     this.registerDisposer(parentNavigationState);
@@ -589,14 +610,14 @@ export class DataPanelLayoutSpecification extends RefCounted implements Trackabl
       verifyObject(obj);
       verifyObjectProperty(obj, 'type', x => this.type.restoreState(x));
       verifyObjectProperty(
-          obj, 'orthographicProjection', x => this.orthographicProjection.restoreState(x));
+        obj, 'orthographicProjection', x => this.orthographicProjection.restoreState(x));
       verifyObjectProperty(
-          obj, 'crossSections', x => x !== undefined && this.crossSections.restoreState(x));
+        obj, 'crossSections', x => x !== undefined && this.crossSections.restoreState(x));
     }
   }
 
   toJSON() {
-    const {type, crossSections, orthographicProjection} = this;
+    const { type, crossSections, orthographicProjection } = this;
     const orthographicProjectionJson = orthographicProjection.toJSON();
     if (crossSections.size === 0 && orthographicProjectionJson === undefined) {
       return type.value;
@@ -613,7 +634,7 @@ export class DataPanelLayoutContainer extends RefCounted {
   element = document.createElement('div');
   specification: Owned<DataPanelLayoutSpecification>;
 
-  private layout: DataDisplayLayout|undefined;
+  private layout: DataDisplayLayout | undefined;
 
   get name() {
     return this.specification.type.value;
@@ -625,18 +646,18 @@ export class DataPanelLayoutContainer extends RefCounted {
   constructor(public viewer: ViewerUIState, defaultLayout: string) {
     super();
     this.specification = this.registerDisposer(
-        new DataPanelLayoutSpecification(this.viewer.navigationState.addRef(), defaultLayout));
+      new DataPanelLayoutSpecification(this.viewer.navigationState.addRef(), defaultLayout));
     this.element.style.flex = '1';
     const scheduleUpdateLayout = this.registerCancellable(debounce(() => this.updateLayout(), 0));
     this.specification.type.changed.add(scheduleUpdateLayout);
 
     registerActionListener(
-        this.element, 'toggle-orthographic-projection',
-        () => this.specification.orthographicProjection.toggle());
+      this.element, 'toggle-orthographic-projection',
+      () => this.specification.orthographicProjection.toggle());
 
     // Ensure the layout is updated before drawing begins to avoid flicker.
     this.registerDisposer(
-        this.viewer.display.updateStarted.add(() => scheduleUpdateLayout.flush()));
+      this.viewer.display.updateStarted.add(() => scheduleUpdateLayout.flush()));
     scheduleUpdateLayout();
   }
   get changed() {
@@ -652,7 +673,7 @@ export class DataPanelLayoutContainer extends RefCounted {
     this.specification.reset();
   }
   private disposeLayout() {
-    let {layout} = this;
+    let { layout } = this;
     if (layout !== undefined) {
       layout.dispose();
       this.layout = undefined;
@@ -661,7 +682,7 @@ export class DataPanelLayoutContainer extends RefCounted {
   private updateLayout() {
     this.disposeLayout();
     this.layout = getLayoutByName(this.name).factory(
-        this, this.element, this.viewer, this.specification.crossSections);
+      this, this.element, this.viewer, this.specification.crossSections);
   }
   disposed() {
     this.disposeLayout();

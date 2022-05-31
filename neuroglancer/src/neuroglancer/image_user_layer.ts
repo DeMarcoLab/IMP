@@ -42,7 +42,7 @@ import {makeCopyButton} from 'neuroglancer/widget/copy_button';
 import {DependentViewContext} from 'neuroglancer/widget/dependent_view_widget';
 import {makeHelpButton} from 'neuroglancer/widget/help_button';
 import {addLayerControlToOptionsTab, LayerControlDefinition, registerLayerControl} from 'neuroglancer/widget/layer_control';
-import {checkboxLayerControl} from 'neuroglancer/widget/layer_control_checkbox';
+//import {checkboxLayerControl} from 'neuroglancer/widget/layer_control_checkbox';
 import {enumLayerControl} from 'neuroglancer/widget/layer_control_enum';
 import {rangeLayerControl} from 'neuroglancer/widget/layer_control_range';
 import {makeMaximizeButton} from 'neuroglancer/widget/maximize_button';
@@ -50,6 +50,7 @@ import {renderScaleLayerControl} from 'neuroglancer/widget/render_scale_widget';
 import {ShaderCodeWidget} from 'neuroglancer/widget/shader_code_widget';
 import {LegendShaderOptions, registerLayerShaderControlsTool, ShaderControls} from 'neuroglancer/widget/shader_controls';
 import {Tab} from 'neuroglancer/widget/tab_view';
+import { ProteomicsOptionsTab } from './ui/proteomics';
 
 const OPACITY_JSON_KEY = 'opacity';
 const BLEND_JSON_KEY = 'blend';
@@ -129,6 +130,10 @@ export class ImageUserLayer extends Base {
         'rendering',
         {label: 'Rendering', order: -100, getter: () => new RenderingOptionsTab(this)});
     this.tabs.default = 'rendering';
+    this.tabs.add(
+      'proteomics',
+      {label: 'Proteomics',order:-50,getter: () => new ProteomicsOptionsTab()});
+    
   }
 
   activateDataSubsources(subsources: Iterable<LoadedDataSubsource>) {
