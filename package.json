@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "@types/three": "^0.139.0",
+    "fabric": "^5.2.1",
+    "tinycolor2": "^1.4.2"
+  },
+  "devDependencies": {
+    "@types/fabric": "^4.5.7"
+  }
+}
