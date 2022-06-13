@@ -49,8 +49,8 @@ export function setupDefaultViewer() {
   viewer.registerDisposer(bindTitle(viewer.title));
 
   //viewer.loadFromJsonUrl();
-  const url: string = 'https://webdev.imp-db.cloud.edu.au:3005/tomosets/';
-  viewer.connectToDatabase(url);
+  //const url: string = 'https://webdev.imp-db.cloud.edu.au:3005/tomosets/';
+  viewer.connectToDatabase();
 
   bindDefaultCopyHandler(viewer);
   bindDefaultPasteHandler(viewer);

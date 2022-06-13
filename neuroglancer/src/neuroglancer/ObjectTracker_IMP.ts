@@ -292,7 +292,7 @@ export class ObjectTracker_IMP {
                     //    archivedLayer.annotations[l]["segments"] = [[archivedLayer.annotations[l].id]]
                     //}
                 }
-                console.log(archivedLayer)
+    //            console.log(archivedLayer)
                 layer_res.push(archivedLayer)
             }
 

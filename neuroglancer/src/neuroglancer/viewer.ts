@@ -69,8 +69,8 @@ import { TrackableScaleBarOptions } from 'neuroglancer/widget/scale_bar';
 import { RPC } from 'neuroglancer/worker_rpc';
 import { cancellableFetchOk, responseJson } from './util/http_request';
 import { ObjectTracker_IMP } from './ObjectTracker_IMP';
-
-
+import { IMP_dbLoader } from './IMP_dbLoader';
+ 
 declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 
 interface CreditLink {
@@ -750,21 +750,6 @@ export class Viewer extends RefCounted implements ViewerState {
       });
     }
 
-    /* for (const action of ['select']) {
-       this.bindAction(action, () => {
-          if(action==="select"){
-           
-          } else {
-         this.mouseState.updateUnconditionally();
-         this.layerManager.invokeAction(action);
-         }
- 
- 
- 
-       });
-     }*/
-
-
     this.bindAction('color-picker', () => {
 
       ObjectTracker_IMP.getInstance().doClickReaction('dblClick', this.mouseState.pageX, this.mouseState.pageY);
@@ -805,19 +790,6 @@ export class Viewer extends RefCounted implements ViewerState {
         this.activateTool(uppercase);
       });
     }
-
-
-    /*this.bindAction('z+1-via-wheel', () => {
-      ObjectTracker_IMP.getInstance().updateSlice("z");
-    })
-
-    this.bindAction('y+1-via-wheel', () => {
-      ObjectTracker_IMP.getInstance().updateSlice("y");
-    })
-
-    this.bindAction('x+1-via-wheel', () => {
-      ObjectTracker_IMP.getInstance().updateSlice("x");
-    })*/
 
     this.bindAction('annotate', () => {
 
@@ -913,39 +885,17 @@ export class Viewer extends RefCounted implements ViewerState {
   //NH_Monash
 
   datasets = [] as Array<any>
-  async connectToDatabase(url: string) {
-    const axios = require('axios').default;
-    axios.defaults.headers.post['Access-Control-Allow-Origin'] = '*'
-    let self = this
-    console.log(url)
-    axios.get(url).then((response: any) => {
-      self.datasets = response.data;
-      this.openDatabasePanel();
-    })
-      .catch((error: any) => {
-        console.error(error);
-      })
-
-
+  
+  connectToDatabase() {
+    IMP_dbLoader.getInstance().getEntriesInDatabase().then((res: any)=>{ 
+      this.datasets=res.data;
+      console.log(res)
+      this.openDatabasePanel()
+    })    
   }
-
-  currentDataset = {} as Object
-  tryFetchByName(selected_name: string) {
-    //console.log(selected_id)
-    const axios = require('axios').default;
-    const url: string = 'https://webdev.imp-db.cloud.edu.au:3005/tomosets/' + selected_name;
-    let self = this
-    axios.get(url).then((response: any) => {
-      self.loadDBsetIntoNeuroglancer(response.data)
-    })
-      .catch((error: any) => {
-        console.error(error);
-      })
-  }
-
 
   async loadDBsetIntoNeuroglancer(dataset: any) {
-    if (dataset.stateFile.exists) {
+    if (dataset.stateFile && dataset.stateFile.exists) {
       //console.log("Has state file")
       let path = dataset.stateFile.path;
       StatusMessage
@@ -973,6 +923,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
       //get the header information
       const response = await fetch(dataset.image + "/" + dataset.name + ".json", { method: "GET" });
+      console.log(response)
       let shaderstring = '#uicontrol invlerp normalized(clamp=false)';
       let position = [100, 100, 100]
       let dimensions = { 'x': [1, 'nm'], 'y': [1, 'nm'], 'z': [1, 'nm'] }
@@ -1023,11 +974,11 @@ export class Viewer extends RefCounted implements ViewerState {
 
             let resText = await (response.text())
             console.log(resText)
-            let re = new RegExp('(?<=\>)(.*?)(.json)', 'g');  //parses the resulting page for the file names present in that folder
+            let re = new RegExp('(?<=(\"|\')>)(.*?)(.json)', 'g');  //parses the resulting page for the file names present in that folder
 
             let sublayers = [...resText.matchAll(re)]
             console.log(sublayers)
-          
+
             let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
             let meshes = [...resText.matchAll(re1)]
             //console.log(meshes)
@@ -1035,7 +986,7 @@ export class Viewer extends RefCounted implements ViewerState {
             let columns = await (a.json());
 
             try {
-             
+
               console.log(columns)
               let option = document.createElement("input");
               option.type = "radio";
@@ -1105,7 +1056,7 @@ export class Viewer extends RefCounted implements ViewerState {
               let colour = ""
               if (sublayer[0].indexOf("column") < 0) {
 
-                const sublayerresponse = await fetch(layer.path + "/" + sublayer[0], { method: "GET" })
+                const sublayerresponse = await fetch(layer.path + sublayer[0], { method: "GET" })
                 const annots = await sublayerresponse.json()
                 //console.log(annots)
                 for (let annotation of annots) {
@@ -1257,11 +1208,7 @@ export class Viewer extends RefCounted implements ViewerState {
       ObjectTracker_IMP.getInstance().setState(this.state);
       ObjectTracker_IMP.getInstance().setPosAndDim(position, dimensions)
       ObjectTracker_IMP.getInstance().makeStateJSON();
-
-
     }
-
-
 
     //Proteomics
     //this constructs the div element with proteomics content. it is appended to the root node and not displayed. Once the proteomics tab is activated, this node is 
@@ -1281,7 +1228,7 @@ export class Viewer extends RefCounted implements ViewerState {
       }
 
 
-      if (dataset.proteomics.path) {
+      if (dataset.proteomics && dataset.proteomics.path) {
         let protTable = document.createElement("table")
         protTable.className = "proteomics-table"
 
@@ -1313,8 +1260,6 @@ export class Viewer extends RefCounted implements ViewerState {
             protTable.append(tdEl1_)
           }
         }
-
-
       } else {
         //console.log("no proteomics")
         responseElement.textContent = "No Proteomics data found."
@@ -1325,7 +1270,6 @@ export class Viewer extends RefCounted implements ViewerState {
 
 
     //Metadata
-
     //this pulls the metadata and creates a node element as a child of the rootnode. Initially this is invisible, once the metadata tab is activated, the node will be appended
     //to that panel as a child.
     //all available metadata for layers will get their own content...
@@ -1346,7 +1290,7 @@ export class Viewer extends RefCounted implements ViewerState {
       heading.textContent = "About this dataset"
       datasetMetadatadiv.append(heading)
       let datasetContent = document.createElement('p')
-      if (dataset.metadata.text) {
+      if (dataset.metadata && dataset.metadata.text) {
         datasetContent.textContent = dataset.metadata.text;
       } else {
         datasetContent.textContent = "No metadata provided for this dataset."
@@ -1400,6 +1344,55 @@ export class Viewer extends RefCounted implements ViewerState {
       topRow.style.justifyContent = "space-between";
       topRow.append(closeButton)
 
+      const localFileButton = document.createElement('button');
+      localFileButton.textContent = "local";
+      localFileButton.className = "neuroglancer-icon btn-group db_btn";
+      localFileButton.onclick = () => {
+        let dbURL = prompt("Please enter the url to the folder with the dataset", "...");
+        if (dbURL == null || dbURL == "") {
+          console.log("Cancelled...")
+        } else {
+          this.state.reset();
+          ObjectTracker_IMP.getInstance().reset();
+          //localhost means that the user has the URL to a folder being hosted on their localhost. We construct the object that would be returned by
+          // the database call here manually. format:
+          /*{_id: '615e33d4e12aea8b27164d0d', dataset_id: 0, image: 'https://webdev.imp-db.cloud.edu.au:3002/folderhost/Synthetic_1/', layer: {…}, metadata: {…}, …}
+dataset_id: 0
+dimensions: {x: Array(2), y: Array(2), z: Array(2)}
+image: "https://webdev.imp-db.cloud.edu.au:3002/folderhost/Synthetic_1/"
+layer: {}
+layers: Array(1)
+0: {metadata: '', path: 'https://webdev.imp-db.cloud.edu.au:3002/folderhost/Synthetic_1/coordinates/', type: 'all'}
+length: 1
+[[Prototype]]: Array(0)
+metadata: {text: 'A synthetic dataset.'}
+name: "Synthetic_1"
+proteomics: {path: 'https://webdev.imp-db.cloud.edu.au:3002/folderhost/Synthetic_1/proteomics/proteomics.json'}
+stateFile: {exists: false, path: ''}
+_id: "615e33d4e12aea8b27164d0d"
+[[Prototype]]: Object*/
+          if(dbURL.endsWith("/")){
+            dbURL = dbURL.substr(0,dbURL.length-1);
+          }
+          const loadObject = {
+            name: "locally_hosted",
+            dimension: {x:[1.0],y:[1.0],z:[1.0]},
+            image: dbURL,
+            layers: [{
+              metadata: "",
+              path: dbURL + "/coordinates/",
+              type: "all"}
+            ]
+          }
+          console.log(loadObject)
+          /*IMP_dbLoader.getInstance().tryFetchByURL(dbURL).then((res:any)=>{
+            console.log(res.data)
+          })*/
+          this.loadDBsetIntoNeuroglancer(loadObject)
+          //this.tryFetchByURL(dbURL)
+        }
+      }
+      topRow.append(localFileButton)
       const resultPanel = document.createElement('div');
       resultPanel.className = "db_result_list";
       const resultList = document.createElement('ul');
@@ -1409,8 +1402,6 @@ export class Viewer extends RefCounted implements ViewerState {
         el.className = "neuroglancer-icon btn-group db-li";
         el.textContent = this.datasets[i].name;
 
-
-
         el.onclick = (ev) => {
           //delete list of elemets
           this.state.reset();
@@ -1418,15 +1409,14 @@ export class Viewer extends RefCounted implements ViewerState {
 
           var element = ev.target as HTMLLIElement
           if (element.textContent) {
-            //console.log(element.textConten)
-            this.tryFetchByName(element.textContent);
-          }
-
+            //load the selected dataset by name
+            IMP_dbLoader.getInstance().tryFetchByName(element.textContent).then((res: any)=>{ 
+              console.log(res.data)
+              this.loadDBsetIntoNeuroglancer(res.data)
+            })    
+          } 
           //close panel upon dataset selection
           db_panel!.style.display = "none"
-
-
-
           //console.log(element.innerHTML)
         }
         resultList.append(el)
@@ -1463,26 +1453,4 @@ export class Viewer extends RefCounted implements ViewerState {
     return className;
   }
 
-  /* loadFromJsonUrl() {
-     //console.log(",,,")
-     var urlParams = new URLSearchParams(window.location.search);
-     if (urlParams.has('json_url')) {
-       let json_url = urlParams.get('json_url')!;
- 
-       //history.replaceState(null, '', removeParameterFromUrl(window.location.href, 'json_url'));
-       StatusMessage
-         .forPromise(
-           cancellableFetchOk(json_url, {}, responseJson)
-             .then(response => {
-               //console.log(response)
-               this.state.restoreState(response);
- 
-             }),
-           {
-             initialMessage: `Retrieving state from json_url: ${json_url}.`,
-             delay: true,
-             errorPrefix: `Error retrieving state: `,
-           });
-     }
-   }*/
 }
