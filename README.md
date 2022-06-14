@@ -12,7 +12,7 @@ npm run dev-server  (see package.json for more commands).
 This will start a neuroglancer instance to use in your browser. Default url is http://127.0.0.1:8080 .
 You can load any hosted neuroglancer compatbile dataset through the normal neuroglancer interface.
 
-## Loading a "IMP" dataset
+## Loading a "IMP"-compatible dataset
 The dataset you want to load must:
 -  be hosted and not just a local file. You can use a service such as nginx to host data. We provided a nginx config file in our preprocessing pipeline repository [https://github.com/DeMarcoLab/imp_preprocessing_pipelines](here.)
 -  follow the expected format also described in the repository.
