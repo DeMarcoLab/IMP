@@ -68,9 +68,9 @@ import { MousePositionWidget, PositionWidget } from 'neuroglancer/widget/positio
 import { TrackableScaleBarOptions } from 'neuroglancer/widget/scale_bar';
 import { RPC } from 'neuroglancer/worker_rpc';
 import { cancellableFetchOk, responseJson } from './util/http_request';
-import { ObjectTracker_IMP } from './ObjectTracker_IMP';
+import IMP_StateManager from './IMP_statemanager';
 import { IMP_dbLoader } from './IMP_dbLoader';
- 
+
 declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 
 interface CreditLink {
@@ -220,6 +220,7 @@ class TrackableViewerState extends CompoundTrackable {
   restoreState(obj: any) {
     const { viewer } = this;
     super.restoreState(obj);
+    
     // Handle legacy properties
     verifyOptionalObjectProperty(obj, 'navigation', navObj => {
       verifyObject(navObj);
@@ -493,8 +494,8 @@ export class Viewer extends RefCounted implements ViewerState {
     this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
       this.uiControlVisibility.showLocation, positionWidget.element));
     topRow.appendChild(positionWidget.element);
-
-
+    
+ 
     //Search NH
     let colorByDiv = document.createElement("div");
     colorByDiv.id = "imp-color-by-div";
@@ -508,9 +509,9 @@ export class Viewer extends RefCounted implements ViewerState {
     button.innerText = "Create Group...";
     button.title = "Toggle Group mode. When toggled on, CTRL+Click to (de)select meshes. Click button again to add group to a new layer.";
     button.onclick = () => {
-      ObjectTracker_IMP.getInstance().toggleGroupingMode();
-      console.log(ObjectTracker_IMP.getInstance().isGrouping());
-      if (ObjectTracker_IMP.getInstance().isGrouping()) {
+      IMP_StateManager.getInstance().toggleGroupingMode();
+      console.log(IMP_StateManager.getInstance().isGrouping());
+      if (IMP_StateManager.getInstance().isGrouping()) {
         button.innerText = "Finished creating group";
       } else {
         button.innerText = "Create Group...";
@@ -618,7 +619,8 @@ export class Viewer extends RefCounted implements ViewerState {
         this.uiControlVisibility.showEditStateButton, button));
       topRow.appendChild(button);
     }
-    {
+
+    /*{
       const button = makeIcon({ text: 'DB', title: 'Open Database Panel' });
       this.registerEventListener(button, 'click', () => {
         this.openDatabasePanel();
@@ -627,7 +629,7 @@ export class Viewer extends RefCounted implements ViewerState {
         this.uiControlVisibility.showDatabaseButton, button));
       topRow.appendChild(button);
 
-    }
+    }*/
     {
       const { helpPanelState } = this;
       const button =
@@ -750,13 +752,17 @@ export class Viewer extends RefCounted implements ViewerState {
       });
     }
 
+    this.bindAction('z+1-via-wheel', () => {
+      IMP_StateManager.getInstance().updatePosDim(this.navigationState.position)
+    })
+
     this.bindAction('color-picker', () => {
 
-      ObjectTracker_IMP.getInstance().doClickReaction('dblClick', this.mouseState.pageX, this.mouseState.pageY);
+      IMP_StateManager.getInstance().doClickReaction('dblClick', this.mouseState.pageX, this.mouseState.pageY);
     })
     this.bindAction('toggle-mesh', () => {
       if (this.mouseState.pickedAnnotationId) {
-        ObjectTracker_IMP.getInstance().toggleSegment(this.mouseState.pickedAnnotationId)
+        IMP_StateManager.getInstance().toggleSegment(this.mouseState.pickedAnnotationId)
       }
     });
 
@@ -793,10 +799,10 @@ export class Viewer extends RefCounted implements ViewerState {
 
     this.bindAction('annotate', () => {
 
-      if (ObjectTracker_IMP.getInstance().getIsDrawingMode()) {
+      if (IMP_StateManager.getInstance().getIsDrawingMode()) {
         console.log("should draw")
-      } else if (ObjectTracker_IMP.getInstance().isGrouping()) {
-        ObjectTracker_IMP.getInstance().tryAddToGroup()
+      } else if (IMP_StateManager.getInstance().isGrouping()) {
+        IMP_StateManager.getInstance().tryAddToGroup()
       } else {
         const selectedLayer = this.selectedLayer.layer;
 
@@ -813,16 +819,16 @@ export class Viewer extends RefCounted implements ViewerState {
 
         userLayer.tool.value.trigger(this.mouseState);
 
-        if (ObjectTracker_IMP.getInstance().isAreaMode()) {
+        if (IMP_StateManager.getInstance().isAreaMode()) {
           console.log(userLayer.tool.value.mouseState);
-          ObjectTracker_IMP.getInstance().setCornerDrawing(userLayer.tool.value.mouseState.position);
+          IMP_StateManager.getInstance().setCornerDrawing(userLayer.tool.value.mouseState.position);
         }
       }
     });
 
     this.bindAction('select-area-mode', () => {
       console.log('select Area Mode On/Off');
-      ObjectTracker_IMP.getInstance().toggleAreaMode();
+      IMP_StateManager.getInstance().toggleAreaMode();
       //ObjectTracker_IMP.getInstance().makeSelectionAnnotationLayer();
       console.log("Created selection layer. ")
     });
@@ -885,34 +891,17 @@ export class Viewer extends RefCounted implements ViewerState {
   //NH_Monash
 
   datasets = [] as Array<any>
-  
-  connectToDatabase() {
-    IMP_dbLoader.getInstance().getEntriesInDatabase().then((res: any)=>{ 
-      this.datasets=res.data;
-      console.log(res)
-      this.openDatabasePanel()
-    })    
+
+  connectToDatabase(datasetName:string) {
+    IMP_dbLoader.getInstance().tryFetchByName(datasetName).then((res: any) => {
+
+      this.loadDBsetIntoNeuroglancer(res.data)
+    })
   }
 
   async loadDBsetIntoNeuroglancer(dataset: any) {
-    if (dataset.stateFile && dataset.stateFile.exists) {
-      //console.log("Has state file")
-      let path = dataset.stateFile.path;
-      StatusMessage
-        .forPromise(
-          cancellableFetchOk(path, {}, responseJson)
-            .then(response => {
-              console.log("response")
-              this.state.restoreState(response);
-            }),
-          {
-            initialMessage: `Retrieving state from json_url: ${path}.`,
-            delay: true,
-            errorPrefix: `Error retrieving state: `,
-          });
+    
 
-    } else {
-      console.log("Has no state file")
       this.navigationState.reset();
       this.perspectiveNavigationState.pose.orientation.reset();
       this.perspectiveNavigationState.zoomFactor.reset();
@@ -921,9 +910,9 @@ export class Viewer extends RefCounted implements ViewerState {
       //  addNewLayer(this.layerSpecification, this.selectedLayer);
       //}//reset state and load new one
 
-      //get the header information
+      //get the header information  
       const response = await fetch(dataset.image + "/" + dataset.name + ".json", { method: "GET" });
-      console.log(response)
+
       let shaderstring = '#uicontrol invlerp normalized(clamp=false)';
       let position = [100, 100, 100]
       let dimensions = { 'x': [1, 'nm'], 'y': [1, 'nm'], 'z': [1, 'nm'] }
@@ -931,10 +920,11 @@ export class Viewer extends RefCounted implements ViewerState {
         //if a header json exists, the correct posistion for the normalized brightness/contrast value is used. if no file is present, best guess defaults are used, which
         //are likely not great.
         const headerdata = await (response.json());
-        //console.log(headerdata)
+        console.log(headerdata)
         if (!(headerdata.mean === 0 && headerdata.min === 0 && headerdata.max === 0 || headerdata.max < headerdata.min)) {
-          shaderstring = '#uicontrol invlerp normalized(range=[' + (headerdata.min - headerdata.max) + ',' + (headerdata.max + headerdata.min) + '], window=[' + (headerdata.min - headerdata.max) + ',' + (headerdata.max + headerdata.min) + '])';
+          shaderstring = '#uicontrol invlerp normalized(range=[' + headerdata.min + ',' + headerdata.max  + '], window=[' + (headerdata.min - Math.abs(headerdata.min))  + ',' + (headerdata.max+Math.abs(headerdata.min)) + '])'
         }
+        //console.log(shaderstring)
         //}
         position = [headerdata.x / 2, headerdata.y / 2, headerdata.z / 2];
 
@@ -952,18 +942,21 @@ export class Viewer extends RefCounted implements ViewerState {
       shaderstring += '\nvoid main() {\n   emitRGB(color * inverter(normalized(), invertColormap));\n}\n';
       const imgLayer = { "type": "image", "visible": true, "source": "precomputed://" + dataset.image + "/image", "tab": "rendering", "name": dataset.name, "shader": shaderstring };
 
-      ObjectTracker_IMP.getInstance().addLayer(imgLayer, true)
+      IMP_StateManager.getInstance().addLayer(imgLayer, true)
       // ObjectTracker_IMP.getInstance().setActiveLayerName(dataset.name)
+      /*add custom scroll bar to each panel*/
+      //add scrollbar
+
 
       let names = []
       let colours = []
-      let hasAnnotations = true;
+      //let hasAnnotations = true;
       if (dataset.layers) {
         //console.log(dataset.layers)
         for (let layer of dataset.layers) {
-          console.log(layer)
+          //console.log(layer)
           if (layer && layer.type == "all") {
-            console.log("all")
+            //console.log("all")
             //fetch the json for the annotations 
             const response = await fetch(layer.path, { method: "GET" });
 
@@ -973,11 +966,11 @@ export class Viewer extends RefCounted implements ViewerState {
             }
 
             let resText = await (response.text())
-            console.log(resText)
+            //console.log(resText)
             let re = new RegExp('(?<=(\"|\')>)(.*?)(.json)', 'g');  //parses the resulting page for the file names present in that folder
 
             let sublayers = [...resText.matchAll(re)]
-            console.log(sublayers)
+            //console.log(sublayers)
 
             let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
             let meshes = [...resText.matchAll(re1)]
@@ -987,7 +980,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
             try {
 
-              console.log(columns)
+              //console.log(columns)
               let option = document.createElement("input");
               option.type = "radio";
               option.id = "color-by-type";
@@ -996,7 +989,7 @@ export class Viewer extends RefCounted implements ViewerState {
               option.value = "type";
               option.checked = true;
               option.addEventListener('change', () => {
-                ObjectTracker_IMP.getInstance().updateAttribute(0);
+                IMP_StateManager.getInstance().updateAttribute(0);
               });
               //option.onclick = (ev) => {
               //  ObjectTracker_IMP.getInstance().updateAttribute("colorBy","type",ev)
@@ -1013,15 +1006,16 @@ export class Viewer extends RefCounted implements ViewerState {
               document.getElementById('imp-color-by-div')?.appendChild(label);
               document.getElementById('imp-color-by-div')?.appendChild(option);
 
+              console.log(columns)
               for (let i = 0; i < columns.length; i++) {
-                let option = document.createElement("input")
-                option.type = "radio"
-                option.id = columns[i]
-                option.name = "colorBy"
-                option.className = "imp-radio";
-                option.value = columns[i]
-                option.addEventListener('change', () => {
-                  ObjectTracker_IMP.getInstance().updateAttribute(i + 1);
+                let opt_ = document.createElement("input")
+                opt_.type = "radio"
+                opt_.id = columns[i]
+                opt_.name = "colorBy"
+                opt_.className = "imp-radio";
+                opt_.value = columns[i]
+                opt_.addEventListener('change', () => {
+                  IMP_StateManager.getInstance().updateAttribute(i + 1);
                 });
 
                 let label = document.createElement("label");
@@ -1029,10 +1023,10 @@ export class Viewer extends RefCounted implements ViewerState {
                 label.htmlFor = columns[i]
                 label.innerHTML = columns[i]
                 document.getElementById('imp-color-by-div')?.appendChild(label)
-                document.getElementById('imp-color-by-div')?.appendChild(option)
+                document.getElementById('imp-color-by-div')?.appendChild(opt_)
                 //add a list of colormaps
                 let selectEl = document.createElement("select");
-                let colorMaps = ObjectTracker_IMP.getInstance().getColormapKeys();
+                let colorMaps = IMP_StateManager.getInstance().getColormapKeys();
                 //console.log(colorMaps)
                 for (let i = 0; i < colorMaps.length; i++) {
                   let opt = document.createElement('option');
@@ -1041,9 +1035,10 @@ export class Viewer extends RefCounted implements ViewerState {
                   opt.textContent = colorMaps[i]
                   selectEl.appendChild(opt);
                 }
+                console.log(selectEl)
                 document.getElementById('imp-color-by-div')?.appendChild(selectEl)
                 selectEl.addEventListener('change', () => {
-                  ObjectTracker_IMP.getInstance().updateColormap(selectEl.value)
+                  IMP_StateManager.getInstance().updateColormap(selectEl.value)
                 })
               }
 
@@ -1060,7 +1055,7 @@ export class Viewer extends RefCounted implements ViewerState {
                 const annots = await sublayerresponse.json()
                 //console.log(annots)
                 for (let annotation of annots) {
-                  ObjectTracker_IMP.getInstance().addIdName(annotation.id, sublayer[0].split(".json")[0]);
+                  IMP_StateManager.getInstance().addIdName(annotation.id, sublayer[0].split(".json")[0]);
                 }
                 let shaderstring = "\n#uicontrol int colour_by slider(min=0,max=" + (columns.length > 0 ? columns.length : 1) + ")"
                 shaderstring += "\nvoid main() {\n"
@@ -1095,7 +1090,7 @@ export class Viewer extends RefCounted implements ViewerState {
                 colour = annots[0].props[0]
                 //console.log(newLayer)
                 //ObjectTracker_IMP.getInstance().addNameID(sublayer[0].split(".json")[0],annots[0].id) //TODO: Make_better!
-                ObjectTracker_IMP.getInstance().addLayer(newLayer, false)
+                IMP_StateManager.getInstance().addLayer(newLayer, false)
               }
 
               /*try to load the mesh layer if available */
@@ -1119,7 +1114,7 @@ export class Viewer extends RefCounted implements ViewerState {
                     "name": sublayer[0].split(".json")[0] + "_mesh",
                     "visible": true
                   };
-                  ObjectTracker_IMP.getInstance().addLayer(meshlayer, false)
+                  IMP_StateManager.getInstance().addLayer(meshlayer, false)
 
                 }
               }
@@ -1173,7 +1168,7 @@ export class Viewer extends RefCounted implements ViewerState {
               }
               counter++;
               //console.log(segmentationlayer)
-              ObjectTracker_IMP.getInstance().addLayer(segmentationlayer, false)
+              IMP_StateManager.getInstance().addLayer(segmentationlayer, false)
             }
 
             //console.log(segmentationLayers)
@@ -1196,19 +1191,20 @@ export class Viewer extends RefCounted implements ViewerState {
                 "name": mesh[0],
                 "visible": true
               };
-              ObjectTracker_IMP.getInstance().addLayer(meshlayer, false)
+              IMP_StateManager.getInstance().addLayer(meshlayer, false)
 
 
             }
 
-          }
+          
         }
       }
 
-      ObjectTracker_IMP.getInstance().setState(this.state);
-      ObjectTracker_IMP.getInstance().setPosAndDim(position, dimensions)
-      ObjectTracker_IMP.getInstance().makeStateJSON();
-    }
+      IMP_StateManager.getInstance().setState(this.state);
+      IMP_StateManager.getInstance().setPosAndDim(position, dimensions)
+      IMP_StateManager.getInstance().makeStateJSON();
+    
+
 
     //Proteomics
     //this constructs the div element with proteomics content. it is appended to the root node and not displayed. Once the proteomics tab is activated, this node is 
@@ -1273,7 +1269,7 @@ export class Viewer extends RefCounted implements ViewerState {
     //this pulls the metadata and creates a node element as a child of the rootnode. Initially this is invisible, once the metadata tab is activated, the node will be appended
     //to that panel as a child.
     //all available metadata for layers will get their own content...
-    if (rootNode !== null) {
+    /*if (rootNode !== null) {
       //console.log(response.toString())
       let responseElement = document.getElementById("metadataOptions-content")
       if (responseElement === null) {
@@ -1319,10 +1315,10 @@ export class Viewer extends RefCounted implements ViewerState {
       }
       responseElement.append(layerMetadatadiv)
 
-    }
+    }*/
   }
-
-  openDatabasePanel() {
+  }
+ /* openDatabasePanel() {
     //console.log("button clicked");
     let db_panel = document.getElementById("db_panel")
     if (db_panel !== null) {
@@ -1348,46 +1344,29 @@ export class Viewer extends RefCounted implements ViewerState {
       localFileButton.textContent = "local";
       localFileButton.className = "neuroglancer-icon btn-group db_btn";
       localFileButton.onclick = () => {
-        let dbURL = prompt("Please enter the url to the folder with the dataset", "...");
+        let dbURL = prompt("Please enter the url to the folder with the dataset", "http://127.0.0.1");
         if (dbURL == null || dbURL == "") {
           console.log("Cancelled...")
         } else {
           this.state.reset();
-          ObjectTracker_IMP.getInstance().reset();
-          //localhost means that the user has the URL to a folder being hosted on their localhost. We construct the object that would be returned by
-          // the database call here manually. format:
-          /*{_id: '615e33d4e12aea8b27164d0d', dataset_id: 0, image: 'https://webdev.imp-db.cloud.edu.au:3002/folderhost/Synthetic_1/', layer: {…}, metadata: {…}, …}
-dataset_id: 0
-dimensions: {x: Array(2), y: Array(2), z: Array(2)}
-image: "https://webdev.imp-db.cloud.edu.au:3002/folderhost/Synthetic_1/"
-layer: {}
-layers: Array(1)
-0: {metadata: '', path: 'https://webdev.imp-db.cloud.edu.au:3002/folderhost/Synthetic_1/coordinates/', type: 'all'}
-length: 1
-[[Prototype]]: Array(0)
-metadata: {text: 'A synthetic dataset.'}
-name: "Synthetic_1"
-proteomics: {path: 'https://webdev.imp-db.cloud.edu.au:3002/folderhost/Synthetic_1/proteomics/proteomics.json'}
-stateFile: {exists: false, path: ''}
-_id: "615e33d4e12aea8b27164d0d"
-[[Prototype]]: Object*/
-          if(dbURL.endsWith("/")){
-            dbURL = dbURL.substr(0,dbURL.length-1);
+          IMP_StateManager.getInstance().reset();
+ 
+          if (dbURL.endsWith("/")) {
+            dbURL = dbURL.substr(0, dbURL.length - 1);
           }
           const loadObject = {
             name: "locally_hosted",
-            dimension: {x:[1.0],y:[1.0],z:[1.0]},
+            dimension: { x: [1.0], y: [1.0], z: [1.0] },
             image: dbURL,
             layers: [{
               metadata: "",
               path: dbURL + "/coordinates/",
-              type: "all"}
+              type: "all"
+            }
             ]
           }
           console.log(loadObject)
-          /*IMP_dbLoader.getInstance().tryFetchByURL(dbURL).then((res:any)=>{
-            console.log(res.data)
-          })*/
+          
           this.loadDBsetIntoNeuroglancer(loadObject)
           //this.tryFetchByURL(dbURL)
         }
@@ -1405,16 +1384,16 @@ _id: "615e33d4e12aea8b27164d0d"
         el.onclick = (ev) => {
           //delete list of elemets
           this.state.reset();
-          ObjectTracker_IMP.getInstance().reset();
+          IMP_StateManager.getInstance().reset();
 
           var element = ev.target as HTMLLIElement
           if (element.textContent) {
             //load the selected dataset by name
-            IMP_dbLoader.getInstance().tryFetchByName(element.textContent).then((res: any)=>{ 
+            IMP_dbLoader.getInstance().tryFetchByName(element.textContent).then((res: any) => {
               console.log(res.data)
               this.loadDBsetIntoNeuroglancer(res.data)
-            })    
-          } 
+            })
+          }
           //close panel upon dataset selection
           db_panel!.style.display = "none"
           //console.log(element.innerHTML)
@@ -1432,7 +1411,7 @@ _id: "615e33d4e12aea8b27164d0d"
         rootNode.append(db_panel)
       }
     }
-  }
+  }*/
   getClassNamePerType(typ: string) {
     let className = "";
 

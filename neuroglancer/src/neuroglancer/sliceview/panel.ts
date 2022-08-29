@@ -376,6 +376,7 @@ export class SliceViewPanel extends RenderedDataPanel {
    * position.
    */
   zoomByMouse(factor: number) {
+
     const {navigationState} = this;
     if (!navigationState.valid) {
       return;

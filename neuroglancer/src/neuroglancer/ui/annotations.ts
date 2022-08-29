@@ -60,7 +60,7 @@ import {makeIcon} from 'neuroglancer/widget/icon';
 import {makeMoveToButton} from 'neuroglancer/widget/move_to_button';
 import {Tab} from 'neuroglancer/widget/tab_view';
 import {VirtualList, VirtualListSource} from 'neuroglancer/widget/virtual_list';
-import { ObjectTracker_IMP } from '../ObjectTracker_IMP';
+import IMP_StateManager from '../IMP_statemanager';
 
 
 export class MergedAnnotationStates extends RefCounted implements
@@ -657,7 +657,7 @@ export class AnnotationLayerView extends Tab {
     const element = document.createElement('div');
     element.classList.add('neuroglancer-annotation-list-entry');
 
-    element.style.backgroundColor = ObjectTracker_IMP.getInstance().getColorForId(annotation.id);
+    element.style.backgroundColor = IMP_StateManager.getInstance().getColorForId(annotation.id);
   /*  element.onmouseenter = () => {
       ObjectTracker_IMP.getInstance().hoverSegment(annotation.id,true);
     }

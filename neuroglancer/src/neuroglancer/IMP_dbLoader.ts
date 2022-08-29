@@ -45,9 +45,7 @@ export class IMP_dbLoader {
         //console.log(selected_id)
         const axios = require('axios').default;
         axios.defaults.headers.post['Access-Control-Allow-Origin'] = '*'
-        console.log(this.default_DB_url)
         let response = await axios.get(this.default_DB_url+selected_name);
-        console.log(response.data)
         return response;
     }
 

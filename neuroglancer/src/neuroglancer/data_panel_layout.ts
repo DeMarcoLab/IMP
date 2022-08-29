@@ -41,8 +41,8 @@ import { WatchableMap } from 'neuroglancer/util/watchable_map';
 import { VisibilityPrioritySpecification } from 'neuroglancer/viewer_state';
 import { DisplayDimensionsWidget } from 'neuroglancer/widget/display_dimensions_widget';
 import { ScaleBarOptions } from 'neuroglancer/widget/scale_bar';
-//import { ObjectTracker_IMP } from './ObjectTracker_IMP';
-//import { Drawing } from './Drawing';
+import IMP_StateManager from './IMP_statemanager';
+
 
 export interface SliceViewViewerState {
   chunkManager: ChunkManager;
@@ -184,21 +184,13 @@ function registerRelatedLayouts(
       }));
   }
   //NH for IMP project - need reference to the axis of the panel, storing in id of element.
-  panel.element.id = relatedLayouts[0].toString();
-  //create drawing button
-  //button for drawing function
-  /*if (relatedLayouts[0].toString() !== "3d") {
-    let drawingButton = document.createElement("button");
-    drawingButton.innerText = "Draw " + relatedLayouts[0].toString();
-    drawingButton.className = "draw-btn"
-    drawingButton.onclick = () => {
-      //ObjectTracker_IMP.getInstance().toggleIsDrawingMode();
-      ObjectTracker_IMP.getInstance().addDrawing(relatedLayouts[0].toString())
-    }
-    //create a separate canvas for fabricJS to use
-   
-    controls.appendChild(drawingButton);
-  }*/
+  let dim = (relatedLayouts[0].toString() == "xy" ? "z":relatedLayouts[0].toString()=="xz"?"y": relatedLayouts[0].toString()=="yz"?"x":"3d");
+  panel.element.id = "panel_"+ dim;
+
+  //console.log(panel.element.id)
+  if(dim!=="3d")
+    IMP_StateManager.getInstance().addDimWidgets(panel.element,dim)
+  
   for (const relatedLayout of relatedLayouts) {
     const button = document.createElement('button');
     const innerDiv = document.createElement('div');
@@ -207,6 +199,7 @@ function registerRelatedLayouts(
     button.title = `Switch to ${relatedLayout} layout.`;
     button.addEventListener('click', () => {
       layout.container.name = relatedLayout;
+   //   ObjectTracker_IMP.getInstance().addDimWidgets();
     });
     controls.appendChild(button);
   }

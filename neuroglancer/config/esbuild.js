@@ -114,7 +114,7 @@ class Builder {
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>neuroglancer</title>
+    <title>cryoglancer</title>
     <link href="main.bundle.css" rel="stylesheet">
 `;
 

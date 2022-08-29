@@ -26,7 +26,8 @@ declare var NEUROGLANCER_DEFAULT_STATE_FRAGMENT: string|undefined;
 /**
  * Sets up the default neuroglancer viewer.
  */
-export function setupDefaultViewer() {
+export function setupDefaultViewer(datasetName: string) {
+
   let viewer = (<any>window)['viewer'] = makeDefaultViewer();
   setDefaultInputEventBindings(viewer.inputEventBindings);
 
@@ -50,7 +51,7 @@ export function setupDefaultViewer() {
 
   //viewer.loadFromJsonUrl();
   //const url: string = 'https://webdev.imp-db.cloud.edu.au:3005/tomosets/';
-  viewer.connectToDatabase();
+  viewer.connectToDatabase(datasetName);
 
   bindDefaultCopyHandler(viewer);
   bindDefaultPasteHandler(viewer);

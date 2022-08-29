@@ -7,7 +7,7 @@
   --friendly-selected-border-color: #79b37e;
   --friendly-blue: #4f5bc9;
   --friendly-icon: #b4b4b8;
-
+  --friendly-light-grey: #e6e6e6;
   --select-border: #777;
   --select-focus: var(--friendly-blue);
   --select-arrow: var(--select-border);
@@ -498,7 +498,8 @@ height:25px;
   word-wrap: break-word;
   min-width: 0;
   /*width:160px;*/
-  background-color: var(--hatch-secondary-color);
+  background-color: var(--friendly-light-grey);
+
   padding:3px;
 }
 
@@ -506,8 +507,37 @@ height:25px;
   padding:5px 5px 5px 5px;
   height: 100%;
   background-color: var(--main-bg-color);
+  border-radius: 1px;
 }
 
 .proteomics-table-head-item{
   border-bottom: 1px solid var(--friendly-blue);
+}
+
+.imp-dimInfo {
+  position: relative;
+  z-index: 50000;
+  background-color: var(--friendly-border-color);
+  margin-left: calc(50% - 32px);
+  opacity: 0.7;
+  margin-top: 2px;
+  display:grid;
+  grid-area: 1 / 1 / auto / auto;
+  width: auto;
+  max-width: 65px;
+}
+.imp-dim-header {
+  display: grid; 
+  grid-template-columns: repeat(2,1fr);
+}
+.imp-slide-container {
+  width:50px;
+}
+
+.imp-dimslider {
+  width: 50px;
+}
+
+.neuroglancer-display-dimensions-widget{
+  margin-top: 15px;
 }
