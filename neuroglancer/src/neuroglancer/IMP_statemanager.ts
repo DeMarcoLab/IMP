@@ -1,6 +1,7 @@
 
-import { Position } from "./navigation_state.js";
+//import { Position } from "./navigation_state.js";
 
+import { ConsoleReporter } from 'jasmine';
 import IMP_ColorTracker from './IMP_ColorTracker'
 interface AvailableLayers {
     [key: string]: any
@@ -26,6 +27,7 @@ export default class IMP_StateManager {
     private idNameMap: Map<string, string>;
     private idPositionMap: Map<string, number[]>;
 
+    private originalSegmentList: any;
 
     private areaModeOn: boolean;
     private drawingCoordinates: any[]
@@ -55,14 +57,14 @@ export default class IMP_StateManager {
     private zDimWidget: HTMLElement;
     private constructor() {
         this.availableLayers = {};
-  
+
         this.firstRun = true;
         this.showsLicense = false;
-   
+
         this.idNameMap = new Map<string, string>();
 
         this.idPositionMap = new Map<string, number[]>();
-   
+
         this.dimensions = [];
         this.areaModeOn = false;
         this.drawingCoordinates = [[], []];
@@ -71,8 +73,10 @@ export default class IMP_StateManager {
         this.currGroup = [];
         this.layerToBeAdded = null;
         this.annotationShaderString = "";
-        
+
         this.imp_colortracker = new IMP_ColorTracker();
+
+
     }
 
 
@@ -112,35 +116,82 @@ export default class IMP_StateManager {
         switch (dim) {
             case "x":
                 this.xDimWidget = widget;
-               
+
                 break;
             case "y":
                 this.yDimWidget = widget;
-               
+
                 break;
             case "z":
                 this.zDimWidget = widget;
-                
+
                 break;
         }
     }
-    public addDimWidgets(panel:HTMLElement, dim: string) {
-            switch(dim){
-                case "x":
-                    panel.appendChild(this.xDimWidget)
-                    break;
-                case "y":
-                    panel.appendChild(this.yDimWidget)
-                   
-                    break;
-                case "z":
-                    panel.appendChild(this.zDimWidget)
-                    break;
-            }
-            
-        
+    public addDimWidgets(panel: HTMLElement, dim: string) {
+        switch (dim) {
+            case "x":
+                panel.appendChild(this.xDimWidget)
+                break;
+            case "y":
+                panel.appendChild(this.yDimWidget)
+
+                break;
+            case "z":
+                panel.appendChild(this.zDimWidget)
+                break;
+        }
+
+
     }
 
+    //take list of active meshes and download it in the same format as initially provided (i.e. with location/rotation)
+    public downloadActiveSegments() {
+        let currVisibleSegments: string[] = []
+       
+        const currLayers = this.state.toJSON().layers;
+        for (let i = 0; i < currLayers.length; i++) {
+            if (currLayers[i].type === "segmentation") {
+                currVisibleSegments = currVisibleSegments.concat(currLayers[i].segments)
+            }
+        }
+        let newPositionList: any = []
+        for (let i = 0; i < currVisibleSegments.length; i++) {
+            const pos = this.idPositionMap.get(currVisibleSegments[i]);
+            //match the position of each visible segment with the originalFile list. 
+            if (pos !== undefined) {
+                for (let j = 0; j < this.originalSegmentList.length; j++) {
+                    const entry = this.originalSegmentList[j];
+                    if (entry["x"] === (pos[0] + "") && entry["y"] === (pos[1]+"") && entry["z"] === (pos[2]+"")) {
+                        newPositionList.push(entry)
+                    }
+                }
+            }
+           
+        }
+        //console.log(this.originalSegmentList.length);
+        //console.log(newPositionList.length);
+        const header = Object.keys(newPositionList[0])
+        const replacer = (key:any, value:any) => value === null ? '' : value // specify how you want to handle null values here
+        const csvString = [
+           header
+           ,
+            ...newPositionList.map((row: { [x: string]: any; }) => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','))
+          ].join('\r\n')
+
+   
+        //console.log(csvString)
+        var element = document.createElement('a');
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(csvString));
+        element.setAttribute('download', "visible_particles.csv");
+      
+        element.style.display = 'none';
+        document.body.appendChild(element);
+      
+        element.click();
+      
+        document.body.removeChild(element);
+    }
     private showMeshesInBox() {
         //console.log(this.drawingCoordinates);
         let group = []
@@ -158,7 +209,7 @@ export default class IMP_StateManager {
 
             }
         }
-       // console.log(group.length);
+        // console.log(group.length);
         this.makeStateJSON(false, "", null, false, group);
     }
 
@@ -171,26 +222,29 @@ export default class IMP_StateManager {
         return IMP_StateManager.instance;
     }
 
+    public setOriginalSegmentList(original: any) {
+        this.originalSegmentList = JSON.parse(original);
+    }
     public addIdName(id: string, name: string) {
         this.idNameMap.set(id, name);
 
     }
     public addNameColour(name: string, colour: string) {
-        this.imp_colortracker.addNameColour(name,colour)
-    
+        this.imp_colortracker.addNameColour(name, colour)
+
     }
     public addLayer(layer: any, archived: boolean) {
 
         if (layer.type == "annotation") {
-            for (const annotation of layer.annotations) { 
+            for (const annotation of layer.annotations) {
                 //         console.log(annotation["props"])
-                this.imp_colortracker.addColorToStorage(annotation["id"],annotation["props"])
+                this.imp_colortracker.addColorToStorage(annotation["id"], annotation["props"])
                 this.imp_colortracker.addNormalisedField(annotation["id"], annotation["fields"])
                 this.idPositionMap.set(annotation["id"], annotation["point"]);
             }
 
-            this.imp_colortracker.addNameColorMapEntry(layer['name'],layer.annotations[0].props[0])
-          
+            this.imp_colortracker.addNameColorMapEntry(layer['name'], layer.annotations[0].props[0])
+
             if (this.annotationShaderString === "") {
                 this.annotationShaderString = layer.shader;
             }
@@ -204,11 +258,12 @@ export default class IMP_StateManager {
                 layer["segmentColors"] = {}
                 for (const annotation of annotLayer.layer.annotations) {
                     layer["segments"].push(annotation["id"]) //display all segments per default.
-                    layer["segmentColors"][annotation["id"]] = this.imp_colortracker.getColorFromID(annotation["id"])}
+                    layer["segmentColors"][annotation["id"]] = this.imp_colortracker.getColorFromID(annotation["id"])
+                }
             }
             //
-            this.imp_colortracker.setDefaultColorForLayerName(layer['name'],layer.segmentDefaultColor);
-        
+            this.imp_colortracker.setDefaultColorForLayerName(layer['name'], layer.segmentDefaultColor);
+
         }
         //console.log(layer)
         this.availableLayers[layer.name] = { "layer": layer, "archived": archived }
@@ -228,9 +283,7 @@ export default class IMP_StateManager {
         this.dimensions = dimensions;
     }
 
-    public updatePosDim(pos: Position) {
-        //console.log(pos.value)
-    }
+
     public makeStateJSON(colorByChanged: boolean = false, togglingSegment: string = "", highlightSegment: any = null, colorMapChanged: boolean = false, togglingGroup: string[] = [], selectionMode: boolean = false) {
         //console.log(this.availableLayers)
         //create layers array:
@@ -254,7 +307,7 @@ export default class IMP_StateManager {
             }
 
             this.imp_colortracker.initColorByStrings()
-        
+
             //selection layer to display meshes within a drawn box.
             layer_res.push({
                 "type": "annotation", "source": "local://annotations", "tab": "annotations", "name": "selections",
@@ -278,22 +331,22 @@ export default class IMP_StateManager {
 
                 if (layer.type === "segmentation") {
                     console.log(layer)
-            //        if (layer.hasAnnoConnection) {
-                        let annotLayer = this.availableLayers[layer.name.split("_")[0]]
-                        if (annotLayer) {
+                    //        if (layer.hasAnnoConnection) {
+                    let annotLayer = this.availableLayers[layer.name.split("_")[0]]
+                    if (annotLayer) {
 
-                            layer["segmentColors"] = {}
+                        layer["segmentColors"] = {}
 
-                            for (const annotation of annotLayer.layer.annotations) {
-                                //  layer["segments"].push(annotation["id"])
-                                let col =  this.imp_colortracker.colorSegment(annotation["id"])
-                                layer.segmentColors[annotation["id"]] = col !== "" ? 
-                                col : 
+                        for (const annotation of annotLayer.layer.annotations) {
+                            //  layer["segments"].push(annotation["id"])
+                            let col = this.imp_colortracker.colorSegment(annotation["id"])
+                            layer.segmentColors[annotation["id"]] = col !== "" ?
+                                col :
                                 annotation["props"][0]
-                      
-                            }
 
-                   //     }
+                        }
+
+                        //     }
                     }
                 }
 
@@ -426,7 +479,7 @@ export default class IMP_StateManager {
         this.state.reset()
 
         this.state.restoreState(result2)
-  
+
         this.makeColourBoxes();
 
 
@@ -538,9 +591,9 @@ export default class IMP_StateManager {
             this.makeStateJSON(false, "", { "color": newColor, "id": id })
         } else {
             this.makeStateJSON(false, "", { "color": color, "id": id })
-    
+
         }
-        this.imp_colortracker.setLastColor(color,id)
+        this.imp_colortracker.setLastColor(color, id)
 
     }
     public updateAttribute(value: number) {
@@ -556,7 +609,7 @@ export default class IMP_StateManager {
         this.showsLicense = false;
         this.idNameMap = new Map<string, string>();
         this.imp_colortracker.reset();
-     
+
     }
 
     public setState(state: any) {
@@ -616,7 +669,7 @@ export default class IMP_StateManager {
         }
     }
 
-    public getColorForId(id:string){
+    public getColorForId(id: string) {
         return this.imp_colortracker.getColorForId(id);
     }
     public tryAddToGroup() {

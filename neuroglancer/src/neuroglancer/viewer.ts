@@ -67,7 +67,7 @@ import { makeIcon } from 'neuroglancer/widget/icon';
 import { MousePositionWidget, PositionWidget } from 'neuroglancer/widget/position_widget';
 import { TrackableScaleBarOptions } from 'neuroglancer/widget/scale_bar';
 import { RPC } from 'neuroglancer/worker_rpc';
-import { cancellableFetchOk, responseJson } from './util/http_request';
+//import { cancellableFetchOk, responseJson } from './util/http_request';
 import IMP_StateManager from './IMP_statemanager';
 import { IMP_dbLoader } from './IMP_dbLoader';
 
@@ -620,16 +620,15 @@ export class Viewer extends RefCounted implements ViewerState {
       topRow.appendChild(button);
     }
 
-    /*{
-      const button = makeIcon({ text: 'DB', title: 'Open Database Panel' });
+    {
+      const button = makeIcon({ text: '⇩', title: 'Download visible segment list' });
       this.registerEventListener(button, 'click', () => {
-        this.openDatabasePanel();
+        IMP_StateManager.getInstance().downloadActiveSegments();       
       });
-      this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
-        this.uiControlVisibility.showDatabaseButton, button));
+ 
       topRow.appendChild(button);
 
-    }*/
+    }
     {
       const { helpPanelState } = this;
       const button =
@@ -752,17 +751,32 @@ export class Viewer extends RefCounted implements ViewerState {
       });
     }
 
-    this.bindAction('z+1-via-wheel', () => {
-      IMP_StateManager.getInstance().updatePosDim(this.navigationState.position)
-    })
+   // this.bindAction('z+1-via-wheel', () => {
+    //  IMP_StateManager.getInstance().updatePosDim(this.navigationState.position)
+    //})
 
     this.bindAction('color-picker', () => {
 
       IMP_StateManager.getInstance().doClickReaction('dblClick', this.mouseState.pageX, this.mouseState.pageY);
     })
     this.bindAction('toggle-mesh', () => {
+      console.log("....")
+      
+      //pickedAnnotationId is when a "ball" has been clicked or put in focus, i.e. used to DISPLAY the mesh.
+      //To determine which mesh was clicked (to remove it, check the id in the dom)
+      let els = document.getElementsByClassName("neuroglancer-layer-item-value");
+      let clickedMesh = ""
+      for(let i = 0; i < els.length; i++){
+        if(els[i].innerHTML.length > 4 && els[i].innerHTML.indexOf(".")<0 && els[i].innerHTML.indexOf("#")<0){
+        clickedMesh =  els[i].innerHTML;
+        }
+      }
+
       if (this.mouseState.pickedAnnotationId) {
+
         IMP_StateManager.getInstance().toggleSegment(this.mouseState.pickedAnnotationId)
+      } else if (clickedMesh!=""){
+        IMP_StateManager.getInstance().toggleSegment(clickedMesh)
       }
     });
 
@@ -920,7 +934,7 @@ export class Viewer extends RefCounted implements ViewerState {
         //if a header json exists, the correct posistion for the normalized brightness/contrast value is used. if no file is present, best guess defaults are used, which
         //are likely not great.
         const headerdata = await (response.json());
-        console.log(headerdata)
+        //console.log(headerdata)
         if (!(headerdata.mean === 0 && headerdata.min === 0 && headerdata.max === 0 || headerdata.max < headerdata.min)) {
           shaderstring = '#uicontrol invlerp normalized(range=[' + headerdata.min + ',' + headerdata.max  + '], window=[' + (headerdata.min - Math.abs(headerdata.min))  + ',' + (headerdata.max+Math.abs(headerdata.min)) + '])'
         }
@@ -935,7 +949,12 @@ export class Viewer extends RefCounted implements ViewerState {
 
         }
       }
-
+      const originalFile_response = await fetch(dataset.image+"/particles.csv");
+      const originalFile = await originalFile_response.text();
+      //console.log(originalFile)
+      let jsonList = this.csvJSON(originalFile);
+      //console.log(jsonList)
+      IMP_StateManager.getInstance().setOriginalSegmentList(jsonList)
       shaderstring += '\n#uicontrol int invertColormap slider(min=0, max=1, step=1, default=0)';
       shaderstring += '\n#uicontrol vec3 color color(default="white")';
       shaderstring += '\n float inverter(float val, int invert) {return 0.5 + ((2.0 * (-float(invert) + 0.5)) * (val - 0.5));}';
@@ -1006,7 +1025,7 @@ export class Viewer extends RefCounted implements ViewerState {
               document.getElementById('imp-color-by-div')?.appendChild(label);
               document.getElementById('imp-color-by-div')?.appendChild(option);
 
-              console.log(columns)
+              //console.log(columns)
               for (let i = 0; i < columns.length; i++) {
                 let opt_ = document.createElement("input")
                 opt_.type = "radio"
@@ -1318,6 +1337,37 @@ export class Viewer extends RefCounted implements ViewerState {
     }*/
   }
   }
+
+  //var csv is the CSV file with headers
+ csvJSON(csv: string){
+
+  let lines=csv.split("\n");
+
+  let result = [];
+
+  // NOTE: If your columns contain commas in their values, you'll need
+  // to deal with those before doing the next step 
+  // (you might convert them to &&& or something, then covert them back later)
+  // jsfiddle showing the issue https://jsfiddle.net/
+ //console.log(lines)
+  let headers=lines[0].split(",");
+
+  for(let i=1;i<lines.length;i++){
+
+      let obj: any;
+      obj = {}
+      let currentline=lines[i].split(",");
+
+      for(let j=0;j<headers.length;j++){
+         obj[headers[j]] = currentline[j];
+         
+      }
+      result.push(obj);
+  }
+
+  //return result; //JavaScript object
+  return JSON.stringify(result); //JSON
+}
  /* openDatabasePanel() {
     //console.log("button clicked");
     let db_panel = document.getElementById("db_panel")

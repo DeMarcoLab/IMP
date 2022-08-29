@@ -41,8 +41,6 @@ import { WatchableMap } from 'neuroglancer/util/watchable_map';
 import { VisibilityPrioritySpecification } from 'neuroglancer/viewer_state';
 import { DisplayDimensionsWidget } from 'neuroglancer/widget/display_dimensions_widget';
 import { ScaleBarOptions } from 'neuroglancer/widget/scale_bar';
-import IMP_StateManager from './IMP_statemanager';
-
 
 export interface SliceViewViewerState {
   chunkManager: ChunkManager;
@@ -188,8 +186,8 @@ function registerRelatedLayouts(
   panel.element.id = "panel_"+ dim;
 
   //console.log(panel.element.id)
-  if(dim!=="3d")
-    IMP_StateManager.getInstance().addDimWidgets(panel.element,dim)
+  //if(dim!=="3d")
+   // IMP_StateManager.getInstance().addDimWidgets(panel.element,dim)
   
   for (const relatedLayout of relatedLayouts) {
     const button = document.createElement('button');
