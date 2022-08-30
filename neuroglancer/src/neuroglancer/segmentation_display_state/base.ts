@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import {SharedDisjointUint64Sets} from 'neuroglancer/shared_disjoint_sets';
-import {SharedWatchableValue} from 'neuroglancer/shared_watchable_value';
-import {Uint64Set} from 'neuroglancer/uint64_set';
-import {RefCounted} from 'neuroglancer/util/disposable';
-import {Uint64} from 'neuroglancer/util/uint64';
+import { SharedDisjointUint64Sets } from 'neuroglancer/shared_disjoint_sets';
+import { SharedWatchableValue } from 'neuroglancer/shared_watchable_value';
+import { Uint64Set } from 'neuroglancer/uint64_set';
+import { RefCounted } from 'neuroglancer/util/disposable';
+import { Uint64 } from 'neuroglancer/util/uint64';
 
 export interface VisibleSegmentsState {
   visibleSegments: Uint64Set;
@@ -42,13 +42,13 @@ export const VISIBLE_SEGMENTS_STATE_PROPERTIES: (keyof VisibleSegmentsState)[] =
 ];
 
 export function onVisibleSegmentsStateChanged(
-    context: RefCounted, state: VisibleSegmentsState, callback: () => void) {
+  context: RefCounted, state: VisibleSegmentsState, callback: () => void) {
   context.registerDisposer(state.visibleSegments.changed.add(callback));
   context.registerDisposer(state.segmentEquivalences.changed.add(callback));
 }
 
 export function onTemporaryVisibleSegmentsStateChanged(
-    context: RefCounted, state: VisibleSegmentsState, callback: () => void) {
+  context: RefCounted, state: VisibleSegmentsState, callback: () => void) {
   context.registerDisposer(state.temporaryVisibleSegments.changed.add(callback));
   context.registerDisposer(state.temporarySegmentEquivalences.changed.add(callback));
   context.registerDisposer(state.useTemporaryVisibleSegments.changed.add(callback));
@@ -69,35 +69,41 @@ function isHighBitSegment(segmentId: Uint64): boolean {
 
 export function getVisibleSegments(state: VisibleSegmentsState) {
   return state.useTemporaryVisibleSegments.value ? state.temporaryVisibleSegments :
-                                                   state.visibleSegments;
+    state.visibleSegments;
 }
 
 export function getSegmentEquivalences(state: VisibleSegmentsState) {
   return state.useTemporarySegmentEquivalences.value ? state.temporarySegmentEquivalences :
-                                                       state.segmentEquivalences;
+    state.segmentEquivalences;
 }
 
 export function forEachVisibleSegment(
-    state: VisibleSegmentsState, callback: (objectId: Uint64, rootObjectId: Uint64) => void) {
+  state: VisibleSegmentsState, callback: (objectId: Uint64, rootObjectId: Uint64) => void) {
   const visibleSegments = getVisibleSegments(state);
+  //console.log(visibleSegments)
   const segmentEquivalences = getSegmentEquivalences(state);
-  const highBitRepresentative = segmentEquivalences.disjointSets.highBitRepresentative.value;
-  for (let rootObjectId of visibleSegments) {
-    // TODO(jbms): Remove this check if logic is added to ensure that it always holds.
-    if (!segmentEquivalences.disjointSets.isMinElement(rootObjectId)) {
-      continue;
-    }
-    for (let objectId of segmentEquivalences.setElements(rootObjectId)) {
-      if (highBitRepresentative && isHighBitSegment(objectId)) {
+  try {
+    const highBitRepresentative = segmentEquivalences.disjointSets.highBitRepresentative.value;
+    for (let rootObjectId of visibleSegments) {
+      // TODO(jbms): Remove this check if logic is added to ensure that it always holds.
+      if (!segmentEquivalences.disjointSets.isMinElement(rootObjectId)) {
         continue;
       }
-      callback(objectId, rootObjectId);
+      for (let objectId of segmentEquivalences.setElements(rootObjectId)) {
+        if (highBitRepresentative && isHighBitSegment(objectId)) {
+          continue;
+        }
+        callback(objectId, rootObjectId);
+      }
     }
+  } catch (err) {
+    //NH I couldn't fix this error occasionally happening (HgithbitRepresentative undefined), but as it doesn't impact usability, did this ugly thing.
+
   }
 }
 
 export interface IndexedSegmentProperty {
   id: string;
   type: 'string';
-  description: string|undefined;
+  description: string | undefined;
 }

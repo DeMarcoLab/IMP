@@ -5,7 +5,7 @@ export default class IMP_ColorTracker {
     private colorByStrings: string[]
     private nameColorMap: Map<string, string>;
     private colorStorage: any;
-    private lastColorId: any[];
+    private highlightedList: string[];
     private normalisedFields:    Map<string, any>;
 
     private currColorMap: string;
@@ -15,7 +15,7 @@ export default class IMP_ColorTracker {
         this.colorByStrings = [];
         this.colorByStrings.push('type');
         this.nameColorMap = new Map<string, string>();
-        this.lastColorId = []
+        this.highlightedList = [];
         this.currColorMap = "jet";
         this.normalisedFields = new Map<string, any>();
     }
@@ -118,12 +118,11 @@ export default class IMP_ColorTracker {
         this.currColorMap = "jet";
     }
 
-    public getLastColor(){
-        return this.lastColorId;
-    }
-
-    public setLastColor(color:string,id:string){
-        this.lastColorId[0] = color;
-        this.lastColorId[1] = id;
+    public setHighlightedList(id:string){
+        if(this.highlightedList.includes(id)){
+            this.highlightedList.splice(this.highlightedList.indexOf(id),1);
+        } else {
+            this.highlightedList.push(id)
+        }
     }
 }

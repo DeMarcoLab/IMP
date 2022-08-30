@@ -39,6 +39,8 @@ export default class IMP_StateManager {
     private layerToBeAdded: any;
     private annotationShaderString: string;
     private displayState: SegmentationDisplayState;
+
+    private highlightColour: string;
     //  private segmentationDisplayState: SegmentationDisplayState;
 
     /*private xDrawings: Map<string, Drawing>;
@@ -56,6 +58,9 @@ export default class IMP_StateManager {
     private xDimWidget: HTMLElement;
     private yDimWidget: HTMLElement;
     private zDimWidget: HTMLElement;
+
+    private colorpickerDiv: HTMLElement;
+
     private constructor() {
         this.availableLayers = {};
 
@@ -76,9 +81,17 @@ export default class IMP_StateManager {
         this.annotationShaderString = "";
 
         this.imp_colortracker = new IMP_ColorTracker();
+        this.highlightColour = "highlight";
+        this.colorpickerDiv = document.createElement('div');
+        this.colorpickerDiv.className = 'imp-color-picker-container';
+
+
+
+        document.getElementById("neuroglancer-container")!.appendChild(this.colorpickerDiv);
 
 
     }
+
 
 
 
@@ -149,7 +162,7 @@ export default class IMP_StateManager {
     //take list of active meshes and download it in the same format as initially provided (i.e. with location/rotation)
     public downloadActiveSegments() {
         let currVisibleSegments: string[] = []
-       
+
         const currLayers = this.state.toJSON().layers;
         for (let i = 0; i < currLayers.length; i++) {
             if (currLayers[i].type === "segmentation") {
@@ -163,34 +176,34 @@ export default class IMP_StateManager {
             if (pos !== undefined) {
                 for (let j = 0; j < this.originalSegmentList.length; j++) {
                     const entry = this.originalSegmentList[j];
-                    if (entry["x"] === (pos[0] + "") && entry["y"] === (pos[1]+"") && entry["z"] === (pos[2]+"")) {
+                    if (entry["x"] === (pos[0] + "") && entry["y"] === (pos[1] + "") && entry["z"] === (pos[2] + "")) {
                         newPositionList.push(entry)
                     }
                 }
             }
-           
+
         }
         //console.log(this.originalSegmentList.length);
         //console.log(newPositionList.length);
         const header = Object.keys(newPositionList[0])
-        const replacer = (key:any, value:any) => value === null ? '' : value // specify how you want to handle null values here
+        const replacer = (key: any, value: any) => value === null ? '' : value // specify how you want to handle null values here
         const csvString = [
-           header
-           ,
+            header
+            ,
             ...newPositionList.map((row: { [x: string]: any; }) => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','))
-          ].join('\r\n')
+        ].join('\r\n')
 
-   
+
         //console.log(csvString)
         var element = document.createElement('a');
         element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(csvString));
         element.setAttribute('download', "visible_particles.csv");
-      
+
         element.style.display = 'none';
         document.body.appendChild(element);
-      
+
         element.click();
-      
+
         document.body.removeChild(element);
     }
     private showMeshesInBox() {
@@ -477,9 +490,9 @@ export default class IMP_StateManager {
         }
 
         this.firstRun = false;
-        //this.state.reset()
+        this.state.reset()
         //this.state.set(result2)
-       // this.state.layers = result2.layers;
+        // this.state.layers = result2.layers;
         this.state.restoreState(result2)
 
         this.makeColourBoxes();
@@ -521,25 +534,14 @@ export default class IMP_StateManager {
                 if (id == null) {
                     return;
                 }
-                let colorpickerDiv = document.createElement('div');
-                colorpickerDiv.className = 'imp-color-picker-container';
-
-                let colorpicker = document.createElement('input');
-                colorpicker.type = 'color';
+       
                 //console.log(event.pageX);
-                colorpickerDiv.setAttribute("style", "left:" + mouseX + "px; top:" + mouseY + "px;")//  style.left=event.pageX +'';
-                //colorpickerDiv.style.top = event.pageY + '';
-                colorpickerDiv.appendChild(colorpicker);
-                let closeButton = document.createElement('button');
-                closeButton.textContent = "X";
-                closeButton.addEventListener("click", () => {
+               
+       
                     //console.log("...")
-                    this.changeSegmentColor(colorpicker.value, id!);
-                    colorpickerDiv.textContent = '';
-                })
+                this.changeSegmentColor(id!);
+            
 
-                colorpickerDiv.appendChild(closeButton);
-                document.getElementById("neuroglancer-container")!.appendChild(colorpickerDiv);
 
         }
     }
@@ -577,8 +579,8 @@ export default class IMP_StateManager {
         // console.log(this.visibleSegments)
     }
 
-    public setSegmentationDisplayState(displayState: SegmentationDisplayState){
-        console.log(displayState);
+    public setSegmentationDisplayState(displayState: SegmentationDisplayState) {
+       // console.log(displayState);
         this.displayState = displayState;
 
     }
@@ -588,27 +590,24 @@ export default class IMP_StateManager {
         const id = tempStatedColor;
         id.tryParseString(idString);
 
-        const {visibleSegments} = this.displayState.segmentationGroupState.value;
+        const { visibleSegments } = this.displayState.segmentationGroupState.value;
         visibleSegments.set(id, !visibleSegments.has(id));
 
         //console.log(this.visibleSegments)
         //this.makeStateJSON(false, id)
     }
 
-    public changeSegmentColor(color: string, id: string) {
-        // console.log(color + " - " + id)
+    //double click a segment, take its color and save it for the next double click.
+    public changeSegmentColor( id: string) {
+        console.log("Changing color of " + id)
         var tinycolor = require("tinycolor2");
-        let lastColor = this.imp_colortracker.getLastColor();
-        if (color === lastColor[0] && id === lastColor[1]) return;
+        
 
-        if (color === "highlight") {
-            let newColor = tinycolor(this.imp_colortracker.getColorForId(id)).brighten(20).toString();
-            this.makeStateJSON(false, "", { "color": newColor, "id": id })
-        } else {
-            this.makeStateJSON(false, "", { "color": color, "id": id })
-
-        }
-        this.imp_colortracker.setLastColor(color, id)
+        let newColor = tinycolor(this.imp_colortracker.getColorForId(id)).brighten(40).toString();
+        this.makeStateJSON(false, "", { "color": newColor, "id": id })
+        this.imp_colortracker.setHighlightedList(id);
+        
+      
 
     }
     public updateAttribute(value: number) {
