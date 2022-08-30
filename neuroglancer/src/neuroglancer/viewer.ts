@@ -760,8 +760,7 @@ export class Viewer extends RefCounted implements ViewerState {
       IMP_StateManager.getInstance().doClickReaction('dblClick', this.mouseState.pageX, this.mouseState.pageY);
     })
     this.bindAction('toggle-mesh', () => {
-      console.log("....")
-      
+ 
       //pickedAnnotationId is when a "ball" has been clicked or put in focus, i.e. used to DISPLAY the mesh.
       //To determine which mesh was clicked (to remove it, check the id in the dom)
       let els = document.getElementsByClassName("neuroglancer-layer-item-value");
@@ -777,6 +776,7 @@ export class Viewer extends RefCounted implements ViewerState {
         IMP_StateManager.getInstance().toggleSegment(this.mouseState.pickedAnnotationId)
       } else if (clickedMesh!=""){
         IMP_StateManager.getInstance().toggleSegment(clickedMesh)
+     
       }
     });
 
@@ -1054,7 +1054,7 @@ export class Viewer extends RefCounted implements ViewerState {
                   opt.textContent = colorMaps[i]
                   selectEl.appendChild(opt);
                 }
-                console.log(selectEl)
+                //console.log(selectEl)
                 document.getElementById('imp-color-by-div')?.appendChild(selectEl)
                 selectEl.addEventListener('change', () => {
                   IMP_StateManager.getInstance().updateColormap(selectEl.value)

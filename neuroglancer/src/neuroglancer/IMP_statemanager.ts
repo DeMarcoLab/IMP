@@ -1,8 +1,9 @@
 
 //import { Position } from "./navigation_state.js";
 
-import { ConsoleReporter } from 'jasmine';
 import IMP_ColorTracker from './IMP_ColorTracker'
+import { SegmentationDisplayState } from './segmentation_display_state/frontend';
+import { Uint64 } from './util/uint64';
 interface AvailableLayers {
     [key: string]: any
 }
@@ -37,7 +38,7 @@ export default class IMP_StateManager {
     private currGroup: string[];
     private layerToBeAdded: any;
     private annotationShaderString: string;
-
+    private displayState: SegmentationDisplayState;
     //  private segmentationDisplayState: SegmentationDisplayState;
 
     /*private xDrawings: Map<string, Drawing>;
@@ -476,8 +477,9 @@ export default class IMP_StateManager {
         }
 
         this.firstRun = false;
-        this.state.reset()
-
+        //this.state.reset()
+        //this.state.set(result2)
+       // this.state.layers = result2.layers;
         this.state.restoreState(result2)
 
         this.makeColourBoxes();
@@ -574,10 +576,23 @@ export default class IMP_StateManager {
         }
         // console.log(this.visibleSegments)
     }
-    public toggleSegment(id: string) {
-        console.log(id);
+
+    public setSegmentationDisplayState(displayState: SegmentationDisplayState){
+        console.log(displayState);
+        this.displayState = displayState;
+
+    }
+    public toggleSegment(idString: string) {
+        //console.log(id);
+        const tempStatedColor = new Uint64();
+        const id = tempStatedColor;
+        id.tryParseString(idString);
+
+        const {visibleSegments} = this.displayState.segmentationGroupState.value;
+        visibleSegments.set(id, !visibleSegments.has(id));
+
         //console.log(this.visibleSegments)
-        this.makeStateJSON(false, id)
+        //this.makeStateJSON(false, id)
     }
 
     public changeSegmentColor(color: string, id: string) {

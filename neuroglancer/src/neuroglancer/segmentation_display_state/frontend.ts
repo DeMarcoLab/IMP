@@ -40,6 +40,7 @@ import {Uint64} from 'neuroglancer/util/uint64';
 import {withSharedVisibility} from 'neuroglancer/visibility_priority/frontend';
 import {makeCopyButton} from 'neuroglancer/widget/copy_button';
 import {makeFilterButton} from 'neuroglancer/widget/filter_button';
+import IMP_StateManager from '../IMP_statemanager';
 
 export class Uint64MapEntry {
   constructor(public key: Uint64, public value?: Uint64, public label?: string|undefined) {}
@@ -335,7 +336,7 @@ function makeRegisterSegmentWidgetEventHandlers(displayState: SegmentationDispla
     const idString = entryElement.dataset.id!;
     const id = tempStatedColor;
     id.tryParseString(idString);
-    console.log(id);
+    //console.log(id);
     displayState.segmentSelectionState.set(id);
     if (!isWithinSelectionPanel(entryElement)) {
       displayState.selectSegment(id, false);
@@ -426,12 +427,15 @@ export class SegmentWidgetFactory<Template extends SegmentWidgetTemplate> {
       ((element: HTMLElement, template: SegmentWidgetTemplate) => void);
   constructor(
       public displayState: SegmentationDisplayState|undefined, protected template: Template) {
+      
     if (displayState !== undefined) {
       let r = cachedRegisterSegmentWidgetEventHandlers.get(displayState);
       if (r === undefined) {
         r = makeRegisterSegmentWidgetEventHandlers(displayState);
         cachedRegisterSegmentWidgetEventHandlers.set(displayState, r);
       }
+      //NH: Pass the display state of segments to the cryoglancer state mamager to be able to control it from there from custom controls.
+      IMP_StateManager.getInstance().setSegmentationDisplayState(displayState);
       this.registerEventHandlers = r;
     }
   }
