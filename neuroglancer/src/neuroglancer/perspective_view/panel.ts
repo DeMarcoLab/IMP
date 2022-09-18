@@ -519,8 +519,8 @@ export class PerspectivePanel extends RenderedDataPanel {
         lightingDirection, kAxes[2], this.navigationState.pose.orientation.orientation);
     vec3.scale(lightingDirection, lightingDirection, -1);
 
-    let ambient = 0.2;
-    let directional = 1 - ambient;
+    let ambient =1;
+    let directional = 0.8;
 
     const renderContext: PerspectiveViewRenderContext = {
       wireFrame: this.viewer.wireFrame.value,

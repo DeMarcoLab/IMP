@@ -311,7 +311,8 @@ export default class IMP_StateManager {
 
                 //the available layer is not yet in the state. add it to the layers.
                 let archivedLayer = this.availableLayers[key].layer
-                archivedLayer["archived"] = archivedLayer.type === "image" ? false : true
+                
+                archivedLayer["archived"] =  archivedLayer.type === "image" ? false :true;
 
                 if (archivedLayer.type === "annotation") {
                     archivedLayer["annotation_relationships"] = [archivedLayer["name"] + "_mesh"];
@@ -394,7 +395,7 @@ export default class IMP_StateManager {
                 if (layer.type == "segmentation" && layer.name.split("_")[0] == layerName) {
                     if (layer["archived"]) {
                         layer["segments"] = [togglingSegment];
-                        layer["archived"] = false;
+                        layer["archived"] = true;
                     } else {
                         if (layer["segments"]) {
                             if (layer["segments"].indexOf(togglingSegment) >= 0) {
@@ -420,14 +421,14 @@ export default class IMP_StateManager {
                     //remove the box annotation from the view.
                     layer.annotations = [];
                 }
-                console.log(groupToUse.toString())
+                //console.log(groupToUse.toString())
                 for (let i = 0; i < groupToUse.length; i++) {
                     let segm = groupToUse[i];
-                    console.log(segm)
+                    //console.log(segm)
                     let layerName = this.idNameMap.get(segm);
                     if (layer.type === "segmentation" && layer.name.split("_")[0] === layerName) {
                         if (layer["archived"]) {
-                            layer["archived"] = false;
+                            layer["archived"] = true;
                             //if it was archived, this has not been selected before, so we delete all the segments and only toggle the desired ones.
                             layer["segments"] = [];
 
@@ -474,12 +475,12 @@ export default class IMP_StateManager {
                 "layer": "selections"
             } : result["selectedLayer"],
             "layout": {
-                "type": result["layout"]["type"] ? result["layout"]["type"] : "4panel", "crossSections": {
+                "type": result["layout"]["type"] ? result["layout"]["type"] : "4panel" /*, "crossSections": {
                     "a": {
-                        "width": 2048,
-                        "height": 2048
+                        "width": 1000,
+                        "height": 1500
                     }
-                }
+                }*/
             },
             "partialViewport": result["partialViewport"],
             "layerListPanel": this.firstRun ? {
@@ -535,10 +536,6 @@ export default class IMP_StateManager {
                     return;
                 }
        
-                //console.log(event.pageX);
-               
-       
-                    //console.log("...")
                 this.changeSegmentColor(id!);
             
 
@@ -550,23 +547,36 @@ export default class IMP_StateManager {
         return this.imp_colortracker.getColorMapKeys();
     }
     public makeColourBoxes() {
-
-        let elements = document.getElementsByClassName("neuroglancer-layer-item-label") as HTMLCollection;
+        console.log("colourbox")
+        /*.neuroglancer-layer-list-panel-item[data-archived=false]*/
+        let elements = document.getElementsByClassName("neuroglancer-layer-side-panel-name") as HTMLCollection;
         //console.log(elements)
         //console.log(this.nameColorMap)
         for (var i = 0; i < elements.length; i++) {
-            var div = elements[i]
-            let name = div.innerHTML
-            if (div.innerHTML.indexOf("mesh") > 0) {
-                name = div.innerHTML.split("_")[0]
-            }
-            let colorName = this.imp_colortracker.getColorName(name);
-            if (colorName !== undefined) {
-                div.parentElement!.setAttribute("style", "background:" + colorName + " !important")
-            } else {
-                div.setAttribute("style", "color:#aaa");
+            var div = elements[i] as HTMLInputElement
+  
+            let name = div.value;
 
+            if (name.indexOf("mesh") > 0) {
+                name = name.split("_")[0]
             }
+            const colorName = this.imp_colortracker.getColorName(name);
+            const parentElement = div.parentElement!;
+            const inputNodes = parentElement.getElementsByTagName('input');
+            let checkBEl;
+            for(let i = 0; i < inputNodes.length; i++){
+                if(inputNodes[i].type == "checkbox"){
+                    checkBEl = inputNodes[i] as HTMLInputElement;
+                    break;
+                }
+            }
+            if (colorName !== undefined) {
+                if(checkBEl && checkBEl.checked){
+                    div.parentElement!.setAttribute("style", "background: " + colorName + " !important")
+                } else {
+                    div.parentElement!.setAttribute("style", "background: white !important")
+                }
+            } 
             //element.style.background = // element.innerHTML + "<div className='colorSquare' style='background:"+ this.nameColorMap.get(element.innerHTML)+";' />";
         }
     }

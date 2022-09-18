@@ -58,8 +58,8 @@
 .neuroglancer-layer-list-panel-item[data-archived=true] 
 .neuroglancer-layer-side-panel-name, 
 .neuroglancer-layer-list-panel-item[data-archived=true] .neuroglancer-icon svg {
-  color: #56595e !important;
-  stroke: #56595e !important;
+  color: #56595e !important;*/
+  stroke: #56595e !important;*/
 }
 
 
@@ -70,10 +70,15 @@
 .neuroglancer-layer-list-panel-item {
   border: none !important;
   border-radius:1.5pt;
+  color: white !important;
+  min-height:25px;
+}
 
+.neuroglancer-layer-list-panel-item-number{
+  display:none !important;
 }
 .neuroglancer-layer-list-panel-item[data-archived=false] {
-  color: var(--main-color) !important;
+
   background-color: var(--friendly-selected-border-color);
 }
 
@@ -256,6 +261,7 @@ element.style {
   font-size:smaller !important;
 }
 
+
 .imp-option-label {
   margin-left:5px;
  
@@ -357,6 +363,8 @@ html, body, #neuroglancer-container{
 .neuroglancer-layer-panel {
   background-color: var(--main-bg-color) !important;
   margin-left:0 !important; 
+  position: absolute !important;
+  margin-top:-200px !important; /*hide this panel to reduce clutter*/
 }
 
 .neuroglancer-layer-item-label {

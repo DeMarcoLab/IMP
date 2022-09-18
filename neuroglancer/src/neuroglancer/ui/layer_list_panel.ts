@@ -34,6 +34,7 @@ import {makeDeleteButton} from 'neuroglancer/widget/delete_button';
 import {makeIcon} from 'neuroglancer/widget/icon';
 
 import {CheckboxIcon} from '../widget/checkbox_icon';
+import IMP_StateManager from '../IMP_statemanager';
 
 const DEFAULT_LAYER_LIST_PANEL_LOCATION: SidePanelLocation = {
   ...DEFAULT_SIDE_PANEL_LOCATION,
@@ -137,6 +138,8 @@ class LayerListItem extends RefCounted {
                   },
                   set value(value: boolean) {
                     layer.setArchived(!value);
+                    layer.setVisible(value)
+                    IMP_StateManager.getInstance().makeColourBoxes();
                   },
                   changed: layer.layerChanged,
                 },
@@ -146,7 +149,7 @@ class LayerListItem extends RefCounted {
                 }))
             .element);
     element.appendChild(numberElement);
-    element.appendChild(this.registerDisposer(new LayerVisibilityWidget(layer)).element);
+   // element.appendChild(this.registerDisposer(new LayerVisibilityWidget(layer)).element);
     element.appendChild(this.registerDisposer(new LayerNameWidget(layer)).element);
     element.appendChild(
         this.registerDisposer(makeSelectedLayerSidePanelCheckboxIcon(layer)).element);

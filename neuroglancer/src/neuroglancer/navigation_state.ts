@@ -1359,6 +1359,8 @@ abstract class TrackableZoom extends RefCounted implements Trackable,
   }
 
   setPhysicalScale(scaleInCanonicalVoxels: number, canonicalVoxelPhysicalSize: number) {
+    //console.log("setPhysicalScale: navigation_state1363")
+    
     const curCanonicalVoxelPhysicalSize = this.curCanonicalVoxelPhysicalSize =
         this.canonicalVoxelPhysicalSize;
     this.value =
@@ -1389,6 +1391,7 @@ export class TrackableCrossSectionZoom extends TrackableZoom {
 
 export class TrackableProjectionZoom extends TrackableZoom {
   protected getDefaultValue() {
+  
     const {legacyValue_} = this;
     if (!Number.isNaN(legacyValue_)) {
       this.legacyValue_ = Number.NaN;
