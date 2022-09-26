@@ -32,7 +32,6 @@ import {makeCloseButton} from 'neuroglancer/widget/close_button';
 import {makeDeleteButton} from 'neuroglancer/widget/delete_button';
 import {makeIcon} from 'neuroglancer/widget/icon';
 import {PositionWidget} from 'neuroglancer/widget/position_widget';
-import IMP_StateManager from '../IMP_statemanager';
 
 
 class LayerWidget extends RefCounted {

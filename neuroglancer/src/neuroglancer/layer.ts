@@ -49,7 +49,7 @@ import {WatchableVisibilityPriority} from 'neuroglancer/visibility_priority/fron
 import {DependentViewContext} from 'neuroglancer/widget/dependent_view_widget';
 import {TabSpecification} from 'neuroglancer/widget/tab_view';
 import {RPC} from 'neuroglancer/worker_rpc';
-import IMP_StateManager from './IMP_statemanager';
+//import IMP_StateManager from './IMP_statemanager';
 
 const TOOL_JSON_KEY = 'tool';
 const TOOL_BINDINGS_JSON_KEY = 'toolBindings';

@@ -60,7 +60,7 @@ import {renderScaleLayerControl} from 'neuroglancer/widget/render_scale_widget';
 import {colorSeedLayerControl, fixedColorLayerControl} from 'neuroglancer/widget/segmentation_color_mode';
 import {registerLayerShaderControlsTool} from 'neuroglancer/widget/shader_controls';
 import {registerSegmentSelectTools} from 'neuroglancer/ui/segment_select_tools';
-//import { ObjectTracker_IMP } from './ObjectTracker_IMP';
+
 
 const SELECTED_ALPHA_JSON_KEY = 'selectedAlpha';
 const NOT_SELECTED_ALPHA_JSON_KEY = 'notSelectedAlpha';
@@ -96,6 +96,7 @@ export class SegmentationUserLayerGroupState extends RefCounted implements Segme
     this.visibleSegments.changed.add(specificationChanged.dispatch);
     this.hideSegmentZero.changed.add(specificationChanged.dispatch);
     this.segmentQuery.changed.add(specificationChanged.dispatch);
+   
   }
 
   restoreState(specification: unknown) {
@@ -254,6 +255,7 @@ class SegmentationUserLayerDisplayState implements SegmentationDisplayState {
   constructor(public layer: SegmentationUserLayer) {
     // Even though `SegmentationUserLayer` assigns this to its `displayState` property, redundantly
     // assign it here first in order to allow it to be accessed by `segmentationGroupState`.
+
     layer.displayState = this;
     this.segmentationGroupState = this.layer.registerDisposer(
         new LinkedSegmentationGroupState<SegmentationUserLayerGroupState>(
@@ -274,6 +276,7 @@ class SegmentationUserLayerDisplayState implements SegmentationDisplayState {
         new IndirectWatchableValue(this.segmentationGroupState, group => group.segmentQuery));
     this.segmentPropertyMap = this.layer.registerDisposer(
         new IndirectWatchableValue(this.segmentationGroupState, group => group.segmentPropertyMap));
+
   }
 
   segmentSelectionState = new SegmentSelectionState();
@@ -649,7 +652,6 @@ export class SegmentationUserLayer extends Base {
       }
       case 'select': {
         if (!this.pick.value) break;
-        console.log("...");
         const {segmentSelectionState} = this.displayState;
         if (segmentSelectionState.hasSelectedSegment) {
           const segment = segmentSelectionState.selectedSegment;
@@ -714,6 +716,7 @@ export class SegmentationUserLayer extends Base {
       return false;
     }
     const {displayState} = this;
+
     const normalizedId = augmentSegmentId(displayState, id);
     const {
       segmentEquivalences,

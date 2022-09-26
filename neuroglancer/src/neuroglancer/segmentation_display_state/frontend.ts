@@ -40,7 +40,7 @@ import {Uint64} from 'neuroglancer/util/uint64';
 import {withSharedVisibility} from 'neuroglancer/visibility_priority/frontend';
 import {makeCopyButton} from 'neuroglancer/widget/copy_button';
 import {makeFilterButton} from 'neuroglancer/widget/filter_button';
-import IMP_StateManager from '../IMP_statemanager';
+
 
 export class Uint64MapEntry {
   constructor(public key: Uint64, public value?: Uint64, public label?: string|undefined) {}
@@ -434,8 +434,6 @@ export class SegmentWidgetFactory<Template extends SegmentWidgetTemplate> {
         r = makeRegisterSegmentWidgetEventHandlers(displayState);
         cachedRegisterSegmentWidgetEventHandlers.set(displayState, r);
       }
-      //NH: Pass the display state of segments to the cryoglancer state mamager to be able to control it from there from custom controls.
-      IMP_StateManager.getInstance().setSegmentationDisplayState(displayState);
       this.registerEventHandlers = r;
     }
   }

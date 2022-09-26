@@ -103,12 +103,15 @@ export class SegmentationRenderLayer extends SliceViewVolumeRenderLayer<ShaderPa
       renderScaleTarget: displayState.renderScaleTarget,
       localPosition: displayState.localPosition,
     });
+ 
     this.registerDisposer(this.shaderParameters as AggregateWatchableValue<ShaderParameters>);
     registerRedrawWhenSegmentationDisplayStateChanged(displayState, this);
     this.registerDisposer(displayState.selectedAlpha.changed.add(this.redrawNeeded.dispatch));
     this.registerDisposer(displayState.notSelectedAlpha.changed.add(this.redrawNeeded.dispatch));
     this.registerDisposer(
         displayState.ignoreNullVisibleSet.changed.add(this.redrawNeeded.dispatch));
+
+
   }
 
   disposed() {

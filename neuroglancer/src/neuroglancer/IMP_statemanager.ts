@@ -2,8 +2,7 @@
 //import { Position } from "./navigation_state.js";
 
 import IMP_ColorTracker from './IMP_ColorTracker'
-import { SegmentationDisplayState } from './segmentation_display_state/frontend';
-import { Uint64 } from './util/uint64';
+
 interface AvailableLayers {
     [key: string]: any
 }
@@ -38,9 +37,8 @@ export default class IMP_StateManager {
     private currGroup: string[];
     private layerToBeAdded: any;
     private annotationShaderString: string;
-    private displayState: SegmentationDisplayState;
-
-    private highlightColour: string;
+ 
+    //private highlightColour: string;
     //  private segmentationDisplayState: SegmentationDisplayState;
 
     /*private xDrawings: Map<string, Drawing>;
@@ -81,7 +79,7 @@ export default class IMP_StateManager {
         this.annotationShaderString = "";
 
         this.imp_colortracker = new IMP_ColorTracker();
-        this.highlightColour = "highlight";
+        //this.highlightColour = "highlight";
         this.colorpickerDiv = document.createElement('div');
         this.colorpickerDiv.className = 'imp-color-picker-container';
 
@@ -186,7 +184,7 @@ export default class IMP_StateManager {
         //console.log(this.originalSegmentList.length);
         //console.log(newPositionList.length);
         const header = Object.keys(newPositionList[0])
-        const replacer = (key: any, value: any) => value === null ? '' : value // specify how you want to handle null values here
+        const replacer = ( value: any) => value === null ? '' : value // specify how you want to handle null values here
         const csvString = [
             header
             ,
@@ -390,13 +388,14 @@ export default class IMP_StateManager {
                     toggling_group.push(layer.annotations[i].id);
                 }
             }
-            if (togglingSegment !== "") {
+           /* if (togglingSegment !== "") {
                 let layerName = this.idNameMap.get(togglingSegment);
-                if (layer.type == "segmentation" && layer.name.split("_")[0] == layerName) {
-                    if (layer["archived"]) {
-                        layer["segments"] = [togglingSegment];
-                        layer["archived"] = true;
-                    } else {
+                if (layer.type === "segmentation" && layer.name.split("_")[0] === layerName) {
+
+                        if(layer["archived"]){
+                            layer["segments"]=[togglingSegment];
+                            layer["archived"]=false;
+                        }
                         if (layer["segments"]) {
                             if (layer["segments"].indexOf(togglingSegment) >= 0) {
                                 layer["segments"].splice(layer["segments"].indexOf(togglingSegment), 1)
@@ -406,10 +405,11 @@ export default class IMP_StateManager {
                         } else {
                             layer["segments"] = [togglingSegment]
                         }
+                        
                         break;
-                    }
+                    
                 }
-            }
+            }*/
             if (togglingGroup.toString() !== "" || toggling_group.toString() !== "") {
                 let groupToUse = []
                 if (togglingGroup.toString() !== "") {
@@ -524,7 +524,7 @@ export default class IMP_StateManager {
         }
         return null;
     }
-    public doClickReaction(clickType: string, mouseX: number, mouseY: number) {
+    public doClickReaction(clickType: string) {
         //doClickReactions are called in mouse_bindings.ts as reactions on click. that is where default reactions can be disabled as well.
         switch (clickType) {
             case 'dblClick':
@@ -587,24 +587,6 @@ export default class IMP_StateManager {
             this.visibleSegments.push(id);
         }
         // console.log(this.visibleSegments)
-    }
-
-    public setSegmentationDisplayState(displayState: SegmentationDisplayState) {
-       // console.log(displayState);
-        this.displayState = displayState;
-
-    }
-    public toggleSegment(idString: string) {
-        //console.log(id);
-        const tempStatedColor = new Uint64();
-        const id = tempStatedColor;
-        id.tryParseString(idString);
-
-        const { visibleSegments } = this.displayState.segmentationGroupState.value;
-        visibleSegments.set(id, !visibleSegments.has(id));
-
-        //console.log(this.visibleSegments)
-        //this.makeStateJSON(false, id)
     }
 
     //double click a segment, take its color and save it for the next double click.

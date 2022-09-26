@@ -70,6 +70,8 @@ import { RPC } from 'neuroglancer/worker_rpc';
 //import { cancellableFetchOk, responseJson } from './util/http_request';
 import IMP_StateManager from './IMP_statemanager';
 import { IMP_dbLoader } from './IMP_dbLoader';
+import { SegmentationUserLayer } from './segmentation_user_layer';
+import { Uint64 } from './util/uint64';
 
 declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 
@@ -757,26 +759,42 @@ export class Viewer extends RefCounted implements ViewerState {
 
     this.bindAction('color-picker', () => {
 
-      IMP_StateManager.getInstance().doClickReaction('dblClick', this.mouseState.pageX, this.mouseState.pageY);
+      IMP_StateManager.getInstance().doClickReaction('dblClick');
     })
     this.bindAction('toggle-mesh', () => {
- 
-      //pickedAnnotationId is when a "ball" has been clicked or put in focus, i.e. used to DISPLAY the mesh.
-      //To determine which mesh was clicked (to remove it, check the id in the dom)
-      let els = document.getElementsByClassName("neuroglancer-layer-item-value");
-      let clickedMesh = ""
-      for(let i = 0; i < els.length; i++){
-        if(els[i].innerHTML.length > 4 && els[i].innerHTML.indexOf(".")<0 && els[i].innerHTML.indexOf("#")<0){
-        clickedMesh =  els[i].innerHTML;
-        }
+
+      //console.log(this)
+      //IMP_StateManager.getInstance().setSegmentationDisplayState()
+      let vals = this.layerSelectedValues.toJSON();
+      let clickedId="-1";
+      let name = "-1"
+      for(let i = 0; i < Object.keys(vals).length; i++){
+         let key = Object.keys(vals)[i];
+        // console.log(vals[key])
+         if(vals[key].value !== {} && typeof(vals[key]["value"])==="string" && vals[key]["value"].indexOf("#")<0){
+          name = key;
+          clickedId = vals[key]["value"]
+          break;
+         } else {
+          if(vals[key].annotationId ){
+            name = key + "_mesh";
+            clickedId = vals[key].annotationId;
+            break;
+          }
+         }
       }
 
-      if (this.mouseState.pickedAnnotationId) {
+      let layers = this.layerManager.managedLayers;
+      for(let lay of layers){
 
-        IMP_StateManager.getInstance().toggleSegment(this.mouseState.pickedAnnotationId)
-      } else if (clickedMesh!=""){
-        IMP_StateManager.getInstance().toggleSegment(clickedMesh)
-     
+        if(lay!==null && lay["layer_"] !== null && lay["name_"] === name ){
+          let sLay = lay["layer_"] as SegmentationUserLayer;
+          const displayState = sLay.displayState;
+          const {visibleSegments} = displayState.segmentationGroupState.value;
+          let id = new Uint64();
+          id.tryParseString(clickedId.toString())
+          visibleSegments.set(id, !visibleSegments.has(id));
+        }
       }
     });
 
@@ -825,7 +843,7 @@ export class Viewer extends RefCounted implements ViewerState {
           return;
         }
         const userLayer = selectedLayer.layer;
-        console.log(userLayer)
+        //console.log(userLayer)
         if (userLayer === null || userLayer.tool.value === undefined) {
           StatusMessage.showTemporaryMessage(`The selected layer (${JSON.stringify(selectedLayer.name)}) does not have an active annotation tool.`);
           return;
