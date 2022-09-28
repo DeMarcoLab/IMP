@@ -86,12 +86,7 @@ export default class IMP_StateManager {
 
 
         document.getElementById("neuroglancer-container")!.appendChild(this.colorpickerDiv);
-
-
     }
-
-
-
 
     public getIsDrawingMode() {
         return this.isDrawingMode;
@@ -343,7 +338,7 @@ export default class IMP_StateManager {
             if (colorByChanged || colorMapChanged) {
 
                 if (layer.type === "segmentation") {
-                    console.log(layer)
+                    //console.log(layer)
                     //        if (layer.hasAnnoConnection) {
                     let annotLayer = this.availableLayers[layer.name.split("_")[0]]
                     if (annotLayer) {
@@ -368,7 +363,7 @@ export default class IMP_StateManager {
                     //  layr["segments"].push(annotation["id"])
                     if (this.imp_colortracker.getCurrColorBy() !== 0) {
                         for (const annotation of layer.annotations) {
-                            //layer["segmentColors"][annotation["id"]] = this.colorStorage[annotation["id"]][this.currColorBy];
+                            
                             let hexval = this.imp_colortracker.getHexVal(annotation["id"]);
                             annotation["props"][this.imp_colortracker.getCurrColorBy()] = hexval;
                         }
@@ -512,34 +507,17 @@ export default class IMP_StateManager {
         this.makeStateJSON(false, "", false, true);
     }
 
-
-    private getMeshIDFromElement() {
-        const allActiveLayers = document.getElementsByClassName('neuroglancer-layer-item-value');
-        for (let i = 0; i < allActiveLayers.length; i++) {
-            if (allActiveLayers[i].textContent!.indexOf("#") < 0 && allActiveLayers[i].textContent!.indexOf(".") < 0 && allActiveLayers[i].textContent! !== "") {
-                //mesh was double clicked
-                //make colour picker
-                return (allActiveLayers[i].textContent);
-            }
-        }
-        return null;
-    }
-    public doClickReaction(clickType: string) {
+  
+    public doClickReaction(clickType: string, id:string) {
         //doClickReactions are called in mouse_bindings.ts as reactions on click. that is where default reactions can be disabled as well.
         switch (clickType) {
             case 'dblClick':
-                //console.log("dblClick");
-                //mesh was double clicked
-                //make colour picker
-                let id = this.getMeshIDFromElement();
+
                 if (id == null) {
                     return;
                 }
        
                 this.changeSegmentColor(id!);
-            
-
-
         }
     }
 
@@ -678,11 +656,8 @@ export default class IMP_StateManager {
     public getColorForId(id: string) {
         return this.imp_colortracker.getColorForId(id);
     }
-    public tryAddToGroup() {
-        let id = this.getMeshIDFromElement();
-        if (id === null) {
-            return;
-        }
+    public tryAddToGroup(id:string) {
+     
         if (this.currGroup.indexOf(id) >= 0) {
             this.currGroup.splice(this.currGroup.indexOf(id), 1)
         } else if (id.length > 1) {

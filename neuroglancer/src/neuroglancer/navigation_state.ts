@@ -1182,6 +1182,8 @@ export class DisplayPose extends RefCounted {
 
 export type TrackableZoomInterface = TrackableProjectionZoom|TrackableCrossSectionZoom;
 
+//@Daniel here is the zoomstate. If you zoom the slice views, the 3d view also changes and when you zoom in, the sections are not larger than the image anymore. Perhaps
+//this is where to dig.
 export class LinkedZoomState<T extends TrackableProjectionZoom|TrackableCrossSectionZoom> extends
     LinkedBase<T> {
   constructor(

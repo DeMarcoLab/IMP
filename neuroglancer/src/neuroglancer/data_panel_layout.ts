@@ -479,8 +479,8 @@ export function validateLayoutName(obj: any) {
 }
 
 export class CrossSectionSpecification extends RefCounted implements Trackable {
-  width = new TrackableValue<number>(1000, verifyPositiveInt);
-  height = new TrackableValue<number>(1000, verifyPositiveInt);
+  width = new TrackableValue<number>(1, verifyPositiveInt);
+  height = new TrackableValue<number>(1, verifyPositiveInt);
   position: LinkedPosition;
   orientation: LinkedOrientationState;
   scale: LinkedZoomState<TrackableZoomInterface>;

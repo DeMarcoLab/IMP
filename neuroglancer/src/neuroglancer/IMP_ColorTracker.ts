@@ -111,7 +111,7 @@ export default class IMP_ColorTracker {
         return this.colorStorage[id][this.currColorBy];
     }
     public getPropsFromStorage(id:string){
-        return this.colorStorage(id);
+        return this.colorStorage[id];
     }
     public reset(){
         this.normalisedFields = new Map<string, any>();

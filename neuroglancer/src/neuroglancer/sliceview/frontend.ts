@@ -532,7 +532,7 @@ gl_Position = uProjectionMatrix * aVertexPosition;
 `);
     this.shader = this.registerDisposer(builder.build());
   }
-
+  // @DANIEL maybe here??
   draw(
       texture: WebGLTexture|null, projectionMatrix: mat4, colorFactor: vec4, backgroundColor: vec4,
       xStart: number, yStart: number, xEnd: number, yEnd: number) {

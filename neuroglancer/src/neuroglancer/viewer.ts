@@ -53,7 +53,7 @@ import { TrackableRGB } from 'neuroglancer/util/color';
 import { Borrowed, Owned, RefCounted } from 'neuroglancer/util/disposable';
 import { removeFromParent } from 'neuroglancer/util/dom';
 import { ActionEvent, registerActionListener } from 'neuroglancer/util/event_action_map';
-import { vec3 } from 'neuroglancer/util/geom';
+import {  vec3 } from 'neuroglancer/util/geom';
 import { parseFixedLengthArray, verifyFinitePositiveFloat, verifyObject, verifyOptionalObjectProperty, verifyString } from 'neuroglancer/util/json';
 import { EventActionMap, KeyboardEventBinder } from 'neuroglancer/util/keyboard_bindings';
 import { NullarySignal } from 'neuroglancer/util/signal';
@@ -479,6 +479,8 @@ export class Viewer extends RefCounted implements ViewerState {
   }
 
   private makeUI() {
+
+
     const gridContainer = this.element;
     gridContainer.classList.add('neuroglancer-viewer');
     gridContainer.classList.add('neuroglancer-noselect');
@@ -612,7 +614,7 @@ export class Viewer extends RefCounted implements ViewerState {
       topRow.appendChild(button.element);
     }
 
-    {
+    /*{
       const button = makeIcon({ text: '{}', title: 'Edit JSON state' });
       this.registerEventListener(button, 'click', () => {
         this.editJsonState();
@@ -620,12 +622,31 @@ export class Viewer extends RefCounted implements ViewerState {
       this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
         this.uiControlVisibility.showEditStateButton, button));
       topRow.appendChild(button);
-    }
+    }*/
 
     {
-      const button = makeIcon({ text: '⇩', title: 'Download visible segment list' });
+      const button = makeIcon({ text: '⪚', title: 'Download visible segment list' });
       this.registerEventListener(button, 'click', () => {
         IMP_StateManager.getInstance().downloadActiveSegments();       
+      });
+ 
+      topRow.appendChild(button);
+
+    }
+    {
+      const button = makeIcon({ text: '+', title: 'Load a previously saved state' });
+      this.registerEventListener(button, 'click', () => {
+        this.createLoadStatePanel();     
+      });
+ 
+      topRow.appendChild(button);
+
+    }
+    {
+      const button = makeIcon({ text: '🖫', title: 'Save current state.' });
+      this.registerEventListener(button, 'click', () => {
+        this.createSaveStatePanel();
+ 
       });
  
       topRow.appendChild(button);
@@ -730,6 +751,88 @@ export class Viewer extends RefCounted implements ViewerState {
 
   }
 
+  private createLoadStatePanel(){
+    let savedStates = IMP_dbLoader.getInstance().getSaveStates();
+    let statesArr = []
+    if(savedStates=== undefined){
+      statesArr[0] = "No saved states available yet."
+    } else {
+      statesArr = savedStates;
+    }
+ 
+    let panel = document.createElement("div");
+    panel.className = "loadStatePanel";
+    
+    let stateListEl = document.createElement("ul");
+    stateListEl.className = "db_ul"
+    panel.appendChild(stateListEl);
+    for(let el of statesArr){
+      let liEl = document.createElement("li");
+      liEl.innerHTML = el;
+      liEl.className = "db_li"
+      if(el !== "No saved states available yet"){
+        let self = this;
+        liEl.onclick = () => {
+          console.log("loading " + liEl.innerHTML);
+          let newState = IMP_dbLoader.getInstance().loadSaveState(liEl.innerHTML);
+          console.log(newState)
+          self.state.reset();
+          self.state.restoreState(newState);
+          panel.style.display = "none";
+        }
+      }
+      stateListEl.appendChild(liEl)
+
+    }
+
+    const rootNode = document.getElementById("neuroglancer-container");
+    if(rootNode){
+      rootNode.appendChild(panel);
+    }
+
+  }
+  
+  private createSaveStatePanel(){
+    let panel = document.createElement("div");
+    panel.className = "saveStatePanel";
+    let labelElName = document.createElement("label");
+    labelElName.setAttribute("for", "inputElName");
+    labelElName.innerHTML = "Name save State";
+    let inputElName = document.createElement("input");
+    inputElName.type = "text";
+    panel.appendChild(labelElName);
+    panel.appendChild(inputElName);
+    let overwriteCheckboxEl = document.createElement("input");
+    overwriteCheckboxEl.type = "checkbox";
+    overwriteCheckboxEl.checked = false;
+    panel.appendChild(overwriteCheckboxEl);
+    let submitButton = document.createElement("button");
+    submitButton.innerHTML = "Submit";
+    let infoText = document.createElement("div");
+    panel.appendChild(infoText);
+    panel.appendChild(submitButton);
+
+
+    submitButton.onclick = () =>{
+      IMP_dbLoader.getInstance().saveState(inputElName.value,this.state,overwriteCheckboxEl.checked).then((res: any) => {
+        infoText.innerHTML = res;
+        submitButton.innerHTML = "Close";
+        submitButton.onclick = () => {
+          panel.style.display = "none";
+        }
+      })
+     
+    }   
+
+    const rootNode = document.getElementById("neuroglancer-container");
+    if(rootNode){
+      rootNode.appendChild(panel);
+    }
+
+
+
+
+  }
   /**
    * Called once by the constructor to set up event handlers.
    */
@@ -741,6 +844,28 @@ export class Viewer extends RefCounted implements ViewerState {
 
   bindAction<Data>(action: string, handler: (event: ActionEvent<Data>) => void) {
     this.registerDisposer(registerActionListener(this.element, action, handler));
+  }
+
+  //determines which item has been clicked (annotation or mesh layer)
+  private getClickedId_LayerName(){
+    let vals = this.layerSelectedValues.toJSON();
+    let returnee = {"name":"-1","id":"-1"}
+    for(let i = 0; i < Object.keys(vals).length; i++){
+       let key = Object.keys(vals)[i];
+      // console.log(vals[key])
+       if(vals[key].value !== {} && typeof(vals[key]["value"])==="string" && vals[key]["value"].indexOf("#")<0){
+        returnee.name = key;
+        returnee.id = vals[key]["value"]
+        return returnee;
+       } else {
+        if(vals[key].annotationId ){
+          returnee.name = key + "_mesh";
+          returnee.id = vals[key].annotationId;
+          return returnee;
+        }
+       }
+    }
+    return null;
   }
 
   /**
@@ -759,40 +884,23 @@ export class Viewer extends RefCounted implements ViewerState {
 
     this.bindAction('color-picker', () => {
 
-      IMP_StateManager.getInstance().doClickReaction('dblClick');
+      IMP_StateManager.getInstance().doClickReaction('dblClick', this.getClickedId_LayerName()!.id);
     })
     this.bindAction('toggle-mesh', () => {
 
-      //console.log(this)
+      console.log(this)
       //IMP_StateManager.getInstance().setSegmentationDisplayState()
-      let vals = this.layerSelectedValues.toJSON();
-      let clickedId="-1";
-      let name = "-1"
-      for(let i = 0; i < Object.keys(vals).length; i++){
-         let key = Object.keys(vals)[i];
-        // console.log(vals[key])
-         if(vals[key].value !== {} && typeof(vals[key]["value"])==="string" && vals[key]["value"].indexOf("#")<0){
-          name = key;
-          clickedId = vals[key]["value"]
-          break;
-         } else {
-          if(vals[key].annotationId ){
-            name = key + "_mesh";
-            clickedId = vals[key].annotationId;
-            break;
-          }
-         }
-      }
-
-      let layers = this.layerManager.managedLayers;
+      
+      const clickies = this.getClickedId_LayerName();
+      const layers = this.layerManager.managedLayers;
       for(let lay of layers){
 
-        if(lay!==null && lay["layer_"] !== null && lay["name_"] === name ){
+        if(lay!==null && lay["layer_"] !== null && lay["name_"] === clickies!["name"] ){
           let sLay = lay["layer_"] as SegmentationUserLayer;
           const displayState = sLay.displayState;
           const {visibleSegments} = displayState.segmentationGroupState.value;
           let id = new Uint64();
-          id.tryParseString(clickedId.toString())
+          id.tryParseString(clickies!["id"].toString())
           visibleSegments.set(id, !visibleSegments.has(id));
         }
       }
@@ -834,7 +942,7 @@ export class Viewer extends RefCounted implements ViewerState {
       if (IMP_StateManager.getInstance().getIsDrawingMode()) {
         console.log("should draw")
       } else if (IMP_StateManager.getInstance().isGrouping()) {
-        IMP_StateManager.getInstance().tryAddToGroup()
+        IMP_StateManager.getInstance().tryAddToGroup(this.getClickedId_LayerName()!.id)
       } else {
         const selectedLayer = this.selectedLayer.layer;
 
@@ -933,7 +1041,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
   async loadDBsetIntoNeuroglancer(dataset: any) {
     
-
+      IMP_dbLoader.getInstance().setDataset(dataset);
       this.navigationState.reset();
       this.perspectiveNavigationState.pose.orientation.reset();
       this.perspectiveNavigationState.zoomFactor.reset();
@@ -972,6 +1080,7 @@ export class Viewer extends RefCounted implements ViewerState {
       //console.log(originalFile)
       let jsonList = this.csvJSON(originalFile);
       //console.log(jsonList)
+      //save the original segments, so we can download a variation from it later.
       IMP_StateManager.getInstance().setOriginalSegmentList(jsonList)
       shaderstring += '\n#uicontrol int invertColormap slider(min=0, max=1, step=1, default=0)';
       shaderstring += '\n#uicontrol vec3 color color(default="white")';
@@ -1028,9 +1137,7 @@ export class Viewer extends RefCounted implements ViewerState {
               option.addEventListener('change', () => {
                 IMP_StateManager.getInstance().updateAttribute(0);
               });
-              //option.onclick = (ev) => {
-              //  ObjectTracker_IMP.getInstance().updateAttribute("colorBy","type",ev)
-              //}
+       
               let label = document.createElement("label");
               label.className = "imp-option-label";
               label.htmlFor = "color-by-type";

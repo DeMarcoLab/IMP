@@ -47,6 +47,10 @@ export function parseColorSerialization(x: string) {
   throw new Error(`Invalid serialized color: ${JSON.stringify(x)}.`);
 }
 
+
+
+
+
 export function parseRGBAColorSpecification(x: any) {
   try {
     if (typeof x !== 'string') {
@@ -109,6 +113,7 @@ export function serializeColor(x: vec3|vec4) {
       result += Math.min(255, Math.max(0, Math.round(x[i] * 255)));
     }
     result += `, ${float32ToString(x[3])})`;
+    //console.log(result);
     return result;
   }
 }

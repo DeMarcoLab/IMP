@@ -52,6 +52,7 @@ export class RenderViewport {
   visibleHeightFraction: number = 0;
 }
 
+//@Daniel not sure if this is relevant
 export function applyRenderViewportToProjectionMatrix(
     viewport: RenderViewport, projectionMatrix: mat4) {
   const xScale = 1 / viewport.visibleWidthFraction;
@@ -469,7 +470,7 @@ export class DisplayContext extends RefCounted implements FrameNumberCounter {
 
     // Ensure the alpha buffer is set to 1.
     gl.disable(gl.SCISSOR_TEST);
-    this.gl.clearColor(1.0, 1.0, 1.0, 1.0);
+    this.gl.clearColor(1.0, 1.0, 1.0, 1);
     this.gl.colorMask(false, false, false, true);
     gl.clear(gl.COLOR_BUFFER_BIT);
     this.gl.colorMask(true, true, true, true);

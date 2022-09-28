@@ -28,7 +28,7 @@
     background-color: var(--main-bg-color);
   }
   
-  .db-li {
+  .db_li {
     position: relative;
     padding-left: 15px;
     width: 85%;
@@ -41,7 +41,9 @@
     cursor: pointer;
     user-select: none;
   }
-  
+  .db_li:hover {
+    background-color: var(--friendly-light-grey)
+  }
   
   .db_li:after {
     position: absolute;
@@ -58,8 +60,8 @@
 .neuroglancer-layer-list-panel-item[data-archived=true] 
 .neuroglancer-layer-side-panel-name, 
 .neuroglancer-layer-list-panel-item[data-archived=true] .neuroglancer-icon svg {
-  color: #56595e !important;*/
-  stroke: #56595e !important;*/
+  color: #56595e !important;
+  stroke: #56595e !important;
 }
 
 
@@ -159,7 +161,7 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#eeeeee', end
     filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#afcee0', endColorstr='#afcee0',GradientType=0 ); /* IE6-9 */
   }
   
-  #db_panel {
+  .saveStatePanel, .loadStatePanel {
     background:var( --main-bg-color);
     border: 1px solid var(--friendly-border-color);
     width: 200px;

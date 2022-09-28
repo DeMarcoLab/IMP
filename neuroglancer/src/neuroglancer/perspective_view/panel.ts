@@ -519,8 +519,8 @@ export class PerspectivePanel extends RenderedDataPanel {
         lightingDirection, kAxes[2], this.navigationState.pose.orientation.orientation);
     vec3.scale(lightingDirection, lightingDirection, -1);
 
-    let ambient =1;
-    let directional = 0.8;
+    let ambient =0.6;
+    let directional = 0.4;
 
     const renderContext: PerspectiveViewRenderContext = {
       wireFrame: this.viewer.wireFrame.value,
@@ -717,14 +717,16 @@ export class PerspectivePanel extends RenderedDataPanel {
       mat4.multiply(mat, sliceViewInvViewMatrix, mat);
       mat4.multiply(mat, viewProjectionMat, mat);
       const backgroundColor = tempVec4;
+     
       const crossSectionBackgroundColor = this.viewer.crossSectionBackgroundColor.value;
       backgroundColor[0] = crossSectionBackgroundColor[0];
       backgroundColor[1] = crossSectionBackgroundColor[1];
       backgroundColor[2] = crossSectionBackgroundColor[2];
       backgroundColor[3] = 1;
+       //@DANIEL this is where the draw method is called
       sliceViewRenderHelper.draw(
           sliceView.offscreenFramebuffer.colorBuffers[0].texture, mat,
-          vec4.fromValues(factor, factor, factor, 1), tempVec4, 0, 0, 1, 1);
+          vec4.fromValues(factor, factor, factor, 0), tempVec4, 0, 0, 1, 1);
     }
   }
 

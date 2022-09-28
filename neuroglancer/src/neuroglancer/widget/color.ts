@@ -15,10 +15,10 @@
  */
 
 import {WatchableValueInterface} from 'neuroglancer/trackable_value';
-import {parseRGBColorSpecification, serializeColor} from 'neuroglancer/util/color';
+import {parseRGBAColorSpecification, parseRGBColorSpecification, serializeColor} from 'neuroglancer/util/color';
 import {hsvToRgb, rgbToHsv} from 'neuroglancer/util/colorspace';
 import {RefCounted} from 'neuroglancer/util/disposable';
-import {vec3} from 'neuroglancer/util/geom';
+import {vec3, vec4} from 'neuroglancer/util/geom';
 
 export class ColorWidget<Color extends vec3|undefined = vec3> extends RefCounted {
   element = document.createElement('input');
@@ -60,6 +60,55 @@ export class ColorWidget<Color extends vec3|undefined = vec3> extends RefCounted
     hue = (hue + 256) % 256;
     temp[0] = hue / 256;
     hsvToRgb(temp, temp[0], temp[1], temp[2]);
+    this.model.value = temp as Color;
+  }
+}
+export class ColorWidgetA<Color extends vec4|undefined = vec4> extends RefCounted {
+  element = document.createElement('input');
+
+  constructor(
+      public model: WatchableValueInterface<Color>,
+      public getDefaultColor: (() => vec4) = () => vec4.fromValues(1, 1, 1,0)) {
+    super();
+    const {element} = this;
+    element.classList.add('neuroglancer-color-widget');
+    element.type = 'color';
+    element.addEventListener('change', () => this.updateModel());
+    element.addEventListener('input', () => this.updateModel());
+    element.addEventListener('wheel', event => {
+      event.stopPropagation();
+      event.preventDefault();
+      this.adjustHueViaWheel(event);
+    });
+    this.registerDisposer(model.changed.add(() => this.updateView()));
+    this.updateView();
+  }
+  private getRGBA() {
+    return this.model.value ?? this.getDefaultColor();
+  }
+  private updateView() {
+    this.element.value = serializeColor(this.getRGBA());
+  }
+  private updateModel() {
+    //console.log(this.element.value)
+    let val =  parseRGBAColorSpecification(this.element.value) as Color;
+    //val![3]=0
+    this.model.value = val;
+  }
+
+  adjustHueViaWheel(event: WheelEvent) {
+    const rgb = this.getRGBA();
+    const temp = vec4.create();
+    rgbToHsv(temp, rgb[0], rgb[1], rgb[2]);
+ 
+
+    const {deltaY} = event;
+    let hue = Math.round(temp[0] * 256);
+    hue += (deltaY > 0 ? 1 : deltaY < 0 ? -1 : 0);
+    hue = (hue + 256) % 256;
+    temp[0] = hue / 256;
+    hsvToRgb(temp, temp[0], temp[1], temp[2]);
+    temp[3]=0;
     this.model.value = temp as Color;
   }
 }
