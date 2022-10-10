@@ -20,9 +20,12 @@
 import {setupDefaultViewer} from 'neuroglancer/ui/default_viewer_setup';
 
 window.addEventListener('DOMContentLoaded', () => {
-  //console.log(window.location.href)
+  console.log(window.location.search)
   const urlParams = new URLSearchParams(window.location.search);
-  const param = urlParams.get("name")
-  if(param!==null)
-    setupDefaultViewer(param);
+
+  const name = urlParams.get("name")
+  const id = urlParams.get("user_id")
+
+  if(name!==null)
+    setupDefaultViewer(name,id!);
 });

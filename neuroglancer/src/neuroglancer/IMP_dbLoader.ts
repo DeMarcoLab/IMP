@@ -5,6 +5,7 @@ export class IMP_dbLoader {
     private static instance: IMP_dbLoader;
     private default_DB_url = 'https://webdev.imp-db.cloud.edu.au:3005/tomosets/';
     private currDataset: any;
+    private user_id: string;
     private constructor() {
         //this.default_DB_url = 
     }
@@ -17,6 +18,9 @@ export class IMP_dbLoader {
         return IMP_dbLoader.instance;
     }
 
+    public setUserId(userID:string){
+        this.user_id=userID;
+    }
     public setDataset(dataset:any){
         this.currDataset=dataset;
     }
@@ -83,7 +87,8 @@ export class IMP_dbLoader {
         //console.log(selected_id)
         const axios = require('axios').default;
         axios.defaults.headers.post['Access-Control-Allow-Origin'] = '*'
-        let response = await axios.get(this.default_DB_url+selected_name);
+        let response = await axios.get(this.default_DB_url+"/getOne/"+selected_name);
+        console.log(response.data)
         return response;
     }
 

@@ -26,7 +26,7 @@ declare var NEUROGLANCER_DEFAULT_STATE_FRAGMENT: string|undefined;
 /**
  * Sets up the default neuroglancer viewer.
  */
-export function setupDefaultViewer(datasetName: string) {
+export function setupDefaultViewer(datasetName: string, userId: string) {
 
   let viewer = (<any>window)['viewer'] = makeDefaultViewer();
   setDefaultInputEventBindings(viewer.inputEventBindings);

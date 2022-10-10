@@ -614,7 +614,7 @@ export class Viewer extends RefCounted implements ViewerState {
       topRow.appendChild(button.element);
     }
 
-    /*{
+    {
       const button = makeIcon({ text: '{}', title: 'Edit JSON state' });
       this.registerEventListener(button, 'click', () => {
         this.editJsonState();
@@ -622,10 +622,10 @@ export class Viewer extends RefCounted implements ViewerState {
       this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
         this.uiControlVisibility.showEditStateButton, button));
       topRow.appendChild(button);
-    }*/
+    }
 
     {
-      const button = makeIcon({ text: '⪚', title: 'Download visible segment list' });
+      const button = makeIcon({ text: '⭳', title: 'Download visible segment list' });
       this.registerEventListener(button, 'click', () => {
         IMP_StateManager.getInstance().downloadActiveSegments();       
       });
@@ -784,7 +784,13 @@ export class Viewer extends RefCounted implements ViewerState {
       stateListEl.appendChild(liEl)
 
     }
+    let closeButton = document.createElement("button");
+    closeButton.innerHTML = "Close";
 
+    panel.appendChild(closeButton);
+    closeButton.onclick = () =>{
+          panel.style.display = "none";
+    }
     const rootNode = document.getElementById("neuroglancer-container");
     if(rootNode){
       rootNode.appendChild(panel);
@@ -802,6 +808,10 @@ export class Viewer extends RefCounted implements ViewerState {
     inputElName.type = "text";
     panel.appendChild(labelElName);
     panel.appendChild(inputElName);
+
+    let labeloverWriteName = document.createElement("label");
+    labeloverWriteName.setAttribute("for", "overwriteCheckboxEl");
+    labeloverWriteName.innerHTML = "Overwrite existing state?";
     let overwriteCheckboxEl = document.createElement("input");
     overwriteCheckboxEl.type = "checkbox";
     overwriteCheckboxEl.checked = false;
@@ -823,7 +833,13 @@ export class Viewer extends RefCounted implements ViewerState {
       })
      
     }   
+    let closeButton = document.createElement("button");
+    closeButton.innerHTML = "Close";
 
+    panel.appendChild(closeButton);
+    closeButton.onclick = () =>{
+          panel.style.display = "none";
+    }
     const rootNode = document.getElementById("neuroglancer-container");
     if(rootNode){
       rootNode.appendChild(panel);
@@ -1034,7 +1050,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
   connectToDatabase(datasetName:string) {
     IMP_dbLoader.getInstance().tryFetchByName(datasetName).then((res: any) => {
-
+      console.log(res)
       this.loadDBsetIntoNeuroglancer(res.data)
     })
   }
