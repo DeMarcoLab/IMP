@@ -17,15 +17,52 @@
 /**
  * @file Main entry point for default neuroglancer viewer.
  */
-import {setupDefaultViewer} from 'neuroglancer/ui/default_viewer_setup';
+import { setupDefaultViewer } from 'neuroglancer/ui/default_viewer_setup';
+
+function getCookie(val: string) {
+  let name = val + "=";
+  let decodedCookie = decodeURIComponent(document.cookie);
+  let ca = decodedCookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) == ' ') {
+      c = c.substring(1);
+    }
+    if (c.indexOf(name) == 0) {
+      return c.substring(name.length, c.length);
+    }
+  }
+  return "";
+}
 
 window.addEventListener('DOMContentLoaded', () => {
   console.log(window.location.search)
-  const urlParams = new URLSearchParams(window.location.search);
+  //cookies?
+  let x = getCookie("orcid_id")
+  if (x) {
+    console.log(x);
+    //get expiry
+    let exp = getCookie("exp");
+    console.log(exp);
+    if (new Date() > new Date(exp)) {
+      console.log("Cookie expired.")
+      alert("Session expired. Please log in again at  https://webdev.imp-db.cloud.edu.au . A session is 4 hours long. ")
+    } else {
+      const urlParams = new URLSearchParams(window.location.search);
 
-  const name = urlParams.get("name")
-  const id = urlParams.get("user_id")
+      const name = urlParams.get("name")
+      const id = urlParams.get("user_id")
+      if(id!==x){
+        console.log("ID in URL is not the same as logging in ID.")
+        alert("You can only view datasets that are connected to your own ORCID ID.")
+      } else {
+        if (name !== null)
+          setupDefaultViewer(name, id!);
+      }
+    }
+  } else {
+    console.log("No cookie. User needs to log in.")
+    alert("You are not logged in via ORCID. Please go back to the portal at https://webdev.imp-db.cloud.edu.au and log in.")
+  }
 
-  if(name!==null)
-    setupDefaultViewer(name,id!);
 });
