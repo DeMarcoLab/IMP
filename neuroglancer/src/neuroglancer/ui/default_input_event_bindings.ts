@@ -28,7 +28,8 @@ export function getIMPBindings() {
             'at:mousedown2': 'toggle-mesh',
             'at:touchhold1': 'toggle-mesh',
             'at:touchtap1x2': 'color-picker',
-            'at:dblClick': 'color-picker'
+            'at:dblClick': 'color-picker',
+            'at:keyd': 'delete-annotation'
           },
           {
           label: 'IMP specific Bindings',
@@ -132,7 +133,7 @@ export function getDefaultRenderedDataPanelBindings() {
           'at:touchrotate': 'rotate-in-plane-via-touchrotate',
           'at:touchtranslate2': 'translate-in-plane-via-touchtranslate',
            'at:mousedown2': 'toggle-mesh',
-
+          'at:keyd':'delete-annotation',
           'at:touchtap2x3': 'snap',
         },
         {

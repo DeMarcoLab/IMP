@@ -54,7 +54,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const id = urlParams.get("user_id")
       if(id!==x){
         console.log("ID in URL is not the same as logging in ID.")
-        alert("You can only view datasets that are connected to your own ORCID ID.")
+        alert("ID mismatch. Please make sure you are logged in and select a dataset from the web portal.")
       } else {
         if (name !== null)
           setupDefaultViewer(name, id!);

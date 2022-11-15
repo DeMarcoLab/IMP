@@ -53,7 +53,7 @@ import { TrackableRGB } from 'neuroglancer/util/color';
 import { Borrowed, Owned, RefCounted } from 'neuroglancer/util/disposable';
 import { removeFromParent } from 'neuroglancer/util/dom';
 import { ActionEvent, registerActionListener } from 'neuroglancer/util/event_action_map';
-import {  vec3 } from 'neuroglancer/util/geom';
+import { vec3 } from 'neuroglancer/util/geom';
 import { parseFixedLengthArray, verifyFinitePositiveFloat, verifyObject, verifyOptionalObjectProperty, verifyString } from 'neuroglancer/util/json';
 import { EventActionMap, KeyboardEventBinder } from 'neuroglancer/util/keyboard_bindings';
 import { NullarySignal } from 'neuroglancer/util/signal';
@@ -72,6 +72,9 @@ import IMP_StateManager from './IMP_statemanager';
 import { IMP_dbLoader } from './IMP_dbLoader';
 import { SegmentationUserLayer } from './segmentation_user_layer';
 import { Uint64 } from './util/uint64';
+import { AnnotationLayer } from './annotation/renderlayer';
+import { AnnotationUserLayer } from './annotation/user_layer';
+import { AnnotationSource } from './annotation';
 
 declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 
@@ -222,7 +225,7 @@ class TrackableViewerState extends CompoundTrackable {
   restoreState(obj: any) {
     const { viewer } = this;
     super.restoreState(obj);
-    
+
     // Handle legacy properties
     verifyOptionalObjectProperty(obj, 'navigation', navObj => {
       verifyObject(navObj);
@@ -498,8 +501,8 @@ export class Viewer extends RefCounted implements ViewerState {
     this.registerDisposer(new ElementVisibilityFromTrackableBoolean(
       this.uiControlVisibility.showLocation, positionWidget.element));
     topRow.appendChild(positionWidget.element);
-    
- 
+
+
     //Search NH
     let colorByDiv = document.createElement("div");
     colorByDiv.id = "imp-color-by-div";
@@ -627,18 +630,18 @@ export class Viewer extends RefCounted implements ViewerState {
     {
       const button = makeIcon({ text: '⭳', title: 'Download visible segment list' });
       this.registerEventListener(button, 'click', () => {
-        IMP_StateManager.getInstance().downloadActiveSegments();       
+        IMP_StateManager.getInstance().downloadActiveSegments();
       });
- 
+
       topRow.appendChild(button);
 
     }
     {
       const button = makeIcon({ text: '+', title: 'Load a previously saved state' });
       this.registerEventListener(button, 'click', () => {
-        this.createLoadStatePanel();     
+        this.createLoadStatePanel();
       });
- 
+
       topRow.appendChild(button);
 
     }
@@ -646,9 +649,9 @@ export class Viewer extends RefCounted implements ViewerState {
       const button = makeIcon({ text: '🖫', title: 'Save current state.' });
       this.registerEventListener(button, 'click', () => {
         this.createSaveStatePanel();
- 
+
       });
- 
+
       topRow.appendChild(button);
 
     }
@@ -751,26 +754,26 @@ export class Viewer extends RefCounted implements ViewerState {
 
   }
 
-  private createLoadStatePanel(){
+  private createLoadStatePanel() {
     let savedStates = IMP_dbLoader.getInstance().getSaveStates();
     let statesArr = []
-    if(savedStates=== undefined){
+    if (savedStates === undefined) {
       statesArr[0] = "No saved states available yet."
     } else {
       statesArr = savedStates;
     }
- 
+
     let panel = document.createElement("div");
     panel.className = "loadStatePanel";
-    
+
     let stateListEl = document.createElement("ul");
     stateListEl.className = "db_ul"
     panel.appendChild(stateListEl);
-    for(let el of statesArr){
+    for (let el of statesArr) {
       let liEl = document.createElement("li");
       liEl.innerHTML = el;
       liEl.className = "db_li"
-      if(el !== "No saved states available yet"){
+      if (el !== "No saved states available yet") {
         let self = this;
         liEl.onclick = () => {
           console.log("loading " + liEl.innerHTML);
@@ -788,17 +791,17 @@ export class Viewer extends RefCounted implements ViewerState {
     closeButton.innerHTML = "Close";
 
     panel.appendChild(closeButton);
-    closeButton.onclick = () =>{
-          panel.style.display = "none";
+    closeButton.onclick = () => {
+      panel.style.display = "none";
     }
     const rootNode = document.getElementById("neuroglancer-container");
-    if(rootNode){
+    if (rootNode) {
       rootNode.appendChild(panel);
     }
 
   }
-  
-  private createSaveStatePanel(){
+
+  private createSaveStatePanel() {
     let panel = document.createElement("div");
     panel.className = "saveStatePanel";
     let labelElName = document.createElement("label");
@@ -823,25 +826,25 @@ export class Viewer extends RefCounted implements ViewerState {
     panel.appendChild(submitButton);
 
 
-    submitButton.onclick = () =>{
-      IMP_dbLoader.getInstance().saveState(inputElName.value,this.state,overwriteCheckboxEl.checked).then((res: any) => {
+    submitButton.onclick = () => {
+      IMP_dbLoader.getInstance().saveState(inputElName.value, this.state, overwriteCheckboxEl.checked).then((res: any) => {
         infoText.innerHTML = res;
         submitButton.innerHTML = "Close";
         submitButton.onclick = () => {
           panel.style.display = "none";
         }
       })
-     
-    }   
+
+    }
     let closeButton = document.createElement("button");
     closeButton.innerHTML = "Close";
 
     panel.appendChild(closeButton);
-    closeButton.onclick = () =>{
-          panel.style.display = "none";
+    closeButton.onclick = () => {
+      panel.style.display = "none";
     }
     const rootNode = document.getElementById("neuroglancer-container");
-    if(rootNode){
+    if (rootNode) {
       rootNode.appendChild(panel);
     }
 
@@ -863,27 +866,43 @@ export class Viewer extends RefCounted implements ViewerState {
   }
 
   //determines which item has been clicked (annotation or mesh layer)
-  private getClickedId_LayerName(){
+  private getClickedMeshId_LayerName() {
     let vals = this.layerSelectedValues.toJSON();
-    let returnee = {"name":"-1","id":"-1"}
-    for(let i = 0; i < Object.keys(vals).length; i++){
-       let key = Object.keys(vals)[i];
+    let returnee = { "name": "-1", "id": "-1" }
+    for (let i = 0; i < Object.keys(vals).length; i++) {
+      let key = Object.keys(vals)[i];
       // console.log(vals[key])
-       if(vals[key].value !== {} && typeof(vals[key]["value"])==="string" && vals[key]["value"].indexOf("#")<0){
+      if (vals[key].value !== {} && typeof (vals[key]["value"]) === "string" && vals[key]["value"].indexOf("#") < 0) {
         returnee.name = key;
         returnee.id = vals[key]["value"]
         return returnee;
-       } else {
-        if(vals[key].annotationId ){
+      } else {
+        if (vals[key].annotationId) {
           returnee.name = key + "_mesh";
           returnee.id = vals[key].annotationId;
           return returnee;
         }
-       }
+      }
     }
     return null;
   }
 
+  private getClickedAnnotationId() {
+    let vals = this.layerSelectedValues.toJSON();
+    let returnee = { "name": "-1", "id": "-1" }
+    for (let i = 0; i < Object.keys(vals).length; i++) {
+      let key = Object.keys(vals)[i];
+      // console.log(vals[key])
+
+      if (vals[key].annotationId) {
+        returnee.name = key;
+        returnee.id = vals[key].annotationId;
+        return returnee;
+      }
+
+    }
+    return null;
+  }
   /**
    * Called once by the constructor to register the action listeners.
    */
@@ -894,27 +913,68 @@ export class Viewer extends RefCounted implements ViewerState {
       });
     }
 
-   // this.bindAction('z+1-via-wheel', () => {
+    // this.bindAction('z+1-via-wheel', () => {
     //  IMP_StateManager.getInstance().updatePosDim(this.navigationState.position)
     //})
 
     this.bindAction('color-picker', () => {
 
-      IMP_StateManager.getInstance().doClickReaction('dblClick', this.getClickedId_LayerName()!.id);
+      IMP_StateManager.getInstance().doClickReaction('dblClick', this.getClickedMeshId_LayerName()!.id);
+    })
+
+    /*deletes the annotation under the mouse cursor */
+    this.bindAction('delete-annotation', () => {
+      const clickies = this.getClickedAnnotationId();
+      if(clickies===null){
+        return;
+      }
+      console.log(clickies)
+      const layers = this.layerManager.managedLayers;
+      for (let lay of layers) {
+
+        if (lay !== null && lay["layer_"] !== null && lay["name_"] === clickies!["name"]) {
+          console.log(lay["layer_"])
+          console.log(clickies)
+          let lays = lay["layer_"] as AnnotationUserLayer;
+          let source = lays.localAnnotations as AnnotationSource;
+          const ref = source.getReference(clickies.id);
+          try {
+            source.delete(ref); //deletes the annotation
+          } finally {
+            ref.dispose();
+          }
+          IMP_StateManager.getInstance().deleteID(clickies.id);
+          //lays!.localAnnotations.annotationMap.delete(clickies!.id);
+         //localAnnotations
+//: 
+//LocalAnnotationSource
+//annotationMap
+//: 
+//Map(107) {'49850' => {…}, '49851' => {…}, '49852' => {…}, '49853' => {…}, '49854' => {…}, …}
+        } else if (lay !== null && lay["layer_"] !== null && lay["name_"] === clickies!["name"]+"_mesh"){
+          //we also have to delete the annotation references in the corresponding mesh layer. 
+          let sLay = lay["layer_"] as SegmentationUserLayer;
+          const displayState = sLay.displayState;
+          const { visibleSegments } = displayState.segmentationGroupState.value;
+          let id = new Uint64();
+          id.tryParseString(clickies!["id"].toString())
+          visibleSegments.set(id, false);
+        }
+      }
     })
     this.bindAction('toggle-mesh', () => {
 
-      console.log(this)
+      //console.log(this)
       //IMP_StateManager.getInstance().setSegmentationDisplayState()
-      
-      const clickies = this.getClickedId_LayerName();
-      const layers = this.layerManager.managedLayers;
-      for(let lay of layers){
 
-        if(lay!==null && lay["layer_"] !== null && lay["name_"] === clickies!["name"] ){
+      const clickies = this.getClickedMeshId_LayerName();
+      const layers = this.layerManager.managedLayers;
+      for (let lay of layers) {
+
+        if (lay !== null && lay["layer_"] !== null && lay["name_"] === clickies!["name"]) {
           let sLay = lay["layer_"] as SegmentationUserLayer;
           const displayState = sLay.displayState;
-          const {visibleSegments} = displayState.segmentationGroupState.value;
+          const { visibleSegments } = displayState.segmentationGroupState.value;
           let id = new Uint64();
           id.tryParseString(clickies!["id"].toString())
           visibleSegments.set(id, !visibleSegments.has(id));
@@ -958,7 +1018,7 @@ export class Viewer extends RefCounted implements ViewerState {
       if (IMP_StateManager.getInstance().getIsDrawingMode()) {
         console.log("should draw")
       } else if (IMP_StateManager.getInstance().isGrouping()) {
-        IMP_StateManager.getInstance().tryAddToGroup(this.getClickedId_LayerName()!.id)
+        IMP_StateManager.getInstance().tryAddToGroup(this.getClickedMeshId_LayerName()!.id)
       } else {
         const selectedLayer = this.selectedLayer.layer;
 
@@ -1048,7 +1108,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
   datasets = [] as Array<any>
 
-  connectToDatabase(datasetName:string) {
+  connectToDatabase(datasetName: string) {
     IMP_dbLoader.getInstance().tryFetchByName(datasetName).then((res: any) => {
       console.log(res)
       this.loadDBsetIntoNeuroglancer(res.data)
@@ -1056,553 +1116,553 @@ export class Viewer extends RefCounted implements ViewerState {
   }
 
   async loadDBsetIntoNeuroglancer(dataset: any) {
-    
-      IMP_dbLoader.getInstance().setDataset(dataset);
-      this.navigationState.reset();
-      this.perspectiveNavigationState.pose.orientation.reset();
-      this.perspectiveNavigationState.zoomFactor.reset();
-      this.resetInitiated.dispatch();
-      //if (!overlaysOpen && this.showLayerDialog && this.visibility.visible) {
-      //  addNewLayer(this.layerSpecification, this.selectedLayer);
-      //}//reset state and load new one
 
-      //get the header information  
-      const response = await fetch(dataset.image + "/" + dataset.name + ".json", { method: "GET" });
+    IMP_dbLoader.getInstance().setDataset(dataset);
+    this.navigationState.reset();
+    this.perspectiveNavigationState.pose.orientation.reset();
+    this.perspectiveNavigationState.zoomFactor.reset();
+    this.resetInitiated.dispatch();
+    //if (!overlaysOpen && this.showLayerDialog && this.visibility.visible) {
+    //  addNewLayer(this.layerSpecification, this.selectedLayer);
+    //}//reset state and load new one
 
-      let shaderstring = '#uicontrol invlerp normalized(clamp=false)';
-      let position = [100, 100, 100]
-      let dimensions = { 'x': [1, 'nm'], 'y': [1, 'nm'], 'z': [1, 'nm'] }
-      if (response.ok) {
-        //if a header json exists, the correct posistion for the normalized brightness/contrast value is used. if no file is present, best guess defaults are used, which
-        //are likely not great.
-        const headerdata = await (response.json());
-        //console.log(headerdata)
-        if (!(headerdata.mean === 0 && headerdata.min === 0 && headerdata.max === 0 || headerdata.max < headerdata.min)) {
-          shaderstring = '#uicontrol invlerp normalized(range=[' + headerdata.min + ',' + headerdata.max  + '], window=[' + (headerdata.min - Math.abs(headerdata.min))  + ',' + (headerdata.max+Math.abs(headerdata.min)) + '])'
-        }
-        //console.log(shaderstring)
-        //}
-        position = [headerdata.x / 2, headerdata.y / 2, headerdata.z / 2];
+    //get the header information  
+    const response = await fetch(dataset.image + "/" + dataset.name + ".json", { method: "GET" });
 
-        //console.log(Object.values(headerdata.pixel_spacing))
-
-        if (headerdata.pixel_spacing) {
-          dimensions = { 'x': [headerdata.pixel_spacing[0], 'nm'], 'y': [headerdata.pixel_spacing[1], 'nm'], 'z': [headerdata.pixel_spacing[2], 'nm'] }; //if this is in the dataset info, should be more precise
-
-        }
+    let shaderstring = '#uicontrol invlerp normalized(clamp=false)';
+    let position = [100, 100, 100]
+    let dimensions = { 'x': [1, 'nm'], 'y': [1, 'nm'], 'z': [1, 'nm'] }
+    if (response.ok) {
+      //if a header json exists, the correct posistion for the normalized brightness/contrast value is used. if no file is present, best guess defaults are used, which
+      //are likely not great.
+      const headerdata = await (response.json());
+      //console.log(headerdata)
+      if (!(headerdata.mean === 0 && headerdata.min === 0 && headerdata.max === 0 || headerdata.max < headerdata.min)) {
+        shaderstring = '#uicontrol invlerp normalized(range=[' + headerdata.min + ',' + headerdata.max + '], window=[' + (headerdata.min - Math.abs(headerdata.min)) + ',' + (headerdata.max + Math.abs(headerdata.min)) + '])'
       }
-      const originalFile_response = await fetch(dataset.image+"/particles.csv");
-      const originalFile = await originalFile_response.text();
-      //console.log(originalFile)
-      let jsonList = this.csvJSON(originalFile);
-      //console.log(jsonList)
-      //save the original segments, so we can download a variation from it later.
-      IMP_StateManager.getInstance().setOriginalSegmentList(jsonList)
-      shaderstring += '\n#uicontrol int invertColormap slider(min=0, max=1, step=1, default=0)';
-      shaderstring += '\n#uicontrol vec3 color color(default="white")';
-      shaderstring += '\n float inverter(float val, int invert) {return 0.5 + ((2.0 * (-float(invert) + 0.5)) * (val - 0.5));}';
-      shaderstring += '\nvoid main() {\n   emitRGB(color * inverter(normalized(), invertColormap));\n}\n';
-      const imgLayer = { "type": "image", "visible": true, "source": "precomputed://" + dataset.image + "/image", "tab": "rendering", "name": dataset.name, "shader": shaderstring };
+      //console.log(shaderstring)
+      //}
+      position = [headerdata.x / 2, headerdata.y / 2, headerdata.z / 2];
 
-      IMP_StateManager.getInstance().addLayer(imgLayer, true)
-      // ObjectTracker_IMP.getInstance().setActiveLayerName(dataset.name)
-      /*add custom scroll bar to each panel*/
-      //add scrollbar
+      //console.log(Object.values(headerdata.pixel_spacing))
+
+      if (headerdata.pixel_spacing) {
+        dimensions = { 'x': [headerdata.pixel_spacing[0], 'nm'], 'y': [headerdata.pixel_spacing[1], 'nm'], 'z': [headerdata.pixel_spacing[2], 'nm'] }; //if this is in the dataset info, should be more precise
+
+      }
+    }
+    const originalFile_response = await fetch(dataset.image + "/particles.csv");
+    const originalFile = await originalFile_response.text();
+    //console.log(originalFile)
+    let jsonList = this.csvJSON(originalFile);
+    //console.log(jsonList)
+    //save the original segments, so we can download a variation from it later.
+    IMP_StateManager.getInstance().setOriginalSegmentList(jsonList)
+    shaderstring += '\n#uicontrol int invertColormap slider(min=0, max=1, step=1, default=0)';
+    shaderstring += '\n#uicontrol vec3 color color(default="white")';
+    shaderstring += '\n float inverter(float val, int invert) {return 0.5 + ((2.0 * (-float(invert) + 0.5)) * (val - 0.5));}';
+    shaderstring += '\nvoid main() {\n   emitRGB(color * inverter(normalized(), invertColormap));\n}\n';
+    const imgLayer = { "type": "image", "visible": true, "source": "precomputed://" + dataset.image + "/image", "tab": "rendering", "name": dataset.name, "shader": shaderstring };
+
+    IMP_StateManager.getInstance().addLayer(imgLayer, true)
+    // ObjectTracker_IMP.getInstance().setActiveLayerName(dataset.name)
+    /*add custom scroll bar to each panel*/
+    //add scrollbar
 
 
-      let names = []
-      let colours = []
-      //let hasAnnotations = true;
-      if (dataset.layers) {
-        //console.log(dataset.layers)
-        for (let layer of dataset.layers) {
-          //console.log(layer)
-          if (layer && layer.type == "all") {
-            //console.log("all")
-            //fetch the json for the annotations 
-            const response = await fetch(layer.path, { method: "GET" });
+    let names = []
+    let colours = []
+    //let hasAnnotations = true;
+    if (dataset.layers) {
+      //console.log(dataset.layers)
+      for (let layer of dataset.layers) {
+        //console.log(layer)
+        if (layer && layer.type == "all") {
+          //console.log("all")
+          //fetch the json for the annotations 
+          const response = await fetch(layer.path, { method: "GET" });
 
-            if (!response.ok) {
-              console.log("Response is not ok: " + response.json());
-              continue;
-            }
+          if (!response.ok) {
+            console.log("Response is not ok: " + response.json());
+            continue;
+          }
 
-            let resText = await (response.text())
-            //console.log(resText)
-            let re = new RegExp('(?<=(\"|\')>)(.*?)(.json)', 'g');  //parses the resulting page for the file names present in that folder
+          let resText = await (response.text())
+          //console.log(resText)
+          let re = new RegExp('(?<=(\"|\')>)(.*?)(.json)', 'g');  //parses the resulting page for the file names present in that folder
 
-            let sublayers = [...resText.matchAll(re)]
-            //console.log(sublayers)
+          let sublayers = [...resText.matchAll(re)]
+          //console.log(sublayers)
 
-            let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
-            let meshes = [...resText.matchAll(re1)]
-            //console.log(meshes)
-            let a = await fetch(layer.path + "columns.json", { method: "GET" })
-            let columns = await (a.json());
+          let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
+          let meshes = [...resText.matchAll(re1)]
+          //console.log(meshes)
+          let a = await fetch(layer.path + "columns.json", { method: "GET" })
+          let columns = await (a.json());
 
-            try {
+          try {
 
-              //console.log(columns)
-              let option = document.createElement("input");
-              option.type = "radio";
-              option.id = "color-by-type";
-              option.className = "imp-radio";
-              option.name = "colorBy";
-              option.value = "type";
-              option.checked = true;
-              option.addEventListener('change', () => {
-                IMP_StateManager.getInstance().updateAttribute(0);
+            //console.log(columns)
+            let option = document.createElement("input");
+            option.type = "radio";
+            option.id = "color-by-type";
+            option.className = "imp-radio";
+            option.name = "colorBy";
+            option.value = "type";
+            option.checked = true;
+            option.addEventListener('change', () => {
+              IMP_StateManager.getInstance().updateAttribute(0);
+            });
+
+            let label = document.createElement("label");
+            label.className = "imp-option-label";
+            label.htmlFor = "color-by-type";
+            label.innerHTML = "type";
+
+            //label for div:
+            let labDiv = document.createElement("div")
+            labDiv.innerText = "Colour by:  ";
+            document.getElementById('imp-color-by-div')?.appendChild(labDiv)
+            document.getElementById('imp-color-by-div')?.appendChild(label);
+            document.getElementById('imp-color-by-div')?.appendChild(option);
+
+            //console.log(columns)
+            for (let i = 0; i < columns.length; i++) {
+              let opt_ = document.createElement("input")
+              opt_.type = "radio"
+              opt_.id = columns[i]
+              opt_.name = "colorBy"
+              opt_.className = "imp-radio";
+              opt_.value = columns[i]
+              opt_.addEventListener('change', () => {
+                IMP_StateManager.getInstance().updateAttribute(i + 1);
               });
-       
+
               let label = document.createElement("label");
               label.className = "imp-option-label";
-              label.htmlFor = "color-by-type";
-              label.innerHTML = "type";
+              label.htmlFor = columns[i]
+              label.innerHTML = columns[i]
+              document.getElementById('imp-color-by-div')?.appendChild(label)
+              document.getElementById('imp-color-by-div')?.appendChild(opt_)
+              //add a list of colormaps
+              let selectEl = document.createElement("select");
+              let colorMaps = IMP_StateManager.getInstance().getColormapKeys();
+              //console.log(colorMaps)
+              for (let i = 0; i < colorMaps.length; i++) {
+                let opt = document.createElement('option');
+                if (colorMaps[i] === "jet") { opt.selected = true }
+                opt.value = colorMaps[i];
+                opt.textContent = colorMaps[i]
+                selectEl.appendChild(opt);
+              }
+              //console.log(selectEl)
+              document.getElementById('imp-color-by-div')?.appendChild(selectEl)
+              selectEl.addEventListener('change', () => {
+                IMP_StateManager.getInstance().updateColormap(selectEl.value)
+              })
+            }
 
-              //label for div:
-              let labDiv = document.createElement("div")
-              labDiv.innerText = "Colour by:  ";
-              document.getElementById('imp-color-by-div')?.appendChild(labDiv)
-              document.getElementById('imp-color-by-div')?.appendChild(label);
-              document.getElementById('imp-color-by-div')?.appendChild(option);
+          } catch (e) {
+            console.log("Couldn't process a column file.")
+          }
 
-              //console.log(columns)
+          //fetch each layer
+          for (let sublayer of sublayers) {
+            let colour = ""
+            if (sublayer[0].indexOf("column") < 0) {
+
+              const sublayerresponse = await fetch(layer.path + sublayer[0], { method: "GET" })
+              const annots = await sublayerresponse.json()
+              //console.log(annots)
+              for (let annotation of annots) {
+                IMP_StateManager.getInstance().addIdName(annotation.id, sublayer[0].split(".json")[0]);
+              }
+              let shaderstring = "\n#uicontrol int colour_by slider(min=0,max=" + (columns.length > 0 ? columns.length : 1) + ")"
+              shaderstring += "\nvoid main() {\n"
+              //build ugly shaderstring TODO make this nice
+              shaderstring += "\nif(colour_by==0) {\n        setColor(prop_color());\n}";
+              //build configuration from available columns
+              let annotationProperties = [{ "id": "color", "type": "rgb", "default": "red" }];
+
+              //build radio box in top row if we have more than one column to color by
+
+
+
               for (let i = 0; i < columns.length; i++) {
-                let opt_ = document.createElement("input")
-                opt_.type = "radio"
-                opt_.id = columns[i]
-                opt_.name = "colorBy"
-                opt_.className = "imp-radio";
-                opt_.value = columns[i]
-                opt_.addEventListener('change', () => {
-                  IMP_StateManager.getInstance().updateAttribute(i + 1);
-                });
 
-                let label = document.createElement("label");
-                label.className = "imp-option-label";
-                label.htmlFor = columns[i]
-                label.innerHTML = columns[i]
-                document.getElementById('imp-color-by-div')?.appendChild(label)
-                document.getElementById('imp-color-by-div')?.appendChild(opt_)
-                //add a list of colormaps
-                let selectEl = document.createElement("select");
-                let colorMaps = IMP_StateManager.getInstance().getColormapKeys();
-                //console.log(colorMaps)
-                for (let i = 0; i < colorMaps.length; i++) {
-                  let opt = document.createElement('option');
-                  if (colorMaps[i] === "jet") { opt.selected = true }
-                  opt.value = colorMaps[i];
-                  opt.textContent = colorMaps[i]
-                  selectEl.appendChild(opt);
-                }
-                //console.log(selectEl)
-                document.getElementById('imp-color-by-div')?.appendChild(selectEl)
-                selectEl.addEventListener('change', () => {
-                  IMP_StateManager.getInstance().updateColormap(selectEl.value)
-                })
+                let obj = { "id": columns[i], "type": "rgb", "default": "yellow" }
+                annotationProperties.push(obj)
+                //adjust shader string
+                shaderstring += "\nif(colour_by==" + (i + 1) + ") {\n        setColor(prop_" + columns[i] + "());\n}";
+              }
+              shaderstring += "\n}"
+              const newLayer = {
+                "type": "annotation", "source": "local://annotations", "tab": "annotations", "name": sublayer[0].split(".json")[0],
+                "shader": shaderstring,
+                "annotationProperties": annotationProperties,
+                "annotations": annots,
+                "visible": false  //disable layer per default
               }
 
-            } catch (e) {
-              console.log("Couldn't process a column file.")
+
+              names.push(sublayer[0].split(".json")[0])
+              colours.push(annots[0].props[0])
+              colour = annots[0].props[0]
+              //console.log(newLayer)
+              //ObjectTracker_IMP.getInstance().addNameID(sublayer[0].split(".json")[0],annots[0].id) //TODO: Make_better!
+              IMP_StateManager.getInstance().addLayer(newLayer, false)
             }
 
-            //fetch each layer
-            for (let sublayer of sublayers) {
-              let colour = ""
-              if (sublayer[0].indexOf("column") < 0) {
+            /*try to load the mesh layer if available */
+            for (let mesh of meshes) {
 
-                const sublayerresponse = await fetch(layer.path + sublayer[0], { method: "GET" })
-                const annots = await sublayerresponse.json()
-                //console.log(annots)
-                for (let annotation of annots) {
-                  IMP_StateManager.getInstance().addIdName(annotation.id, sublayer[0].split(".json")[0]);
-                }
-                let shaderstring = "\n#uicontrol int colour_by slider(min=0,max=" + (columns.length > 0 ? columns.length : 1) + ")"
-                shaderstring += "\nvoid main() {\n"
-                //build ugly shaderstring TODO make this nice
-                shaderstring += "\nif(colour_by==0) {\n        setColor(prop_color());\n}";
-                //build configuration from available columns
-                let annotationProperties = [{ "id": "color", "type": "rgb", "default": "red" }];
+              if (mesh[1] === sublayer[0].split(".json")[0]) {
+                const meshlayer = {
+                  "type": "segmentation",
+                  "hasAnnoConnection": true,
+                  "source": {
+                    "url": "precomputed://" + layer.path + mesh[0],
+                    "transform": {
+                      "outputDimensions": dimensions,
 
-                //build radio box in top row if we have more than one column to color by
+                      "inputDimensions": dimensions
+                    }
+                  },
+                  "tab": "segments",
+                  "segments": [],
+                  "segmentDefaultColor": colour,
+                  "name": sublayer[0].split(".json")[0] + "_mesh",
+                  "visible": true
+                };
+                IMP_StateManager.getInstance().addLayer(meshlayer, false)
 
-
-
-                for (let i = 0; i < columns.length; i++) {
-
-                  let obj = { "id": columns[i], "type": "rgb", "default": "yellow" }
-                  annotationProperties.push(obj)
-                  //adjust shader string
-                  shaderstring += "\nif(colour_by==" + (i + 1) + ") {\n        setColor(prop_" + columns[i] + "());\n}";
-                }
-                shaderstring += "\n}"
-                const newLayer = {
-                  "type": "annotation", "source": "local://annotations", "tab": "annotations", "name": sublayer[0].split(".json")[0],
-                  "shader": shaderstring,
-                  "annotationProperties": annotationProperties,
-                  "annotations": annots,
-                  "visible": false  //disable layer per default
-                }
-
-
-                names.push(sublayer[0].split(".json")[0])
-                colours.push(annots[0].props[0])
-                colour = annots[0].props[0]
-                //console.log(newLayer)
-                //ObjectTracker_IMP.getInstance().addNameID(sublayer[0].split(".json")[0],annots[0].id) //TODO: Make_better!
-                IMP_StateManager.getInstance().addLayer(newLayer, false)
-              }
-
-              /*try to load the mesh layer if available */
-              for (let mesh of meshes) {
-
-                if (mesh[1] === sublayer[0].split(".json")[0]) {
-                  const meshlayer = {
-                    "type": "segmentation",
-                    "hasAnnoConnection": true,
-                    "source": {
-                      "url": "precomputed://" + layer.path + mesh[0],
-                      "transform": {
-                        "outputDimensions": dimensions,
-
-                        "inputDimensions": dimensions
-                      }
-                    },
-                    "tab": "segments",
-                    "segments": [],
-                    "segmentDefaultColor": colour,
-                    "name": sublayer[0].split(".json")[0] + "_mesh",
-                    "visible": true
-                  };
-                  IMP_StateManager.getInstance().addLayer(meshlayer, false)
-
-                }
               }
             }
-            //console.log(ObjectTracker_IMP.getInstance().getLayers())
+          }
+          //console.log(ObjectTracker_IMP.getInstance().getLayers())
 
-          } else {
-            const response = await fetch(layer.path, { method: "GET" });
+        } else {
+          const response = await fetch(layer.path, { method: "GET" });
 
-            //layer type segment. this can be done better.
+          //layer type segment. this can be done better.
 
 
-            if (!response.ok) {
-              console.log("Response is not ok: " + response.json());
+          if (!response.ok) {
+            console.log("Response is not ok: " + response.json());
+            continue;
+          }
+
+          let resText = await (response.text())
+          //console.log(resText)
+          let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
+          let meshes = [...resText.matchAll(re1)]
+
+          let re2 = new RegExp('(?<=(f="))(.+)(?=(\/"))', 'g')
+          let segmentationLayers = [...resText.matchAll(re2)]
+
+          //console.log(segmentationLayers)
+          //define some colours for up to 30 layers
+          const colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000']
+          let counter = 0;
+          for (const el of segmentationLayers) {
+
+            if (el[0] === "..") {
               continue;
             }
+            //console.log(el[0])
+            const segmentationlayer = {
+              "type": "segmentation",
+              "source": {
+                "url": "precomputed://" + layer.path + "/" + el[0],
+                "transform": {
+                  "outputDimensions": dimensions,
 
-            let resText = await (response.text())
-            //console.log(resText)
-            let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
-            let meshes = [...resText.matchAll(re1)]
-
-            let re2 = new RegExp('(?<=(f="))(.+)(?=(\/"))', 'g')
-            let segmentationLayers = [...resText.matchAll(re2)]
-
-            //console.log(segmentationLayers)
-            //define some colours for up to 30 layers
-            const colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000']
-            let counter = 0;
-            for (const el of segmentationLayers) {
-
-              if (el[0] === "..") {
-                continue;
-              }
-              //console.log(el[0])
-              const segmentationlayer = {
-                "type": "segmentation",
-                "source": {
-                  "url": "precomputed://" + layer.path + "/" + el[0],
-                  "transform": {
-                    "outputDimensions": dimensions,
-
-                    "inputDimensions": dimensions
-                  }
-                },
-                "tab": "rendering",
-                "saturation": 0.7,
-                "name": el[0],
-                "segmentDefaultColor": colors[counter],
-                "visible": true
-              }
-              counter++;
-              //console.log(segmentationlayer)
-              IMP_StateManager.getInstance().addLayer(segmentationlayer, false)
+                  "inputDimensions": dimensions
+                }
+              },
+              "tab": "rendering",
+              "saturation": 0.7,
+              "name": el[0],
+              "segmentDefaultColor": colors[counter],
+              "visible": true
             }
+            counter++;
+            //console.log(segmentationlayer)
+            IMP_StateManager.getInstance().addLayer(segmentationlayer, false)
+          }
 
-            //console.log(segmentationLayers)
-            for (let mesh of meshes) {
-              const meshlayer = {
-                "type": "segmentation",
-                //"hasAnnoConnection": false,
-                "source": {
-                  "url": "precomputed://" + layer.path + mesh[0],
-                  "transform": {
-                    "outputDimensions": dimensions,
+          //console.log(segmentationLayers)
+          for (let mesh of meshes) {
+            const meshlayer = {
+              "type": "segmentation",
+              //"hasAnnoConnection": false,
+              "source": {
+                "url": "precomputed://" + layer.path + mesh[0],
+                "transform": {
+                  "outputDimensions": dimensions,
 
-                    "inputDimensions": dimensions
-                  }
-                },
-                "tab": "rendering",
-                "saturation": 0.7,
-                "segments": [],
-                "segmentDefaultColor": "darkblue",
-                "name": mesh[0],
-                "visible": true
-              };
-              IMP_StateManager.getInstance().addLayer(meshlayer, false)
+                  "inputDimensions": dimensions
+                }
+              },
+              "tab": "rendering",
+              "saturation": 0.7,
+              "segments": [],
+              "segmentDefaultColor": "darkblue",
+              "name": mesh[0],
+              "visible": true
+            };
+            IMP_StateManager.getInstance().addLayer(meshlayer, false)
 
 
-            }
+          }
 
-          
+
         }
       }
 
       IMP_StateManager.getInstance().setState(this.state);
       IMP_StateManager.getInstance().setPosAndDim(position, dimensions)
       IMP_StateManager.getInstance().makeStateJSON();
-    
 
 
-    //Proteomics
-    //this constructs the div element with proteomics content. it is appended to the root node and not displayed. Once the proteomics tab is activated, this node is 
-    //pulled to that panel and displayed there. 
-    const rootNode = document.getElementById("neuroglancer-container")!;
 
-    let responseElement = document.getElementById("proteomics-content")
+      //Proteomics
+      //this constructs the div element with proteomics content. it is appended to the root node and not displayed. Once the proteomics tab is activated, this node is 
+      //pulled to that panel and displayed there. 
+      const rootNode = document.getElementById("neuroglancer-container")!;
 
-    if (rootNode !== null) {
+      let responseElement = document.getElementById("proteomics-content")
 
-      if (responseElement !== null) {
-        responseElement.textContent = ''
-      } else {
-        responseElement = document.createElement('div')
-        responseElement.id = "proteomics-content"
-        rootNode.append(responseElement)
-      }
+      if (rootNode !== null) {
 
-
-      if (dataset.proteomics && dataset.proteomics.path) {
-        let protTable = document.createElement("table")
-        protTable.className = "proteomics-table"
-
-        responseElement.append(protTable)
-
-
-        let hasHead = false;
-        const response = await fetch(dataset.proteomics.path, { method: "GET" });
-        const res = await response.json();
-
-        const keys = []
-        for (const item of res) {
-          //fill the header row with the keys in the table
-          if (!hasHead) {
-            //trEl_head.innerHTML = ''; //reset table
-            for (const key of Object.keys(item)) {
-              let tdEl = document.createElement("div")
-              tdEl.textContent = key
-              tdEl.className = "proteomics-table-head-item"
-              protTable.append(tdEl)
-              keys.push(key)
-            }
-            hasHead = true;
-          }
-          for (const key of keys) {
-            let tdEl1_ = document.createElement("div")
-            tdEl1_.textContent = item[key]
-            tdEl1_.title = item[key];
-            protTable.append(tdEl1_)
-          }
-        }
-      } else {
-        //console.log("no proteomics")
-        responseElement.textContent = "No Proteomics data found."
-      }
-      responseElement.style.display = "none"
-      //console.log(responseElement)
-    }
-
-
-    //Metadata
-    //this pulls the metadata and creates a node element as a child of the rootnode. Initially this is invisible, once the metadata tab is activated, the node will be appended
-    //to that panel as a child.
-    //all available metadata for layers will get their own content...
-    /*if (rootNode !== null) {
-      //console.log(response.toString())
-      let responseElement = document.getElementById("metadataOptions-content")
-      if (responseElement === null) {
-        responseElement = document.createElement('div')
-        responseElement.id = "metadataOptions-content"
-        rootNode.append(responseElement)
-        responseElement.style.display = "none"
-      } else {
-        responseElement.textContent = '';
-      }
-      let datasetMetadatadiv = document.createElement('div')
-      datasetMetadatadiv.className = "metadata-dataset"
-      let heading = document.createElement('h3')
-      heading.textContent = "About this dataset"
-      datasetMetadatadiv.append(heading)
-      let datasetContent = document.createElement('p')
-      if (dataset.metadata && dataset.metadata.text) {
-        datasetContent.textContent = dataset.metadata.text;
-      } else {
-        datasetContent.textContent = "No metadata provided for this dataset."
-      }
-      datasetMetadatadiv.append(datasetContent)
-      responseElement.append(datasetMetadatadiv)
-      responseElement.append(document.createElement('hl'))
-
-      //metadata about the selected layer
-      let layerMetadatadiv = document.createElement('div')
-      layerMetadatadiv.className = "metadata-layer"
-      let layerheading = document.createElement('h3')
-      layerheading.textContent = "About the selected layer"
-      layerMetadatadiv.append(layerheading)
-
-      for (const elem of dataset.layers) {
-        let layerContent = document.createElement('div')
-        layerContent.style.display = "none"
-        layerContent.className = "layer-metadata-" + elem.name;
-        if (elem.metadata) {
-          layerContent.textContent = elem.metadata
+        if (responseElement !== null) {
+          responseElement.textContent = ''
         } else {
-          layerContent.textContent = "No metadata available for this layer"
+          responseElement = document.createElement('div')
+          responseElement.id = "proteomics-content"
+          rootNode.append(responseElement)
         }
-        layerMetadatadiv.append(layerContent)
-      }
-      responseElement.append(layerMetadatadiv)
 
-    }*/
-  }
+
+        if (dataset.proteomics && dataset.proteomics.path) {
+          let protTable = document.createElement("table")
+          protTable.className = "proteomics-table"
+
+          responseElement.append(protTable)
+
+
+          let hasHead = false;
+          const response = await fetch(dataset.proteomics.path, { method: "GET" });
+          const res = await response.json();
+
+          const keys = []
+          for (const item of res) {
+            //fill the header row with the keys in the table
+            if (!hasHead) {
+              //trEl_head.innerHTML = ''; //reset table
+              for (const key of Object.keys(item)) {
+                let tdEl = document.createElement("div")
+                tdEl.textContent = key
+                tdEl.className = "proteomics-table-head-item"
+                protTable.append(tdEl)
+                keys.push(key)
+              }
+              hasHead = true;
+            }
+            for (const key of keys) {
+              let tdEl1_ = document.createElement("div")
+              tdEl1_.textContent = item[key]
+              tdEl1_.title = item[key];
+              protTable.append(tdEl1_)
+            }
+          }
+        } else {
+          //console.log("no proteomics")
+          responseElement.textContent = "No Proteomics data found."
+        }
+        responseElement.style.display = "none"
+        //console.log(responseElement)
+      }
+
+
+      //Metadata
+      //this pulls the metadata and creates a node element as a child of the rootnode. Initially this is invisible, once the metadata tab is activated, the node will be appended
+      //to that panel as a child.
+      //all available metadata for layers will get their own content...
+      /*if (rootNode !== null) {
+        //console.log(response.toString())
+        let responseElement = document.getElementById("metadataOptions-content")
+        if (responseElement === null) {
+          responseElement = document.createElement('div')
+          responseElement.id = "metadataOptions-content"
+          rootNode.append(responseElement)
+          responseElement.style.display = "none"
+        } else {
+          responseElement.textContent = '';
+        }
+        let datasetMetadatadiv = document.createElement('div')
+        datasetMetadatadiv.className = "metadata-dataset"
+        let heading = document.createElement('h3')
+        heading.textContent = "About this dataset"
+        datasetMetadatadiv.append(heading)
+        let datasetContent = document.createElement('p')
+        if (dataset.metadata && dataset.metadata.text) {
+          datasetContent.textContent = dataset.metadata.text;
+        } else {
+          datasetContent.textContent = "No metadata provided for this dataset."
+        }
+        datasetMetadatadiv.append(datasetContent)
+        responseElement.append(datasetMetadatadiv)
+        responseElement.append(document.createElement('hl'))
+  
+        //metadata about the selected layer
+        let layerMetadatadiv = document.createElement('div')
+        layerMetadatadiv.className = "metadata-layer"
+        let layerheading = document.createElement('h3')
+        layerheading.textContent = "About the selected layer"
+        layerMetadatadiv.append(layerheading)
+  
+        for (const elem of dataset.layers) {
+          let layerContent = document.createElement('div')
+          layerContent.style.display = "none"
+          layerContent.className = "layer-metadata-" + elem.name;
+          if (elem.metadata) {
+            layerContent.textContent = elem.metadata
+          } else {
+            layerContent.textContent = "No metadata available for this layer"
+          }
+          layerMetadatadiv.append(layerContent)
+        }
+        responseElement.append(layerMetadatadiv)
+  
+      }*/
+    }
   }
 
   //var csv is the CSV file with headers
- csvJSON(csv: string){
+  csvJSON(csv: string) {
 
-  let lines=csv.split("\n");
+    let lines = csv.split("\n");
 
-  let result = [];
+    let result = [];
 
-  // NOTE: If your columns contain commas in their values, you'll need
-  // to deal with those before doing the next step 
-  // (you might convert them to &&& or something, then covert them back later)
-  // jsfiddle showing the issue https://jsfiddle.net/
- //console.log(lines)
-  let headers=lines[0].split(",");
+    // NOTE: If your columns contain commas in their values, you'll need
+    // to deal with those before doing the next step 
+    // (you might convert them to &&& or something, then covert them back later)
+    // jsfiddle showing the issue https://jsfiddle.net/
+    //console.log(lines)
+    let headers = lines[0].split(",");
 
-  for(let i=1;i<lines.length;i++){
+    for (let i = 1; i < lines.length; i++) {
 
       let obj: any;
       obj = {}
-      let currentline=lines[i].split(",");
+      let currentline = lines[i].split(",");
 
-      for(let j=0;j<headers.length;j++){
-         obj[headers[j]] = currentline[j];
-         
+      for (let j = 0; j < headers.length; j++) {
+        obj[headers[j]] = currentline[j];
+
       }
       result.push(obj);
-  }
-
-  //return result; //JavaScript object
-  return JSON.stringify(result); //JSON
-}
- /* openDatabasePanel() {
-    //console.log("button clicked");
-    let db_panel = document.getElementById("db_panel")
-    if (db_panel !== null) {
-      db_panel.style.display = "block"
-    } else {
-      db_panel = document.createElement('div');
-
-      db_panel.id = "db_panel";
-      const closeButton = document.createElement('button');
-      closeButton.textContent = "X";
-      closeButton.className = "neuroglancer-icon btn-group db_btn";
-      closeButton.onclick = () => {
-        if (db_panel !== null) {
-          db_panel.style.display = "none"
-        }
-      }
-      const topRow = document.createElement('div');
-      topRow.style.display = "flex";
-      topRow.style.justifyContent = "space-between";
-      topRow.append(closeButton)
-
-      const localFileButton = document.createElement('button');
-      localFileButton.textContent = "local";
-      localFileButton.className = "neuroglancer-icon btn-group db_btn";
-      localFileButton.onclick = () => {
-        let dbURL = prompt("Please enter the url to the folder with the dataset", "http://127.0.0.1");
-        if (dbURL == null || dbURL == "") {
-          console.log("Cancelled...")
-        } else {
-          this.state.reset();
-          IMP_StateManager.getInstance().reset();
- 
-          if (dbURL.endsWith("/")) {
-            dbURL = dbURL.substr(0, dbURL.length - 1);
-          }
-          const loadObject = {
-            name: "locally_hosted",
-            dimension: { x: [1.0], y: [1.0], z: [1.0] },
-            image: dbURL,
-            layers: [{
-              metadata: "",
-              path: dbURL + "/coordinates/",
-              type: "all"
-            }
-            ]
-          }
-          console.log(loadObject)
-          
-          this.loadDBsetIntoNeuroglancer(loadObject)
-          //this.tryFetchByURL(dbURL)
-        }
-      }
-      topRow.append(localFileButton)
-      const resultPanel = document.createElement('div');
-      resultPanel.className = "db_result_list";
-      const resultList = document.createElement('ul');
-      resultList.className = "db_ul";
-      for (var i = 0; i < this.datasets.length; i++) {
-        var el = document.createElement('li')
-        el.className = "neuroglancer-icon btn-group db-li";
-        el.textContent = this.datasets[i].name;
-
-        el.onclick = (ev) => {
-          //delete list of elemets
-          this.state.reset();
-          IMP_StateManager.getInstance().reset();
-
-          var element = ev.target as HTMLLIElement
-          if (element.textContent) {
-            //load the selected dataset by name
-            IMP_dbLoader.getInstance().tryFetchByName(element.textContent).then((res: any) => {
-              console.log(res.data)
-              this.loadDBsetIntoNeuroglancer(res.data)
-            })
-          }
-          //close panel upon dataset selection
-          db_panel!.style.display = "none"
-          //console.log(element.innerHTML)
-        }
-        resultList.append(el)
-      }
-      resultPanel.append(resultList)
-      db_panel.append(topRow)
-      db_panel.append(resultPanel)
-
-
-      const rootNode = document.getElementById("neuroglancer-container")
-      //console.log(rootNode)
-      if (rootNode !== null) {
-        rootNode.append(db_panel)
-      }
     }
-  }*/
+
+    //return result; //JavaScript object
+    return JSON.stringify(result); //JSON
+  }
+  /* openDatabasePanel() {
+     //console.log("button clicked");
+     let db_panel = document.getElementById("db_panel")
+     if (db_panel !== null) {
+       db_panel.style.display = "block"
+     } else {
+       db_panel = document.createElement('div');
+ 
+       db_panel.id = "db_panel";
+       const closeButton = document.createElement('button');
+       closeButton.textContent = "X";
+       closeButton.className = "neuroglancer-icon btn-group db_btn";
+       closeButton.onclick = () => {
+         if (db_panel !== null) {
+           db_panel.style.display = "none"
+         }
+       }
+       const topRow = document.createElement('div');
+       topRow.style.display = "flex";
+       topRow.style.justifyContent = "space-between";
+       topRow.append(closeButton)
+ 
+       const localFileButton = document.createElement('button');
+       localFileButton.textContent = "local";
+       localFileButton.className = "neuroglancer-icon btn-group db_btn";
+       localFileButton.onclick = () => {
+         let dbURL = prompt("Please enter the url to the folder with the dataset", "http://127.0.0.1");
+         if (dbURL == null || dbURL == "") {
+           console.log("Cancelled...")
+         } else {
+           this.state.reset();
+           IMP_StateManager.getInstance().reset();
+  
+           if (dbURL.endsWith("/")) {
+             dbURL = dbURL.substr(0, dbURL.length - 1);
+           }
+           const loadObject = {
+             name: "locally_hosted",
+             dimension: { x: [1.0], y: [1.0], z: [1.0] },
+             image: dbURL,
+             layers: [{
+               metadata: "",
+               path: dbURL + "/coordinates/",
+               type: "all"
+             }
+             ]
+           }
+           console.log(loadObject)
+           
+           this.loadDBsetIntoNeuroglancer(loadObject)
+           //this.tryFetchByURL(dbURL)
+         }
+       }
+       topRow.append(localFileButton)
+       const resultPanel = document.createElement('div');
+       resultPanel.className = "db_result_list";
+       const resultList = document.createElement('ul');
+       resultList.className = "db_ul";
+       for (var i = 0; i < this.datasets.length; i++) {
+         var el = document.createElement('li')
+         el.className = "neuroglancer-icon btn-group db-li";
+         el.textContent = this.datasets[i].name;
+ 
+         el.onclick = (ev) => {
+           //delete list of elemets
+           this.state.reset();
+           IMP_StateManager.getInstance().reset();
+ 
+           var element = ev.target as HTMLLIElement
+           if (element.textContent) {
+             //load the selected dataset by name
+             IMP_dbLoader.getInstance().tryFetchByName(element.textContent).then((res: any) => {
+               console.log(res.data)
+               this.loadDBsetIntoNeuroglancer(res.data)
+             })
+           }
+           //close panel upon dataset selection
+           db_panel!.style.display = "none"
+           //console.log(element.innerHTML)
+         }
+         resultList.append(el)
+       }
+       resultPanel.append(resultList)
+       db_panel.append(topRow)
+       db_panel.append(resultPanel)
+ 
+ 
+       const rootNode = document.getElementById("neuroglancer-container")
+       //console.log(rootNode)
+       if (rootNode !== null) {
+         rootNode.append(db_panel)
+       }
+     }
+   }*/
   getClassNamePerType(typ: string) {
     let className = "";
 

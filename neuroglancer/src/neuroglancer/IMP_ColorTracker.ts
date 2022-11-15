@@ -29,6 +29,10 @@ export default class IMP_ColorTracker {
         }
     }
 
+    public deleteID(id:string){
+        delete this.colorStorage[id];
+        this.normalisedFields.delete(id);
+    }
     public addColorToStorage(id:string,col:string){
         this.colorStorage[id]=col;
     }

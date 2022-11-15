@@ -2,6 +2,7 @@
 //import { Position } from "./navigation_state.js";
 
 import IMP_ColorTracker from './IMP_ColorTracker'
+import { ManagedUserLayer } from './layer';
 
 interface AvailableLayers {
     [key: string]: any
@@ -292,7 +293,7 @@ export default class IMP_StateManager {
 
 
     public makeStateJSON(colorByChanged: boolean = false, togglingSegment: string = "", highlightSegment: any = null, colorMapChanged: boolean = false, togglingGroup: string[] = [], selectionMode: boolean = false) {
-        //console.log(this.availableLayers)
+        console.log("makeStateJSON")
         //create layers array:
         let result = this.state.toJSON() //copy current state
         let layer_res = []
@@ -496,7 +497,6 @@ export default class IMP_StateManager {
 
     }
 
-
     public isSegmentVisible(id: string) {
         return this.visibleSegments.indexOf(id) > -1;
     }
@@ -653,6 +653,12 @@ export default class IMP_StateManager {
         }
     }
 
+    public deleteID(id:string){
+        //this annotation has already been deleted, now we also remove the segment data for it.
+        this.imp_colortracker.deleteID(id);
+        this.idPositionMap.delete(id);
+
+    }
     public getColorForId(id: string) {
         return this.imp_colortracker.getColorForId(id);
     }
