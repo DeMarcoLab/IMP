@@ -72,7 +72,7 @@ import IMP_StateManager from './IMP_statemanager';
 import { IMP_dbLoader } from './IMP_dbLoader';
 import { SegmentationUserLayer } from './segmentation_user_layer';
 import { Uint64 } from './util/uint64';
-import { AnnotationLayer } from './annotation/renderlayer';
+
 import { AnnotationUserLayer } from './annotation/user_layer';
 import { AnnotationSource } from './annotation';
 
@@ -630,7 +630,9 @@ export class Viewer extends RefCounted implements ViewerState {
     {
       const button = makeIcon({ text: '⭳', title: 'Download visible segment list' });
       this.registerEventListener(button, 'click', () => {
-        IMP_StateManager.getInstance().downloadActiveSegments();
+        this.openDownloadOptionPanel();
+        //IMP_StateManager.getInstance().downloadActiveSegments();
+        //IMP_StateManager.getInstance().downloadVisibleAnnotations();
       });
 
       topRow.appendChild(button);
@@ -753,7 +755,31 @@ export class Viewer extends RefCounted implements ViewerState {
 
 
   }
+  private openDownloadOptionPanel(){
+    let panel = document.createElement("div");
+    panel.className = "downloadOptionsPanel ";
 
+   let buttonA = document.createElement("button");
+   buttonA.className="btn-download  neuroglancer-icon"
+   buttonA.innerHTML="Download annotations"
+   buttonA.onclick = () => {
+        IMP_StateManager.getInstance().downloadVisibleAnnotations();
+        panel.remove();
+   }
+   panel.appendChild(buttonA);
+   let buttonB = document.createElement("button");
+   buttonB.className=" btn-download neuroglancer-icon"
+   buttonB.innerHTML="Download meshes"
+   buttonB.onclick = () => {
+        IMP_StateManager.getInstance().downloadActiveSegments();
+        panel.remove();
+   }
+   panel.appendChild(buttonB);
+   const rootNode = document.getElementById("neuroglancer-container");
+   if (rootNode) {
+     rootNode.appendChild(panel);
+   }
+  }
   private createLoadStatePanel() {
     let savedStates = IMP_dbLoader.getInstance().getSaveStates();
     let statesArr = []
@@ -872,7 +898,7 @@ export class Viewer extends RefCounted implements ViewerState {
     for (let i = 0; i < Object.keys(vals).length; i++) {
       let key = Object.keys(vals)[i];
       // console.log(vals[key])
-      if (vals[key].value !== {} && typeof (vals[key]["value"]) === "string" && vals[key]["value"].indexOf("#") < 0) {
+      if ( typeof (vals[key]["value"]) === "string" && vals[key]["value"].indexOf("#") < 0) {
         returnee.name = key;
         returnee.id = vals[key]["value"]
         return returnee;
@@ -928,13 +954,13 @@ export class Viewer extends RefCounted implements ViewerState {
       if(clickies===null){
         return;
       }
-      console.log(clickies)
+     // console.log(clickies)
       const layers = this.layerManager.managedLayers;
       for (let lay of layers) {
 
         if (lay !== null && lay["layer_"] !== null && lay["name_"] === clickies!["name"]) {
-          console.log(lay["layer_"])
-          console.log(clickies)
+          //console.log(lay["layer_"])
+          //console.log(clickies)
           let lays = lay["layer_"] as AnnotationUserLayer;
           let source = lays.localAnnotations as AnnotationSource;
           const ref = source.getReference(clickies.id);

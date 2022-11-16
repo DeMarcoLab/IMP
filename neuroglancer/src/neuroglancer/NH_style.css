@@ -76,6 +76,22 @@
   min-height:25px;
 }
 
+.btn-download{
+  font: 10px sans-serif !important;
+  border-radius: 2pt;
+  margin-top: 2px;
+  margin-bottom:2px;
+  font-weight: lighter;
+  border: 1px solid var(--friendly-selected-border-color)
+}
+.downloadOptionsPanel {
+  width:200px;
+  position:absolute;
+  top:25px;
+  right: 10px;
+  z-index:4000;
+  background-color: var(--main-bg-color);
+}
 .neuroglancer-layer-list-panel-item-number{
   display:none !important;
 }

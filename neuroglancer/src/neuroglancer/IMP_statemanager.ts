@@ -1,8 +1,8 @@
 
-//import { Position } from "./navigation_state.js";
+//import { Position } from "./navigation_state.js";i
 
 import IMP_ColorTracker from './IMP_ColorTracker'
-import { ManagedUserLayer } from './layer';
+
 
 interface AvailableLayers {
     [key: string]: any
@@ -38,7 +38,7 @@ export default class IMP_StateManager {
     private currGroup: string[];
     private layerToBeAdded: any;
     private annotationShaderString: string;
- 
+
     //private highlightColour: string;
     //  private segmentationDisplayState: SegmentationDisplayState;
 
@@ -153,6 +153,35 @@ export default class IMP_StateManager {
 
     }
 
+
+    public downloadVisibleAnnotations() {
+        let currVisibleAnnotations: any[] = []
+
+        const currLayers = this.state.toJSON().layers;
+        for (let i = 0; i < currLayers.length; i++) {
+            if (currLayers[i].type === "annotation") {
+                currVisibleAnnotations = currVisibleAnnotations.concat(currLayers[i].annotations)
+            }
+        }
+        let newPositionList: any = []
+        for (let i = 0; i < currVisibleAnnotations.length; i++) {
+            let annot = currVisibleAnnotations[i] as any;
+            const pos = annot["point"];
+
+            //match the position of each visible segment with the originalFile list. 
+            if (pos !== undefined) {
+                for (let j = 0; j < this.originalSegmentList.length; j++) {
+                    const entry = this.originalSegmentList[j];
+                    if (entry["x"] === (pos[0] + "") && entry["y"] === (pos[1] + "") && entry["z"] === (pos[2] + "")) {
+                        newPositionList.push(entry)
+                        continue;
+                    }
+                }
+            }
+
+        }
+        this.downloadCSV(newPositionList)
+    }
     //take list of active meshes and download it in the same format as initially provided (i.e. with location/rotation)
     public downloadActiveSegments() {
         let currVisibleSegments: string[] = []
@@ -163,6 +192,7 @@ export default class IMP_StateManager {
                 currVisibleSegments = currVisibleSegments.concat(currLayers[i].segments)
             }
         }
+        console.log(currVisibleSegments)
         let newPositionList: any = []
         for (let i = 0; i < currVisibleSegments.length; i++) {
             const pos = this.idPositionMap.get(currVisibleSegments[i]);
@@ -172,33 +202,33 @@ export default class IMP_StateManager {
                     const entry = this.originalSegmentList[j];
                     if (entry["x"] === (pos[0] + "") && entry["y"] === (pos[1] + "") && entry["z"] === (pos[2] + "")) {
                         newPositionList.push(entry)
+                        continue;
                     }
                 }
             }
 
         }
-        //console.log(this.originalSegmentList.length);
-        //console.log(newPositionList.length);
-        const header = Object.keys(newPositionList[0])
-        const replacer = ( value: any) => value === null ? '' : value // specify how you want to handle null values here
-        const csvString = [
-            header
-            ,
-            ...newPositionList.map((row: { [x: string]: any; }) => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','))
-        ].join('\r\n')
+        this.downloadCSV(newPositionList)
+    }
 
-
-        //console.log(csvString)
-        var element = document.createElement('a');
-        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(csvString));
-        element.setAttribute('download', "visible_particles.csv");
-
-        element.style.display = 'none';
-        document.body.appendChild(element);
-
-        element.click();
-
-        document.body.removeChild(element);
+    private downloadCSV(data:any){
+         //console.log(this.originalSegmentList.length);
+         let csvString = ""
+         let header = Object.keys(data[0]).join(',');
+         let values = data.map((o: { [s: string]: unknown; } | ArrayLike<unknown>) => Object.values(o).join(',')).join('\n');
+ 
+         csvString += header + '\n' + values;
+ 
+         var element = document.createElement('a');
+         element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(csvString));
+         element.setAttribute('download', "visible_particles.csv");
+ 
+         element.style.display = 'none';
+         document.body.appendChild(element);
+ 
+         element.click(); //click to start the download of the file.
+ 
+         document.body.removeChild(element);
     }
     private showMeshesInBox() {
         //console.log(this.drawingCoordinates);
@@ -305,8 +335,8 @@ export default class IMP_StateManager {
 
                 //the available layer is not yet in the state. add it to the layers.
                 let archivedLayer = this.availableLayers[key].layer
-                
-                archivedLayer["archived"] =  archivedLayer.type === "image" ? false :true;
+
+                archivedLayer["archived"] = archivedLayer.type === "image" ? false : true;
 
                 if (archivedLayer.type === "annotation") {
                     archivedLayer["annotation_relationships"] = [archivedLayer["name"] + "_mesh"];
@@ -364,7 +394,7 @@ export default class IMP_StateManager {
                     //  layr["segments"].push(annotation["id"])
                     if (this.imp_colortracker.getCurrColorBy() !== 0) {
                         for (const annotation of layer.annotations) {
-                            
+
                             let hexval = this.imp_colortracker.getHexVal(annotation["id"]);
                             annotation["props"][this.imp_colortracker.getCurrColorBy()] = hexval;
                         }
@@ -384,28 +414,28 @@ export default class IMP_StateManager {
                     toggling_group.push(layer.annotations[i].id);
                 }
             }
-           /* if (togglingSegment !== "") {
-                let layerName = this.idNameMap.get(togglingSegment);
-                if (layer.type === "segmentation" && layer.name.split("_")[0] === layerName) {
-
-                        if(layer["archived"]){
-                            layer["segments"]=[togglingSegment];
-                            layer["archived"]=false;
-                        }
-                        if (layer["segments"]) {
-                            if (layer["segments"].indexOf(togglingSegment) >= 0) {
-                                layer["segments"].splice(layer["segments"].indexOf(togglingSegment), 1)
-                            } else {
-                                layer["segments"].push(togglingSegment);
-                            }
-                        } else {
-                            layer["segments"] = [togglingSegment]
-                        }
-                        
-                        break;
-                    
-                }
-            }*/
+            /* if (togglingSegment !== "") {
+                 let layerName = this.idNameMap.get(togglingSegment);
+                 if (layer.type === "segmentation" && layer.name.split("_")[0] === layerName) {
+ 
+                         if(layer["archived"]){
+                             layer["segments"]=[togglingSegment];
+                             layer["archived"]=false;
+                         }
+                         if (layer["segments"]) {
+                             if (layer["segments"].indexOf(togglingSegment) >= 0) {
+                                 layer["segments"].splice(layer["segments"].indexOf(togglingSegment), 1)
+                             } else {
+                                 layer["segments"].push(togglingSegment);
+                             }
+                         } else {
+                             layer["segments"] = [togglingSegment]
+                         }
+                         
+                         break;
+                     
+                 }
+             }*/
             if (togglingGroup.toString() !== "" || toggling_group.toString() !== "") {
                 let groupToUse = []
                 if (togglingGroup.toString() !== "") {
@@ -507,8 +537,8 @@ export default class IMP_StateManager {
         this.makeStateJSON(false, "", false, true);
     }
 
-  
-    public doClickReaction(clickType: string, id:string) {
+
+    public doClickReaction(clickType: string, id: string) {
         //doClickReactions are called in mouse_bindings.ts as reactions on click. that is where default reactions can be disabled as well.
         switch (clickType) {
             case 'dblClick':
@@ -516,7 +546,7 @@ export default class IMP_StateManager {
                 if (id == null) {
                     return;
                 }
-       
+
                 this.changeSegmentColor(id!);
         }
     }
@@ -532,7 +562,7 @@ export default class IMP_StateManager {
         //console.log(this.nameColorMap)
         for (var i = 0; i < elements.length; i++) {
             var div = elements[i] as HTMLInputElement
-  
+
             let name = div.value;
 
             if (name.indexOf("mesh") > 0) {
@@ -542,19 +572,19 @@ export default class IMP_StateManager {
             const parentElement = div.parentElement!;
             const inputNodes = parentElement.getElementsByTagName('input');
             let checkBEl;
-            for(let i = 0; i < inputNodes.length; i++){
-                if(inputNodes[i].type == "checkbox"){
+            for (let i = 0; i < inputNodes.length; i++) {
+                if (inputNodes[i].type == "checkbox") {
                     checkBEl = inputNodes[i] as HTMLInputElement;
                     break;
                 }
             }
             if (colorName !== undefined) {
-                if(checkBEl && checkBEl.checked){
+                if (checkBEl && checkBEl.checked) {
                     div.parentElement!.setAttribute("style", "background: " + colorName + " !important")
                 } else {
                     div.parentElement!.setAttribute("style", "background: white !important")
                 }
-            } 
+            }
             //element.style.background = // element.innerHTML + "<div className='colorSquare' style='background:"+ this.nameColorMap.get(element.innerHTML)+";' />";
         }
     }
@@ -568,16 +598,16 @@ export default class IMP_StateManager {
     }
 
     //double click a segment, take its color and save it for the next double click.
-    public changeSegmentColor( id: string) {
+    public changeSegmentColor(id: string) {
         console.log("Changing color of " + id)
         var tinycolor = require("tinycolor2");
-        
+
 
         let newColor = tinycolor(this.imp_colortracker.getColorForId(id)).brighten(40).toString();
         this.makeStateJSON(false, "", { "color": newColor, "id": id })
         this.imp_colortracker.setHighlightedList(id);
-        
-      
+
+
 
     }
     public updateAttribute(value: number) {
@@ -653,7 +683,7 @@ export default class IMP_StateManager {
         }
     }
 
-    public deleteID(id:string){
+    public deleteID(id: string) {
         //this annotation has already been deleted, now we also remove the segment data for it.
         this.imp_colortracker.deleteID(id);
         this.idPositionMap.delete(id);
@@ -662,8 +692,8 @@ export default class IMP_StateManager {
     public getColorForId(id: string) {
         return this.imp_colortracker.getColorForId(id);
     }
-    public tryAddToGroup(id:string) {
-     
+    public tryAddToGroup(id: string) {
+
         if (this.currGroup.indexOf(id) >= 0) {
             this.currGroup.splice(this.currGroup.indexOf(id), 1)
         } else if (id.length > 1) {
