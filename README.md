@@ -4,10 +4,10 @@ Integrated Microscopy and Proteomics
 This is a modified version of neuroglancer. 
 
 ## Installation
-Clone repository. Go to the neuroglancer directory and run npm install
+Clone repository. Go to the neuroglancer directory and run `npm clean-install`.
 
 ## Local server
-npm run dev-server  (see package.json for more commands).
+`npm run dev-server`  (see package.json for more commands).
 
 This will start a neuroglancer instance to use in your browser. Default url is http://127.0.0.1:8080 .
 You can load any hosted neuroglancer compatbile dataset through the normal neuroglancer interface.
