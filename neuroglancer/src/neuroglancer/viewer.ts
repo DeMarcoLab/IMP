@@ -16,7 +16,7 @@
 
 import './viewer.css';
 import 'neuroglancer/noselect.css';
-import './NH_style.css';
+import './NH_style.css'; //cryoglancer: styles
 import svg_controls_alt from 'ikonate/icons/controls-alt.svg';
 import svg_layers from 'ikonate/icons/layers.svg';
 import svg_list from 'ikonate/icons/list.svg';
@@ -67,14 +67,15 @@ import { makeIcon } from 'neuroglancer/widget/icon';
 import { MousePositionWidget, PositionWidget } from 'neuroglancer/widget/position_widget';
 import { TrackableScaleBarOptions } from 'neuroglancer/widget/scale_bar';
 import { RPC } from 'neuroglancer/worker_rpc';
-//import { cancellableFetchOk, responseJson } from './util/http_request';
-import IMP_StateManager from './IMP_statemanager';
-import { IMP_dbLoader } from './IMP_dbLoader';
-import { SegmentationUserLayer } from './segmentation_user_layer';
 import { Uint64 } from './util/uint64';
 
 import { AnnotationUserLayer } from './annotation/user_layer';
 import { AnnotationSource } from './annotation';
+//cryoglancer: load own classes
+import IMP_StateManager from './IMP_statemanager'; 
+import { IMP_dbLoader } from './IMP_dbLoader';
+import { SegmentationUserLayer } from './segmentation_user_layer';
+
 
 declare var NEUROGLANCER_OVERRIDE_DEFAULT_VIEWER_OPTIONS: any
 
@@ -125,7 +126,7 @@ export const VIEWER_TOP_ROW_CONFIG_OPTIONS = [
   'showLayerSidePanelButton',
   'showLocation',
   'showAnnotationToolStatus',
-  'showDatabaseButton'
+  'showDatabaseButton' //cryoglancer
 ] as const;
 
 export const VIEWER_UI_CONTROL_CONFIG_OPTIONS = [
@@ -481,6 +482,7 @@ export class Viewer extends RefCounted implements ViewerState {
     }
   }
 
+
   private makeUI() {
 
 
@@ -503,9 +505,10 @@ export class Viewer extends RefCounted implements ViewerState {
     topRow.appendChild(positionWidget.element);
 
 
-    //Search NH
+    //****************************cryoglancer block 1 start
+    //creates the colour by element in the top row
     let colorByDiv = document.createElement("div");
-    colorByDiv.id = "imp-color-by-div";
+    colorByDiv.id = "imp-color-by-div"; //this ID will  be used later to populate the dropdownlist
     colorByDiv.style.display = "flex";
     //colorByDiv.style.alignItems='stretch';
     topRow.appendChild(colorByDiv);
@@ -525,6 +528,8 @@ export class Viewer extends RefCounted implements ViewerState {
       }
     }
     topRow.appendChild(button);
+    //****************************cryoglancer block 1 stop
+
 
     const mousePositionWidget = this.registerDisposer(new MousePositionWidget(
       document.createElement('div'), this.mouseState, this.navigationState.coordinateSpace));
@@ -627,6 +632,9 @@ export class Viewer extends RefCounted implements ViewerState {
       topRow.appendChild(button);
     }
 
+    //****************************cryoglancer block 2 start
+
+    //Download the segments that are currently visible in the same format as the particle list were initially provided
     {
       const button = makeIcon({ text: '⭳', title: 'Download visible segment list' });
       this.registerEventListener(button, 'click', () => {
@@ -638,6 +646,8 @@ export class Viewer extends RefCounted implements ViewerState {
       topRow.appendChild(button);
 
     }
+
+    //Load a view state from the database
     {
       const button = makeIcon({ text: '+', title: 'Load a previously saved state' });
       this.registerEventListener(button, 'click', () => {
@@ -647,6 +657,8 @@ export class Viewer extends RefCounted implements ViewerState {
       topRow.appendChild(button);
 
     }
+
+    //save the current view in the database
     {
       const button = makeIcon({ text: '🖫', title: 'Save current state.' });
       this.registerEventListener(button, 'click', () => {
@@ -657,6 +669,9 @@ export class Viewer extends RefCounted implements ViewerState {
       topRow.appendChild(button);
 
     }
+    //****************************cryoglancer block 2 stop
+
+
     {
       const { helpPanelState } = this;
       const button =
@@ -725,7 +740,7 @@ export class Viewer extends RefCounted implements ViewerState {
           this.sidePanelManager,
           this.helpPanelState,
           [
-            ['IMP specific Bindings', inputEventBindings.imp],
+            ['IMP specific Bindings', inputEventBindings.imp], //cryoglancer
             ['Global', inputEventBindings.global],
             ['Cross section view', inputEventBindings.sliceView],
             ['3-D projection view', inputEventBindings.perspectiveView]
@@ -755,6 +770,11 @@ export class Viewer extends RefCounted implements ViewerState {
 
 
   }
+
+  //****************************cryoglancer block 3 start 
+
+  //opens small panel that lets user chose to either download all visible meshes or all visible annotations ("dots")
+  //could use some styling
   private openDownloadOptionPanel(){
     let panel = document.createElement("div");
     panel.className = "downloadOptionsPanel ";
@@ -780,6 +800,9 @@ export class Viewer extends RefCounted implements ViewerState {
      rootNode.appendChild(panel);
    }
   }
+
+  //displays a panel with a list of saved states for this dataset
+  //TODO: add users to the states and only show the ones assigned to a user
   private createLoadStatePanel() {
     let savedStates = IMP_dbLoader.getInstance().getSaveStates();
     let statesArr = []
@@ -802,9 +825,9 @@ export class Viewer extends RefCounted implements ViewerState {
       if (el !== "No saved states available yet") {
         let self = this;
         liEl.onclick = () => {
-          console.log("loading " + liEl.innerHTML);
+         // console.log("loading " + liEl.innerHTML);
           let newState = IMP_dbLoader.getInstance().loadSaveState(liEl.innerHTML);
-          console.log(newState)
+         // console.log(newState)
           self.state.reset();
           self.state.restoreState(newState);
           panel.style.display = "none";
@@ -827,6 +850,8 @@ export class Viewer extends RefCounted implements ViewerState {
 
   }
 
+  //creates a panel to save the current view. User can give it a name and option to overwrite an existing state of the same name
+  //all very basic with not error handling
   private createSaveStatePanel() {
     let panel = document.createElement("div");
     panel.className = "saveStatePanel";
@@ -874,7 +899,7 @@ export class Viewer extends RefCounted implements ViewerState {
       rootNode.appendChild(panel);
     }
 
-
+    //****************************cryoglancer block 3 stop
 
 
   }
@@ -891,9 +916,11 @@ export class Viewer extends RefCounted implements ViewerState {
     this.registerDisposer(registerActionListener(this.element, action, handler));
   }
 
-  //determines which item has been clicked (annotation or mesh layer)
+  ////****************************cryoglancer block 4 start 
+  //cryoglancer: determines which item has been clicked (annotation or mesh layer)
+  //determines the name of the layer the clicked mesh is in
   private getClickedMeshId_LayerName() {
-    let vals = this.layerSelectedValues.toJSON();
+    let vals = this.layerSelectedValues.toJSON(); //neuroglancer state object which keeps track of what has been clicked
     let returnee = { "name": "-1", "id": "-1" }
     for (let i = 0; i < Object.keys(vals).length; i++) {
       let key = Object.keys(vals)[i];
@@ -913,6 +940,7 @@ export class Viewer extends RefCounted implements ViewerState {
     return null;
   }
 
+  //get id of clicked annotation ("dot")
   private getClickedAnnotationId() {
     let vals = this.layerSelectedValues.toJSON();
     let returnee = { "name": "-1", "id": "-1" }
@@ -929,6 +957,9 @@ export class Viewer extends RefCounted implements ViewerState {
     }
     return null;
   }
+  //****************************cryoglancer block 4 stop
+  
+  
   /**
    * Called once by the constructor to register the action listeners.
    */
@@ -939,12 +970,9 @@ export class Viewer extends RefCounted implements ViewerState {
       });
     }
 
-    // this.bindAction('z+1-via-wheel', () => {
-    //  IMP_StateManager.getInstance().updatePosDim(this.navigationState.position)
-    //})
-
+    //****************************cryoglancer block 5 start 
     this.bindAction('color-picker', () => {
-
+      //the color picker is buggy at best. might be best to disable
       IMP_StateManager.getInstance().doClickReaction('dblClick', this.getClickedMeshId_LayerName()!.id);
     })
 
@@ -978,7 +1006,7 @@ export class Viewer extends RefCounted implements ViewerState {
 //: 
 //Map(107) {'49850' => {…}, '49851' => {…}, '49852' => {…}, '49853' => {…}, '49854' => {…}, …}
         } else if (lay !== null && lay["layer_"] !== null && lay["name_"] === clickies!["name"]+"_mesh"){
-          //we also have to delete the annotation references in the corresponding mesh layer. 
+          //we also have to delete the annotation references in the corresponding mesh layer, identified by same name as annotation suffixed by _mesh 
           let sLay = lay["layer_"] as SegmentationUserLayer;
           const displayState = sLay.displayState;
           const { visibleSegments } = displayState.segmentationGroupState.value;
@@ -988,10 +1016,8 @@ export class Viewer extends RefCounted implements ViewerState {
         }
       }
     })
+    //toggles visibility of a mesh 
     this.bindAction('toggle-mesh', () => {
-
-      //console.log(this)
-      //IMP_StateManager.getInstance().setSegmentationDisplayState()
 
       const clickies = this.getClickedMeshId_LayerName();
       const layers = this.layerManager.managedLayers;
@@ -1007,7 +1033,7 @@ export class Viewer extends RefCounted implements ViewerState {
         }
       }
     });
-
+       //****************************cryoglancer block 5 stop 
     this.bindAction('help', () => { this.toggleHelpPanel(); });
 
     for (let i = 1; i <= 9; ++i) {
@@ -1041,6 +1067,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
     this.bindAction('annotate', () => {
 
+      //cryoglancer hooks into the annotation mode to draw or group. might be better to use own action for it.
       if (IMP_StateManager.getInstance().getIsDrawingMode()) {
         console.log("should draw")
       } else if (IMP_StateManager.getInstance().isGrouping()) {
@@ -1061,6 +1088,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
         userLayer.tool.value.trigger(this.mouseState);
 
+        //cryoglancer area mode means that we can draw a box and display the meshes/annotations within. 
         if (IMP_StateManager.getInstance().isAreaMode()) {
           console.log(userLayer.tool.value.mouseState);
           IMP_StateManager.getInstance().setCornerDrawing(userLayer.tool.value.mouseState.position);
@@ -1068,6 +1096,7 @@ export class Viewer extends RefCounted implements ViewerState {
       }
     });
 
+    //cryoglancer  draw box to define an area in which to display meshes/annotations
     this.bindAction('select-area-mode', () => {
       console.log('select Area Mode On/Off');
       IMP_StateManager.getInstance().toggleAreaMode();
@@ -1130,10 +1159,11 @@ export class Viewer extends RefCounted implements ViewerState {
     }
   }
 
-  //NH_Monash
+     //****************************cryoglancer block 6 start
 
   datasets = [] as Array<any>
 
+  //load a dataset by name
   connectToDatabase(datasetName: string) {
     IMP_dbLoader.getInstance().tryFetchByName(datasetName).then((res: any) => {
       console.log(res)
@@ -1144,30 +1174,32 @@ export class Viewer extends RefCounted implements ViewerState {
   async loadDBsetIntoNeuroglancer(dataset: any) {
 
     IMP_dbLoader.getInstance().setDataset(dataset);
+    //reset state and load new one
     this.navigationState.reset();
     this.perspectiveNavigationState.pose.orientation.reset();
     this.perspectiveNavigationState.zoomFactor.reset();
     this.resetInitiated.dispatch();
-    //if (!overlaysOpen && this.showLayerDialog && this.visibility.visible) {
-    //  addNewLayer(this.layerSpecification, this.selectedLayer);
-    //}//reset state and load new one
+
 
     //get the header information  
     const response = await fetch(dataset.image + "/" + dataset.name + ".json", { method: "GET" });
 
+    //all the below defines the position and view the image should be initially loaded in. the size of the image and resolution which are stored in the "header" are used for 
+    //the calculation and passed to the shaderstring to let it know what to render.
+    //we are initially using some default values which will be nonsense for almost all datasets and should if everything goes right be overwritten using
+    //the info from the header.
     let shaderstring = '#uicontrol invlerp normalized(clamp=false)';
     let position = [100, 100, 100]
     let dimensions = { 'x': [1, 'nm'], 'y': [1, 'nm'], 'z': [1, 'nm'] }
     if (response.ok) {
-      //if a header json exists, the correct posistion for the normalized brightness/contrast value is used. if no file is present, best guess defaults are used, which
-      //are likely not great.
+      //if a header json exists, the correct position for the normalized brightness/contrast value is used. if no file is present, best guess defaults are used, which
+      //are likely not great but there are no universal defaults that would apply to any dataset.
       const headerdata = await (response.json());
       //console.log(headerdata)
       if (!(headerdata.mean === 0 && headerdata.min === 0 && headerdata.max === 0 || headerdata.max < headerdata.min)) {
         shaderstring = '#uicontrol invlerp normalized(range=[' + headerdata.min + ',' + headerdata.max + '], window=[' + (headerdata.min - Math.abs(headerdata.min)) + ',' + (headerdata.max + Math.abs(headerdata.min)) + '])'
       }
-      //console.log(shaderstring)
-      //}
+     
       position = [headerdata.x / 2, headerdata.y / 2, headerdata.z / 2];
 
       //console.log(Object.values(headerdata.pixel_spacing))
@@ -1177,6 +1209,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
       }
     }
+    //we are storing the original file describing the positions of the particles because one functionality is to download currently visible particles in the same format.
     const originalFile_response = await fetch(dataset.image + "/particles.csv");
     const originalFile = await originalFile_response.text();
     //console.log(originalFile)
@@ -1191,20 +1224,24 @@ export class Viewer extends RefCounted implements ViewerState {
     const imgLayer = { "type": "image", "visible": true, "source": "precomputed://" + dataset.image + "/image", "tab": "rendering", "name": dataset.name, "shader": shaderstring };
 
     IMP_StateManager.getInstance().addLayer(imgLayer, true)
-    // ObjectTracker_IMP.getInstance().setActiveLayerName(dataset.name)
-    /*add custom scroll bar to each panel*/
-    //add scrollbar
 
 
     let names = []
     let colours = []
-    //let hasAnnotations = true;
+    //add each layer to the view. They will be displayed on the left hand side of the vis and each different layer gets assigned a different colour (annotations and their
+    //corresponding "meshes" layer have the same colour)
     if (dataset.layers) {
       //console.log(dataset.layers)
       for (let layer of dataset.layers) {
-        //console.log(layer)
-        if (layer && layer.type == "all") {
-          //console.log("all")
+
+        /*There are two different kinds of data. One is the image along with a list of layers that were precomputed which contain the locations of annotations and meshes. These
+        //are identified by lyer.type "all". The other (go down to the else) is a list of layers of type "segmentation". Each layer here was created from a segmentation map without
+        //coordinational information about the location of objects, but only info about the density of objects for each layer. So this other segmentation view will have a lot 
+        //of visual information and look kind of "nice" but you can only toggle each full layer and you can't select individual objects in each layer which is only of
+        limited use.
+        */
+        if (layer && layer.type == "all") { 
+
           //fetch the json for the annotations 
           const response = await fetch(layer.path, { method: "GET" });
 
@@ -1214,21 +1251,19 @@ export class Viewer extends RefCounted implements ViewerState {
           }
 
           let resText = await (response.text())
-          //console.log(resText)
-          let re = new RegExp('(?<=(\"|\')>)(.*?)(.json)', 'g');  //parses the resulting page for the file names present in that folder
+          let re = new RegExp('(?<=(\"|\')>)(.*?)(.json)', 'g');  //parses the resulting page for all the file names present in that folder. files ending on .json
 
           let sublayers = [...resText.matchAll(re)]
-          //console.log(sublayers)
 
-          let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
+          let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g'); //files ending on .mesh
           let meshes = [...resText.matchAll(re1)]
           //console.log(meshes)
-          let a = await fetch(layer.path + "columns.json", { method: "GET" })
+          let a = await fetch(layer.path + "columns.json", { method: "GET" }) //columns contains a list of "extra" fields by which the user may want to colour, such as cross corelation
           let columns = await (a.json());
 
           try {
 
-            //console.log(columns)
+            //create the colour by radio buttons, the default and first one is type
             let option = document.createElement("input");
             option.type = "radio";
             option.id = "color-by-type";
@@ -1252,7 +1287,7 @@ export class Viewer extends RefCounted implements ViewerState {
             document.getElementById('imp-color-by-div')?.appendChild(label);
             document.getElementById('imp-color-by-div')?.appendChild(option);
 
-            //console.log(columns)
+            //if any more columns are there, they get passed in here to create more radio buttons
             for (let i = 0; i < columns.length; i++) {
               let opt_ = document.createElement("input")
               opt_.type = "radio"
@@ -1270,10 +1305,11 @@ export class Viewer extends RefCounted implements ViewerState {
               label.innerHTML = columns[i]
               document.getElementById('imp-color-by-div')?.appendChild(label)
               document.getElementById('imp-color-by-div')?.appendChild(opt_)
-              //add a list of colormaps
+
+              //add a list of colormaps to use for colouring
               let selectEl = document.createElement("select");
               let colorMaps = IMP_StateManager.getInstance().getColormapKeys();
-              //console.log(colorMaps)
+             
               for (let i = 0; i < colorMaps.length; i++) {
                 let opt = document.createElement('option');
                 if (colorMaps[i] === "jet") { opt.selected = true }
@@ -1299,7 +1335,7 @@ export class Viewer extends RefCounted implements ViewerState {
 
               const sublayerresponse = await fetch(layer.path + sublayer[0], { method: "GET" })
               const annots = await sublayerresponse.json()
-              //console.log(annots)
+         
               for (let annotation of annots) {
                 IMP_StateManager.getInstance().addIdName(annotation.id, sublayer[0].split(".json")[0]);
               }
@@ -1309,9 +1345,6 @@ export class Viewer extends RefCounted implements ViewerState {
               shaderstring += "\nif(colour_by==0) {\n        setColor(prop_color());\n}";
               //build configuration from available columns
               let annotationProperties = [{ "id": "color", "type": "rgb", "default": "red" }];
-
-              //build radio box in top row if we have more than one column to color by
-
 
 
               for (let i = 0; i < columns.length; i++) {
@@ -1335,11 +1368,10 @@ export class Viewer extends RefCounted implements ViewerState {
               colours.push(annots[0].props[0])
               colour = annots[0].props[0]
               //console.log(newLayer)
-              //ObjectTracker_IMP.getInstance().addNameID(sublayer[0].split(".json")[0],annots[0].id) //TODO: Make_better!
               IMP_StateManager.getInstance().addLayer(newLayer, false)
             }
 
-            /*try to load the mesh layer if available */
+            /*try to load the mesh layer if available . Mesh layers will always have the same name as the corresponding annotation layer suffixed by _mesh*/
             for (let mesh of meshes) {
 
               if (mesh[1] === sublayer[0].split(".json")[0]) {
@@ -1365,13 +1397,12 @@ export class Viewer extends RefCounted implements ViewerState {
               }
             }
           }
-          //console.log(ObjectTracker_IMP.getInstance().getLayers())
+
 
         } else {
+
+          //i'm really sorry for this partly code duplication
           const response = await fetch(layer.path, { method: "GET" });
-
-          //layer type segment. this can be done better.
-
 
           if (!response.ok) {
             console.log("Response is not ok: " + response.json());
@@ -1379,7 +1410,7 @@ export class Viewer extends RefCounted implements ViewerState {
           }
 
           let resText = await (response.text())
-          //console.log(resText)
+
           let re1 = new RegExp('(?<=\>)(.*?)(.mesh)', 'g');
           let meshes = [...resText.matchAll(re1)]
 
@@ -1387,15 +1418,15 @@ export class Viewer extends RefCounted implements ViewerState {
           let segmentationLayers = [...resText.matchAll(re2)]
 
           //console.log(segmentationLayers)
-          //define some colours for up to 30 layers
+          //define some colours. They are supposed to be easily distinguishable from one another.
           const colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000']
           let counter = 0;
           for (const el of segmentationLayers) {
 
-            if (el[0] === "..") {
+            if (el[0] === "..") { //the segmentationLayers list will contain everything in the layer folder including ".."  which is of no use for us
               continue;
             }
-            //console.log(el[0])
+       
             const segmentationlayer = {
               "type": "segmentation",
               "source": {
@@ -1413,7 +1444,6 @@ export class Viewer extends RefCounted implements ViewerState {
               "visible": true
             }
             counter++;
-            //console.log(segmentationlayer)
             IMP_StateManager.getInstance().addLayer(segmentationlayer, false)
           }
 
@@ -1510,62 +1540,10 @@ export class Viewer extends RefCounted implements ViewerState {
         //console.log(responseElement)
       }
 
-
-      //Metadata
-      //this pulls the metadata and creates a node element as a child of the rootnode. Initially this is invisible, once the metadata tab is activated, the node will be appended
-      //to that panel as a child.
-      //all available metadata for layers will get their own content...
-      /*if (rootNode !== null) {
-        //console.log(response.toString())
-        let responseElement = document.getElementById("metadataOptions-content")
-        if (responseElement === null) {
-          responseElement = document.createElement('div')
-          responseElement.id = "metadataOptions-content"
-          rootNode.append(responseElement)
-          responseElement.style.display = "none"
-        } else {
-          responseElement.textContent = '';
-        }
-        let datasetMetadatadiv = document.createElement('div')
-        datasetMetadatadiv.className = "metadata-dataset"
-        let heading = document.createElement('h3')
-        heading.textContent = "About this dataset"
-        datasetMetadatadiv.append(heading)
-        let datasetContent = document.createElement('p')
-        if (dataset.metadata && dataset.metadata.text) {
-          datasetContent.textContent = dataset.metadata.text;
-        } else {
-          datasetContent.textContent = "No metadata provided for this dataset."
-        }
-        datasetMetadatadiv.append(datasetContent)
-        responseElement.append(datasetMetadatadiv)
-        responseElement.append(document.createElement('hl'))
-  
-        //metadata about the selected layer
-        let layerMetadatadiv = document.createElement('div')
-        layerMetadatadiv.className = "metadata-layer"
-        let layerheading = document.createElement('h3')
-        layerheading.textContent = "About the selected layer"
-        layerMetadatadiv.append(layerheading)
-  
-        for (const elem of dataset.layers) {
-          let layerContent = document.createElement('div')
-          layerContent.style.display = "none"
-          layerContent.className = "layer-metadata-" + elem.name;
-          if (elem.metadata) {
-            layerContent.textContent = elem.metadata
-          } else {
-            layerContent.textContent = "No metadata available for this layer"
-          }
-          layerMetadatadiv.append(layerContent)
-        }
-        responseElement.append(layerMetadatadiv)
-  
-      }*/
     }
   }
 
-  //var csv is the CSV file with headers
+  //copy pasted function to create a JSON from a csv
   csvJSON(csv: string) {
 
     let lines = csv.split("\n");
@@ -1595,100 +1573,7 @@ export class Viewer extends RefCounted implements ViewerState {
     //return result; //JavaScript object
     return JSON.stringify(result); //JSON
   }
-  /* openDatabasePanel() {
-     //console.log("button clicked");
-     let db_panel = document.getElementById("db_panel")
-     if (db_panel !== null) {
-       db_panel.style.display = "block"
-     } else {
-       db_panel = document.createElement('div');
- 
-       db_panel.id = "db_panel";
-       const closeButton = document.createElement('button');
-       closeButton.textContent = "X";
-       closeButton.className = "neuroglancer-icon btn-group db_btn";
-       closeButton.onclick = () => {
-         if (db_panel !== null) {
-           db_panel.style.display = "none"
-         }
-       }
-       const topRow = document.createElement('div');
-       topRow.style.display = "flex";
-       topRow.style.justifyContent = "space-between";
-       topRow.append(closeButton)
- 
-       const localFileButton = document.createElement('button');
-       localFileButton.textContent = "local";
-       localFileButton.className = "neuroglancer-icon btn-group db_btn";
-       localFileButton.onclick = () => {
-         let dbURL = prompt("Please enter the url to the folder with the dataset", "http://127.0.0.1");
-         if (dbURL == null || dbURL == "") {
-           console.log("Cancelled...")
-         } else {
-           this.state.reset();
-           IMP_StateManager.getInstance().reset();
-  
-           if (dbURL.endsWith("/")) {
-             dbURL = dbURL.substr(0, dbURL.length - 1);
-           }
-           const loadObject = {
-             name: "locally_hosted",
-             dimension: { x: [1.0], y: [1.0], z: [1.0] },
-             image: dbURL,
-             layers: [{
-               metadata: "",
-               path: dbURL + "/coordinates/",
-               type: "all"
-             }
-             ]
-           }
-           console.log(loadObject)
-           
-           this.loadDBsetIntoNeuroglancer(loadObject)
-           //this.tryFetchByURL(dbURL)
-         }
-       }
-       topRow.append(localFileButton)
-       const resultPanel = document.createElement('div');
-       resultPanel.className = "db_result_list";
-       const resultList = document.createElement('ul');
-       resultList.className = "db_ul";
-       for (var i = 0; i < this.datasets.length; i++) {
-         var el = document.createElement('li')
-         el.className = "neuroglancer-icon btn-group db-li";
-         el.textContent = this.datasets[i].name;
- 
-         el.onclick = (ev) => {
-           //delete list of elemets
-           this.state.reset();
-           IMP_StateManager.getInstance().reset();
- 
-           var element = ev.target as HTMLLIElement
-           if (element.textContent) {
-             //load the selected dataset by name
-             IMP_dbLoader.getInstance().tryFetchByName(element.textContent).then((res: any) => {
-               console.log(res.data)
-               this.loadDBsetIntoNeuroglancer(res.data)
-             })
-           }
-           //close panel upon dataset selection
-           db_panel!.style.display = "none"
-           //console.log(element.innerHTML)
-         }
-         resultList.append(el)
-       }
-       resultPanel.append(resultList)
-       db_panel.append(topRow)
-       db_panel.append(resultPanel)
- 
- 
-       const rootNode = document.getElementById("neuroglancer-container")
-       //console.log(rootNode)
-       if (rootNode !== null) {
-         rootNode.append(db_panel)
-       }
-     }
-   }*/
+
   getClassNamePerType(typ: string) {
     let className = "";
 
@@ -1708,5 +1593,5 @@ export class Viewer extends RefCounted implements ViewerState {
     }
     return className;
   }
-
+//cryoglancer *********************************** block 6 stop
 }

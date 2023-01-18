@@ -518,10 +518,13 @@ export class SliceViewRenderHelper extends RefCounted {
     builder.addUniform('mat4', 'uProjectionMatrix');
     builder.addUniform('vec4', 'uTextureCoordinateAdjustment');
     builder.require(emitter);
+    // DW: changed the fragment shader to discard pixels outside of the volume, it makes the background black on
+    // the 2D views though, so look into this further if the 2D views need backgrounds
     builder.setFragmentMain(`
 vec4 sampledColor = texture(uSampler, vTexCoord);
 if (sampledColor.a == 0.0) {
-  sampledColor = uBackgroundColor;
+  // sampledColor = uBackgroundColor;
+  discard;
 }
 emit(sampledColor * uColorFactor, 0u);
 `);
