@@ -16,7 +16,7 @@
 
 import './viewer.css';
 import 'neuroglancer/noselect.css';
-import './NH_style.css'; //cryoglancer: styles
+import './IMP_style.css'; //cryoglancer: styles
 import svg_controls_alt from 'ikonate/icons/controls-alt.svg';
 import svg_layers from 'ikonate/icons/layers.svg';
 import svg_list from 'ikonate/icons/list.svg';

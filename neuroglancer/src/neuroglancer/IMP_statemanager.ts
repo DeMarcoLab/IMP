@@ -101,7 +101,7 @@ export default class IMP_StateManager {
         return this.areaModeOn;
     }
     public setCornerDrawing(position: Float32Array) {
-        console.log(position)
+        console.log(this.drawingCoordinates)
         if (this.drawingCoordinates[0].length === 0) {
             this.drawingCoordinates[0] = [position[0], position[1], position[2]];
         } else {
@@ -243,6 +243,7 @@ export default class IMP_StateManager {
         let maxX = this.drawingCoordinates[0][0] > this.drawingCoordinates[1][0] ? this.drawingCoordinates[0][0] : this.drawingCoordinates[1][0];
         let maxY = this.drawingCoordinates[0][1] > this.drawingCoordinates[1][1] ? this.drawingCoordinates[0][1] : this.drawingCoordinates[1][1];
         let maxZ = this.drawingCoordinates[0][2] > this.drawingCoordinates[1][2] ? this.drawingCoordinates[0][2] : this.drawingCoordinates[1][2];
+        //find elemens inside the bounding box.
         for (let [key, value] of this.idPositionMap.entries()) {
             if (value[0] >= minX && value[0] <= maxX && value[1] >= minY && value[1] <= maxY && value[2] >= minZ && value[2] <= maxZ) {
                 //console.log(key);
@@ -250,7 +251,7 @@ export default class IMP_StateManager {
 
             }
         }
-        // console.log(group.length);
+        console.log(group.length);
         this.makeStateJSON(false, "", null, false, group);
     }
 
@@ -412,7 +413,7 @@ export default class IMP_StateManager {
                     }
                 }
             }
-            let toggling_group: string[] = [];
+          /*  let toggling_group: string[] = [];
             if (layer.imp_type === "group") {
                 for (let i = 0; i < layer.annotations.length; i++) {
                     /*let annot = {
@@ -420,10 +421,10 @@ export default class IMP_StateManager {
                     "type": "point",
                     "id": this.currGroup[i],
                     "description": this.currGroup[i],
-                    "prop*/
+                    "prop
                     toggling_group.push(layer.annotations[i].id);
                 }
-            }
+            }*/
             /* if (togglingSegment !== "") {
                  let layerName = this.idNameMap.get(togglingSegment);
                  if (layer.type === "segmentation" && layer.name.split("_")[0] === layerName) {
@@ -446,16 +447,14 @@ export default class IMP_StateManager {
                      
                  }
              }*/
-            if (togglingGroup.toString() !== "" || toggling_group.toString() !== "") {
-                let groupToUse = []
-                if (togglingGroup.toString() !== "") {
-                    groupToUse = togglingGroup;
-                } else {
-                    groupToUse = toggling_group;
-                }
+            if (togglingGroup.toString() !== "" ) {
+                let groupToUse  = togglingGroup;
+                console.log(groupToUse.toString())
                 if (layer.name === "selections") {
                     //remove the box annotation from the view.
                     layer.annotations = [];
+                    
+               
                 }
                 //console.log(groupToUse.toString())
                 for (let i = 0; i < groupToUse.length; i++) {
@@ -464,6 +463,7 @@ export default class IMP_StateManager {
                     let layerName = this.idNameMap.get(segm);
                     if (layer.type === "segmentation" && layer.name.split("_")[0] === layerName) {
                         if (layer["archived"]) {
+                            layer["archived"]=false;
                             //if the layer was archived, this has not been selected before, so we delete all the segments and only toggle the desired ones.
                             layer["segments"] = [];
 

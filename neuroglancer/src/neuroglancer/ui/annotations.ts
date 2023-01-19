@@ -656,8 +656,9 @@ export class AnnotationLayerView extends Tab {
     const chunkTransform = state.chunkTransform.value as ChunkTransformParameters;
     const element = document.createElement('div');
     element.classList.add('neuroglancer-annotation-list-entry');
-
-    element.style.backgroundColor = IMP_StateManager.getInstance().getColorForId(annotation.id);
+    //cryoglancer set background colour for dot annotations in the menu list
+    if(annotation.type!==AnnotationType.AXIS_ALIGNED_BOUNDING_BOX)
+      element.style.backgroundColor = IMP_StateManager.getInstance().getColorForId(annotation.id);
   /*  element.onmouseenter = () => {
       ObjectTracker_IMP.getInstance().hoverSegment(annotation.id,true);
     }
