@@ -369,8 +369,11 @@ export default class IMP_StateManager {
         } else {
             layer_res = result.layers; //if it's not the first run, we just take the layers of the state as they are.
         }
+        //this layerToBeAdded is populated if a group was created
         if (this.layerToBeAdded !== null) {
+            console.log(this.layerToBeAdded)
             layer_res.push(this.layerToBeAdded);
+            //this.layerToBeAdded(null);
         }
         for (let layer of layer_res) {
 
@@ -463,8 +466,9 @@ export default class IMP_StateManager {
                     let layerName = this.idNameMap.get(segm);
                     if (layer.type === "segmentation" && layer.name.split("_")[0] === layerName) {
                         if (layer["archived"]) {
-                            layer["archived"]=false;
-                            //if the layer was archived, this has not been selected before, so we delete all the segments and only toggle the desired ones.
+                            layer["archived"]=false; //unarchive the layer to make it visible
+                            //if the layer was archived, it hasn't been selected before. per default, all segments would be visible. since this is part of the
+                            //specific area selection, we empty the array here and fill it in the later steps with only the segments within the area.
                             layer["segments"] = [];
 
                         }
@@ -666,7 +670,7 @@ export default class IMP_StateManager {
             let annotArr: any[] = [];
             for (let i = 0; i < this.currGroup.length; i++) {
                 let annot = {
-                    "point": this.idPositionMap.get(this.currGroup[i]),
+                    "point": this.idPositionMap.get(this.currGroup[i]), //draw position for this annotation
                     "type": "point",
                     "id": this.currGroup[i],
                     "description": this.currGroup[i] + " - " + this.idNameMap.get(this.currGroup[i]),
@@ -686,11 +690,12 @@ export default class IMP_StateManager {
                     "type": "rgb",
                     "default": "#ff0000"
                 },
-                {
+             /*   {
                     "id": "cc",
                     "type": "rgb",
                     "default": "#ffff00"
-                }],
+                }*/
+                ],
                 "shader": this.annotationShaderString,
                 "name": "Group",
                 "visible": true,
@@ -718,7 +723,7 @@ export default class IMP_StateManager {
         } else if (id.length > 1) {
             this.currGroup.push(id);
         }
-        console.log(this.currGroup);
+       // console.log(this.currGroup);
     }
     public isGrouping() {
         return this.isGroupingMode;
