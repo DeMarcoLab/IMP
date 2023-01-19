@@ -1,5 +1,6 @@
 import { getCachedJson } from "./util/trackable";
 
+//class that manages IMP database interaction
 export class IMP_dbLoader {
 
     private static instance: IMP_dbLoader;
@@ -26,11 +27,10 @@ export class IMP_dbLoader {
     }
     async getDataset(url: string): Promise<any[]> {
         const axios = require('axios').default;
-        //const url: string = 'https://webdev.imp-db.cloud.edu.au:3005/tomosets/' + selected_name;
-        //let self = this
+
         axios.get(url).then((response: any) => {
             return response.data;
-            //self.loadDBsetIntoNeuroglancer(response.data)
+     
         })
             .catch((error: any) => {
                 console.error(error);
@@ -47,6 +47,11 @@ export class IMP_dbLoader {
     loadSaveState(stateName: string){
         return this.currDataset["saveStates"][stateName];
     }
+
+    //the state is already managed by neuroglancer. we just take a jsonified object of that state and pass it to the database. It will get stored by name within the same 
+    //object as the dataset itself. 
+    //with a proper database setup that someone has put some thought into, it is probably better to have the states in its own table identified by the id or name of the dataset
+
     async saveState(name:string, state:any, overwrite:boolean): Promise<string>{
   
         const axios = require('axios').default;
@@ -55,7 +60,7 @@ export class IMP_dbLoader {
         let jsonState = JSON.parse(JSON.stringify( getCachedJson(state).value, null))
         if(this.currDataset["saveStates"]){
             if(!overwrite && this.currDataset["saveStates"][name]){
-                console.log("Save state of this name already exists. Tick overwrite if you want to overwrite, or pick a different name.")
+                //console.log("Save state of this name already exists. Tick overwrite if you want to overwrite, or pick a different name.")
                 return("Save state of this name already exists. Tick overwrite if you want to overwrite, or pick a different name.");
             } else {
                 this.currDataset["saveStates"][name]=jsonState

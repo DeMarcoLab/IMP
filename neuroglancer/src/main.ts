@@ -40,9 +40,10 @@ function getCookie(val: string) {
 window.addEventListener('DOMContentLoaded', () => {
   //console.log(window.location.search)
   //check the existance of the cookie and react accordingly
-  let x = getCookie("orcid_id")
+  //cryoglancer COOKIE HANDLING - disabled for now because of domain issues.
+  let x = getCookie("cryo_logIn")
   console.log(x)
-  if (x) {
+  /*if (x) {
     
     //get expiry
     let exp = getCookie("exp");
@@ -50,23 +51,24 @@ window.addEventListener('DOMContentLoaded', () => {
     if (new Date() > new Date(exp)) {
      // console.log("Cookie expired.")
       alert("Session expired. Please log in again at  https://webdev.imp-db.cloud.edu.au . A session is 4 hours long. ")
-    } else {
+    } else {*/
       const urlParams = new URLSearchParams(window.location.search);
 
       const name = urlParams.get("name")
       const id = urlParams.get("user_id")
-      if(id!==x){
+
+      /*if(id!=x){
        // console.log("ID in URL is not the same as logging in ID.")
         alert("ID mismatch. Please make sure you are logged in and select a dataset from the web portal.")
-      } else {
+      } else {*/
         if (name !== null)
           //load the app only here
           setupDefaultViewer(name, id!);
-      }
-    }
+    //  }
+    /*}
   } else {
     console.log("No cookie. User needs to log in.")
     alert("You are not logged in via ORCID. Please go back to the portal at https://webdev.imp-db.cloud.edu.au and log in.")
-  }
+  }*/
 
 });

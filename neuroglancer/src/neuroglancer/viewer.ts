@@ -869,6 +869,7 @@ export class Viewer extends RefCounted implements ViewerState {
     let overwriteCheckboxEl = document.createElement("input");
     overwriteCheckboxEl.type = "checkbox";
     overwriteCheckboxEl.checked = false;
+    panel.appendChild(labeloverWriteName)
     panel.appendChild(overwriteCheckboxEl);
     let submitButton = document.createElement("button");
     submitButton.innerHTML = "Submit";

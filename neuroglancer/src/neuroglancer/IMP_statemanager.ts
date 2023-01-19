@@ -4,6 +4,16 @@
 import IMP_ColorTracker from './IMP_ColorTracker'
 
 
+//class to  initially initiate all the custom layers (passed in from makeUI in viewer)
+// also manages "modes" of interaction that aren't from neuroglancer, like grouping meshes together in a new layer and drawing a box to display meshes within.
+
+/*
+Note: This class is old and while working on the project, 
+I iteratively found out more about how to use Neuroglancer directly, rather than storing information in this class.
+Some of the stuff in here could probably be rewritten more elegantly using the functionalities Neuroglancer provides. 
+That would imply quite a bit of work though, so I went with "if it works don't touch it".
+
+*/
 interface AvailableLayers {
     [key: string]: any
 }
@@ -24,8 +34,9 @@ export default class IMP_StateManager {
 
     private showsLicense: boolean;
 
-
+    //maps segment/annotation IDs to the name of its own layer
     private idNameMap: Map<string, string>;
+    //maps id of a segment/annotation to its own position
     private idPositionMap: Map<string, number[]>;
 
     private originalSegmentList: any;
@@ -38,26 +49,11 @@ export default class IMP_StateManager {
     private currGroup: string[];
     private layerToBeAdded: any;
     private annotationShaderString: string;
-
-    //private highlightColour: string;
-    //  private segmentationDisplayState: SegmentationDisplayState;
-
-    /*private xDrawings: Map<string, Drawing>;
-    private yDrawings: Map<string, Drawing>;
-    private zDrawings: Map<string, Drawing>;
-
-    private currZDrawing: Drawing;
-    private currYDrawing: Drawing;
-    private currZDrawing:Drawing;
-
-    private xCanvas: HTMLCanvasElement;
-    private yCanvas: HTMLCanvasElement;
-    private zCanvas: HTMLCanvasElement;*/
-
+/*
     private xDimWidget: HTMLElement;
     private yDimWidget: HTMLElement;
     private zDimWidget: HTMLElement;
-
+*/
     private colorpickerDiv: HTMLElement;
 
     private constructor() {
@@ -80,7 +76,6 @@ export default class IMP_StateManager {
         this.annotationShaderString = "";
 
         this.imp_colortracker = new IMP_ColorTracker();
-        //this.highlightColour = "highlight";
         this.colorpickerDiv = document.createElement('div');
         this.colorpickerDiv.className = 'imp-color-picker-container';
 
@@ -118,7 +113,8 @@ export default class IMP_StateManager {
 
         }
     }
-
+/*
+    tried to improve dimension widget position, failed because I could never pinpoint the exact moment when the dim widgets get loaded.
     public loadedDimsCallback(widget: HTMLDivElement, dim: string) {
 
         switch (dim) {
@@ -153,7 +149,10 @@ export default class IMP_StateManager {
 
     }
 
+    */
 
+    //user can download either the visible annotations ("dots") or meshes (function below this). It uses the saved initial particles csv the user provides to keep the format and
+    //just delete entries that are currently not visible.
     public downloadVisibleAnnotations() {
         let currVisibleAnnotations: any[] = []
 
@@ -182,7 +181,7 @@ export default class IMP_StateManager {
         }
         this.downloadCSV(newPositionList)
     }
-    //take list of active meshes and download it in the same format as initially provided (i.e. with location/rotation)
+    //take list of active meshes and download it in the same format as initially provided
     public downloadActiveSegments() {
         let currVisibleSegments: string[] = []
 
@@ -192,7 +191,7 @@ export default class IMP_StateManager {
                 currVisibleSegments = currVisibleSegments.concat(currLayers[i].segments)
             }
         }
-        console.log(currVisibleSegments)
+       // console.log(currVisibleSegments)
         let newPositionList: any = []
         for (let i = 0; i < currVisibleSegments.length; i++) {
             const pos = this.idPositionMap.get(currVisibleSegments[i]);
@@ -211,6 +210,7 @@ export default class IMP_StateManager {
         this.downloadCSV(newPositionList)
     }
 
+    //do the actual download of the csv (simulates a click on a download button)
     private downloadCSV(data:any){
          //console.log(this.originalSegmentList.length);
          let csvString = ""
@@ -230,6 +230,9 @@ export default class IMP_StateManager {
  
          document.body.removeChild(element);
     }
+
+
+    //the user can draw a box using "drawing Mode" and the meshes within that box get displayed.
     private showMeshesInBox() {
         //console.log(this.drawingCoordinates);
         let group = []
@@ -251,7 +254,7 @@ export default class IMP_StateManager {
         this.makeStateJSON(false, "", null, false, group);
     }
 
-
+    //"singleton" 
     public static getInstance(): IMP_StateManager {
         if (!IMP_StateManager.instance) {
             IMP_StateManager.instance = new IMP_StateManager();
@@ -260,9 +263,12 @@ export default class IMP_StateManager {
         return IMP_StateManager.instance;
     }
 
+    //saves the original csv data for particle postions as json, could be used later to download visible segments/annots
     public setOriginalSegmentList(original: any) {
         this.originalSegmentList = JSON.parse(original);
     }
+
+
     public addIdName(id: string, name: string) {
         this.idNameMap.set(id, name);
 
@@ -271,16 +277,19 @@ export default class IMP_StateManager {
         this.imp_colortracker.addNameColour(name, colour)
 
     }
+
+    //adds a layer
     public addLayer(layer: any, archived: boolean) {
 
         if (layer.type == "annotation") {
             for (const annotation of layer.annotations) {
-                //         console.log(annotation["props"])
+                //save the annotation ID along with its colours (in props) and things it could be coloured by (in fields)
                 this.imp_colortracker.addColorToStorage(annotation["id"], annotation["props"])
                 this.imp_colortracker.addNormalisedField(annotation["id"], annotation["fields"])
+                //save the position of this id
                 this.idPositionMap.set(annotation["id"], annotation["point"]);
             }
-
+            //save the layer name along with the first entry of props which is always "type" which is always present. 
             this.imp_colortracker.addNameColorMapEntry(layer['name'], layer.annotations[0].props[0])
 
             if (this.annotationShaderString === "") {
@@ -292,7 +301,9 @@ export default class IMP_StateManager {
         if (layer.type == "segmentation") {
             let annotLayer = this.availableLayers[layer.name.split("_")[0]]
             if (annotLayer) {
-
+                //neuroglancer uses the fields "segments" and "segmentColors" to display individual segments. We therefore push all the segments into those fields and
+                //set the colour to whatever the annotation of that ID is.
+                //note, this blows up the size of the state quite a bit, and sharing neuroglancer URLs gets impossible due to the length of it.
                 layer["segmentColors"] = {}
                 for (const annotation of annotLayer.layer.annotations) {
                     layer["segments"].push(annotation["id"]) //display all segments per default.
@@ -321,14 +332,15 @@ export default class IMP_StateManager {
         this.dimensions = dimensions;
     }
 
-
+    //this creates the new state with all the custom layers we created by calling "addLayer" for each layer that was passed to the app.
+    //this will also get called if the colour by or the colourmap changes or other functions are used that affect the state of the layers (like adding a layer or changing one)
     public makeStateJSON(colorByChanged: boolean = false, togglingSegment: string = "", highlightSegment: any = null, colorMapChanged: boolean = false, togglingGroup: string[] = [], selectionMode: boolean = false) {
-        console.log("makeStateJSON")
+       // console.log("makeStateJSON")
         //create layers array:
         let result = this.state.toJSON() //copy current state
         let layer_res = []
 
-        //find active layers
+      
         if (this.firstRun) {
             //copy the available layers over to the state.
             for (let key in this.availableLayers) {
@@ -347,14 +359,14 @@ export default class IMP_StateManager {
 
             this.imp_colortracker.initColorByStrings()
 
-            //selection layer to display meshes within a drawn box.
+            //selection layer to display meshes within a drawn box "drawing mode"
             layer_res.push({
                 "type": "annotation", "source": "local://annotations", "tab": "annotations", "name": "selections",
                 "archived": false,
                 "tool": "annotateBoundingBox",
             });
         } else {
-            layer_res = result.layers;
+            layer_res = result.layers; //if it's not the first run, we just take the layers of the state as they are.
         }
         if (this.layerToBeAdded !== null) {
             layer_res.push(this.layerToBeAdded);
@@ -366,11 +378,12 @@ export default class IMP_StateManager {
                     "colour_by": this.imp_colortracker.getCurrColorBy()
                 }
             }
-            if (colorByChanged || colorMapChanged) {
 
+            //colours changed
+            if (colorByChanged || colorMapChanged) {
+                //update layers with currColorBy colour.
                 if (layer.type === "segmentation") {
                     //console.log(layer)
-                    //        if (layer.hasAnnoConnection) {
                     let annotLayer = this.availableLayers[layer.name.split("_")[0]]
                     if (annotLayer) {
 
@@ -384,14 +397,12 @@ export default class IMP_StateManager {
                                 annotation["props"][0]
 
                         }
-
-                        //     }
+               
                     }
                 }
 
                 if (layer.type == "annotation") {
 
-                    //  layr["segments"].push(annotation["id"])
                     if (this.imp_colortracker.getCurrColorBy() !== 0) {
                         for (const annotation of layer.annotations) {
 
@@ -403,7 +414,6 @@ export default class IMP_StateManager {
             }
             let toggling_group: string[] = [];
             if (layer.imp_type === "group") {
-                //this is an annotation layer, and we always want to display all corresponding meshes.
                 for (let i = 0; i < layer.annotations.length; i++) {
                     /*let annot = {
                     "point": this.idPositionMap.get(this.currGroup[i]),
@@ -454,23 +464,27 @@ export default class IMP_StateManager {
                     let layerName = this.idNameMap.get(segm);
                     if (layer.type === "segmentation" && layer.name.split("_")[0] === layerName) {
                         if (layer["archived"]) {
-                            layer["archived"] = true;
-                            //if it was archived, this has not been selected before, so we delete all the segments and only toggle the desired ones.
+                            //if the layer was archived, this has not been selected before, so we delete all the segments and only toggle the desired ones.
                             layer["segments"] = [];
 
-                            //TODO: discuss what to do if it is already visible - do we remove the segments around the selected area?
                         }
+                        //put the segments in the list if it's not there yet
                         if (layer["segments"]) {
                             if (layer["segments"].indexOf(segm) < 0) {
                                 layer["segments"].push(segm);
                             }
                         } else {
+                            //create prop segments with new segm inside
                             layer["segments"] = [segm]
                         }
                     }
                 }
             }
+
+            //when double clicking a mesh, that mesh changes the colour to be "highlighted" (it becomes lighter from the basecolour, tinycolor library takes care of that)
+            //double clicking again removes the highlighting and goes back to the colour before.
             if (highlightSegment !== null) {
+          
                 let layerName = this.idNameMap.get(highlightSegment.id);
                 if (layer.type == "segmentation" && layer.name.split("_")[0] == layerName) {
                     layer["segmentColors"][highlightSegment.id] = highlightSegment.color == layer["segmentColors"][highlightSegment.id] ? layer["segmentDefaultColor"] : highlightSegment.color;
@@ -489,6 +503,7 @@ export default class IMP_StateManager {
             }
         }
 
+        //create the new state object
         let result2 = {
             "dimensions": this.firstRun ? this.dimensions : result["dimensions"],
             "position": this.firstRun ? this.position : result["position"],
@@ -520,8 +535,10 @@ export default class IMP_StateManager {
         this.state.reset()
         //this.state.set(result2)
         // this.state.layers = result2.layers;
+        //force the new state on the neuroglancer state object
         this.state.restoreState(result2)
 
+        //sets the background colour of the layers displayed in the menu to be the same as the colour in the vis.
         this.makeColourBoxes();
 
 
@@ -588,6 +605,8 @@ export default class IMP_StateManager {
             //element.style.background = // element.innerHTML + "<div className='colorSquare' style='background:"+ this.nameColorMap.get(element.innerHTML)+";' />";
         }
     }
+
+
     public toggleSegmentFromSegments(id: string) {
         if (this.visibleSegments.indexOf(id) > -1) {
             this.visibleSegments.splice(this.visibleSegments.indexOf(id), this.visibleSegments.indexOf(id) + 1);

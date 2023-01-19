@@ -1,7 +1,8 @@
-import { cmapData, evaluate_cmap } from "./util/js-colormaps.js";
+import { cmapData, evaluate_cmap } from "./util/js-colormaps.js"; //small library that provides a list of well known colour maps
 
+//class to manage colouring of meshes and annotations
 export default class IMP_ColorTracker {
-    private currColorBy: number;
+    private currColorBy: number;  //what are we colouring by (radio buttons at the top bar)
     private colorByStrings: string[]
     private nameColorMap: Map<string, string>;
     private colorStorage: any;
@@ -87,10 +88,6 @@ export default class IMP_ColorTracker {
         if (this.currColorBy!==0) {
 
             let val = this.normalisedFields.get(id)[this.colorByStrings[this.currColorBy]]
-            //function evaluate_cmap(x, name, reverse) {
-            //update annotation colour ball
-
-            //update segment colours
             return this.ConvertRGBtoHex(evaluate_cmap(val, this.currColorMap, false));
         }
         return "";
@@ -101,6 +98,7 @@ export default class IMP_ColorTracker {
         return this.ConvertRGBtoHex(evaluate_cmap(val, this.currColorMap, false));
     }
 
+    //getters and setters
     public setCurrColorMap(cmap:string){
         this.currColorMap=cmap;
     }
