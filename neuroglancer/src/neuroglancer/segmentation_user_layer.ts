@@ -405,7 +405,6 @@ export class SegmentationUserLayer extends Base {
         'segments', {label: 'Seg.', order: -50, getter: () => new SegmentDisplayTab(this)});
     this.tabs.default = 'rendering';
 
-    //ObjectTracker_IMP.getInstance().setSegmentationDisplayState(this.displayState);
   }
 
   get volumeOptions() {

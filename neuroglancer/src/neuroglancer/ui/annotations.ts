@@ -659,12 +659,7 @@ export class AnnotationLayerView extends Tab {
     //cryoglancer set background colour for dot annotations in the menu list
     if(annotation.type!==AnnotationType.AXIS_ALIGNED_BOUNDING_BOX)
       element.style.backgroundColor = IMP_StateManager.getInstance().getColorForId(annotation.id);
-  /*  element.onmouseenter = () => {
-      ObjectTracker_IMP.getInstance().hoverSegment(annotation.id,true);
-    }
-    element.onmouseleave = () => {
-      ObjectTracker_IMP.getInstance().hoverSegment(annotation.id,false);
-    }*/
+
 
     element.style.gridTemplateColumns = this.gridTemplate;
     const icon = document.createElement('div');
@@ -755,7 +750,7 @@ export class AnnotationLayerView extends Tab {
     });
 
     element.addEventListener('action:move-to-annotation', event => {
-      //NH: Click in Annotation menu on a annotation row
+      //cryoglancer info: Click in Annotation menu on a annotation row
       event.stopPropagation();
       event.preventDefault();
       const {layerRank} = chunkTransform;

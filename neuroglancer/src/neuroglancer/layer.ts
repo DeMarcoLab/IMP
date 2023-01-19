@@ -609,7 +609,6 @@ export class ManagedUserLayer extends RefCounted {
       for (const {layerManager} of this.manager.root.subsets) {
         if (layerManager.has(this)) continue;
         layerManager.addManagedLayer(this.addRef());
-        //IMP_StateManager.getInstance().makeColourBoxes();
       }
       this.archived = false;
     }

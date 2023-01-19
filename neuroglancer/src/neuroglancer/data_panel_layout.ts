@@ -181,13 +181,12 @@ function registerRelatedLayouts(
         event.stopPropagation();
       }));
   }
-  //NH for IMP project - need reference to the axis of the panel, storing in id of element.
+  //cryoglancer need reference to the axis of the panel, storing in id of element. - not used currently because I couldn't get it to work
+  //if this is asked for again possibly use this panel id to access the correct one.
   let dim = (relatedLayouts[0].toString() == "xy" ? "z":relatedLayouts[0].toString()=="xz"?"y": relatedLayouts[0].toString()=="yz"?"x":"3d");
   panel.element.id = "panel_"+ dim;
 
-  //console.log(panel.element.id)
-  //if(dim!=="3d")
-   // IMP_StateManager.getInstance().addDimWidgets(panel.element,dim)
+ 
   
   for (const relatedLayout of relatedLayouts) {
     const button = document.createElement('button');
@@ -197,7 +196,6 @@ function registerRelatedLayouts(
     button.title = `Switch to ${relatedLayout} layout.`;
     button.addEventListener('click', () => {
       layout.container.name = relatedLayout;
-   //   ObjectTracker_IMP.getInstance().addDimWidgets();
     });
     controls.appendChild(button);
   }

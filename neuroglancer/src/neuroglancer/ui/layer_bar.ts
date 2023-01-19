@@ -302,7 +302,7 @@ export class LayerBar extends RefCounted {
       }
       widget.valueElement.textContent = text;
     }
-    //IMP_StateManager.getInstance().makeColourBoxes();
+
   }
 
   private updateChunkStatistics() {

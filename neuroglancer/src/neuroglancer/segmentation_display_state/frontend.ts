@@ -392,7 +392,7 @@ function makeRegisterSegmentWidgetEventHandlers(displayState: SegmentationDispla
   };
 
   const onMousedown = (event: MouseEvent) => {
-    //NH: effects when clicking inside the segmentation menu
+    //cryoglancer: effects when clicking inside the segmentation menu
     if (event.button !== 2 || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) {
       return;
     }

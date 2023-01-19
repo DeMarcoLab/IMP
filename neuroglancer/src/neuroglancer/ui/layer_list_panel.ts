@@ -139,6 +139,7 @@ class LayerListItem extends RefCounted {
                   set value(value: boolean) {
                     layer.setArchived(!value);
                     layer.setVisible(value)
+                    //cryoglancer: make the colours behind the layers. I also call this in the makeJSON in the stateManager. possibly redundant.
                     IMP_StateManager.getInstance().makeColourBoxes();
                   },
                   changed: layer.layerChanged,

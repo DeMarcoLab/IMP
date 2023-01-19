@@ -97,8 +97,9 @@ export function forEachVisibleSegment(
       }
     }
   } catch (err) {
-    //NH I couldn't fix this error occasionally happening (HgithbitRepresentative undefined), but as it doesn't impact usability, did this ugly thing.
-
+    //cryoglancer I couldn't fix this error occasionally happening (HgithbitRepresentative undefined), 
+    // but as it doesn't impact usability and I had no idea where to start investigating it, I just catch it. 
+    //Sorry :)
   }
 }
 
